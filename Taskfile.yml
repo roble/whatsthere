@@ -3,7 +3,7 @@ version: '3'
 
 vars:
   # Prefix for running commands in a containerized environment (e.g., 'docker compose exec app')
-  APP: '' 
+  APP: 'docker compose exec app' 
 
 includes:
     # ── BEGIN MODULES ────────────────────────────────────────────────
@@ -33,6 +33,9 @@ includes:
         optional: true
     tenancy:
         taskfile: ./modules/tenancy/Taskfile.yml
+        optional: true
+    chat:
+        taskfile: ./modules/chat/Taskfile.yml
         optional: true
     # ── END MODULES ──────────────────────────────────────────────────
 

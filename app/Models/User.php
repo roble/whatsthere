@@ -10,6 +10,7 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Modules\Auth\Traits\Sociable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
@@ -23,6 +24,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     use HasRoles;
     use InteractsWithMedia;
     use Notifiable;
+    use Sociable;
 
     /**
      * The attributes that are mass assignable.

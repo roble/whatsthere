@@ -1,0 +1,33 @@
+{
+    "name": "modules/chat",
+    "description": "",
+    "type": "library",
+    "license": "proprietary",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Saucebase",
+            "email": "hello@saucebase.dev"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Chat\\Providers\\ChatServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Chat\\": "src/",
+            "Modules\\Chat\\Database\\Factories\\": "database/factories/",
+            "Modules\\Chat\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Chat\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable"
+}
