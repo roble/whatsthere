@@ -1,0 +1,27 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    # Do not fail the analysis if an ignoreErrors pattern doesn't match any reported error.
+    # This prevents "Ignored error pattern ... was not matched" failures when patterns are
+    reportUnmatchedIgnoredErrors: false
+
+    paths:
+        - app/
+        - modules/
+
+    # Level 10 is the highest level
+    level: 5
+
+    ignoreErrors:
+        - message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'.$#"
+          paths:
+              - modules/*/config/*.php
+
+    excludePaths:
+        - modules/*/vendor/*
+
+    #    ignoreErrors:
+    #        - '#PHPDoc tag @var#'
+    #

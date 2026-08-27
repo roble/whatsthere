@@ -1,0 +1,80 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/.claude
+/.agents
+
+# Laravel Boost generated output — run `php artisan boost:install` to create
+/AGENTS.md
+/CLAUDE.md
+/boost.json
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/modules
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+/bootstrap/ssr
+
+# Icon registry
+/resources/js/icon-registry.ts
+
+# Module-specific ignores
+/modules/*/node_modules
+/modules/*/vendor
+/modules/*/resources/js/types/generated.d.ts
+/modules/*/package-lock.json
+/modules/*/dist
+/modules/*/coverage
+/modules/*/*-lock.json
+/modules/*/.turbo
+/modules/*/.cache
+/modules/*.diff
+/modules/*.patch
+/modules/*/.claude
+
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# Filament 
+public/css/filament
+public/fonts/filament
+public/js/filament
+public/vendor/livewire/
+
+# Playwright
+/playwright/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/playwright-mcp/
+/.playwright-mcp/
+/storage/laravel-playwright-config.json
+
+# Docker setup (published from saucebase/installer package)
+/docker/
+
+# Generated files
+lang/php_*.json
+/resources/js/types/generated.d.ts
+
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
+.github/skills/*/*
+stubs/saucebase/stack/*/node_modules
