@@ -1,0 +1,26 @@
+<script setup lang="ts">
+import type { HTMLAttributes } from 'vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { computed } from 'vue';
+
+interface Props {
+    src: string;
+    name?: string;
+    class?: HTMLAttributes['class'];
+}
+
+const props = defineProps<Props>();
+
+const fallbackText = computed(() => props.name?.slice(0, 2) ?? 'ME');
+</script>
+
+<template>
+    <Avatar
+        class="ring-border size-8 ring-1"
+        :class="[props.class]"
+        v-bind="$attrs"
+    >
+        <AvatarImage alt="" class="mt-0 mb-0" :src="props.src" />
+        <AvatarFallback>{{ fallbackText }}</AvatarFallback>
+    </Avatar>
+</template>

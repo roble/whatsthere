@@ -156,10 +156,9 @@ onUnmounted(() => {
                                 />
                                 <code
                                     class="flex-1 text-sm whitespace-pre text-green-400"
-                                    >
-                                    {{ installCommand(selectedMod) }}
-                                    </code
                                 >
+                                    {{ installCommand(selectedMod) }}
+                                </code>
                                 <button
                                     class="cursor-pointer self-start text-gray-300 transition-colors hover:text-gray-300"
                                     @click="copyCommand"

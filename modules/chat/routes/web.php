@@ -1,8 +1,9 @@
 <?php
 
-use Modules\Chat\Http\Controllers\ChatController;
 use Illuminate\Support\Facades\Route;
+use Modules\Chat\Http\Controllers\ChatController;
 
-Route::middleware('web')->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
     Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::post('chat/messages', [ChatController::class, 'stream'])->name('chat.stream');
 });

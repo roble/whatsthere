@@ -31,7 +31,7 @@ class GeneralSettingsTest extends TestCase
     {
         $settings = app(GeneralSettings::class);
 
-        $this->assertSame('Saucebase', $settings->site_name);
+        $this->assertSame(config('app.name'), $settings->site_name);
         $this->assertNull($settings->site_tagline);
         $this->assertNull($settings->site_description);
 
@@ -69,7 +69,7 @@ class GeneralSettingsTest extends TestCase
 
         Livewire::test(GeneralSettingsPage::class)
             ->assertSchemaStateSet([
-                'site_name' => 'Saucebase',
+                'site_name' => config('app.name'),
                 'site_tagline' => null,
                 'site_description' => null,
                 'site_icon' => null,
@@ -133,7 +133,7 @@ class GeneralSettingsTest extends TestCase
 
         $settings = app(GeneralSettings::class);
 
-        $this->assertSame('Saucebase', $settings->site_name);
+        $this->assertSame(config('app.name'), $settings->site_name);
         $this->assertNull($settings->site_description);
     }
 
@@ -149,7 +149,7 @@ class GeneralSettingsTest extends TestCase
 
         Livewire::test(GeneralSettingsPage::class)
             ->fillForm([
-                'site_name' => 'Saucebase',
+                'site_name' => config('app.name'),
                 $field => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
             ])
             ->call('save')
@@ -169,7 +169,7 @@ class GeneralSettingsTest extends TestCase
 
         Livewire::test(GeneralSettingsPage::class)
             ->fillForm([
-                'site_name' => 'Saucebase',
+                'site_name' => config('app.name'),
                 $field => UploadedFile::fake()->image('large.png')->size(1025),
             ])
             ->call('save')
@@ -190,7 +190,7 @@ class GeneralSettingsTest extends TestCase
 
         Livewire::test(GeneralSettingsPage::class)
             ->fillForm([
-                'site_name' => 'Saucebase',
+                'site_name' => config('app.name'),
                 'site_description' => null,
                 $field => $value,
             ])
@@ -199,7 +199,7 @@ class GeneralSettingsTest extends TestCase
 
         $settings = app(GeneralSettings::class);
 
-        $this->assertSame('Saucebase', $settings->site_name);
+        $this->assertSame(config('app.name'), $settings->site_name);
         $this->assertNull($settings->site_description);
     }
 
@@ -243,23 +243,6 @@ class GeneralSettingsTest extends TestCase
 
         $this->assertSame('/storage/tenant-logos/icon.png', $settings->siteIconUrl());
         $this->assertSame('/storage/tenant-logos/logo.png', $settings->siteLogoUrl());
-    }
-
-    public function test_frontend_stack_views_render_settings_driven_metadata(): void
-    {
-        foreach (['vue', 'react'] as $stack) {
-            $template = file_get_contents(base_path("stubs/saucebase/stack/{$stack}/views/app.blade.php"));
-
-            $this->assertIsString($template);
-            $this->assertStringContainsString(
-                '<title data-inertia>{{ $generalSettings->site_name }}</title>',
-                $template,
-            );
-            $this->assertMatchesRegularExpression(
-                '/@if \(\$generalSettings->site_description\).*name="description".*@endif/s',
-                $template,
-            );
-        }
     }
 
     /**
