@@ -5,7 +5,6 @@ import {
     ConversationEmptyState,
     ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import { Loader } from '@/components/ai-elements/loader';
 import {
     Message,
     MessageContent,
@@ -15,6 +14,7 @@ import {
     PromptInput,
     PromptInputBody,
     PromptInputFooter,
+    PromptInputSpeechButton,
     PromptInputSubmit,
     PromptInputTextarea,
     PromptInputTools,
@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/resizable';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Chat } from '@ai-sdk/vue';
+import { CircleAlertIcon } from '@lucide/vue';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
     computed,
@@ -52,8 +53,13 @@ import {
 } from 'vue';
 
 const props = defineProps<{
+    conversationId: string | null;
     initialMessages: UIMessage[];
 }>();
+
+// Tracked separately from the prop: a brand new chat learns its id from the
+// first stream response, without an Inertia round trip.
+const conversationId = ref(props.conversationId);
 
 const title = 'Chat';
 
@@ -93,6 +99,15 @@ async function guardedFetch(
         throw new Error('Session expired.');
     }
 
+    // A new chat is created server-side on its first message. Adopt the id and
+    // move onto its own URL so a reload lands back on this conversation.
+    const id = response.headers.get('X-Conversation-Id');
+
+    if (id && id !== conversationId.value) {
+        conversationId.value = id;
+        window.history.replaceState({}, '', route('chat.show', id));
+    }
+
     return response;
 }
 
@@ -101,8 +116,8 @@ const chat = new Chat({
     transport: new DefaultChatTransport({
         api: route('chat.stream'),
         fetch: guardedFetch,
-        // The server derives the conversation from the authenticated user, so
-        // only the new message is sent -- never a conversation id.
+        // The id is echoed back, but the server never trusts it: it verifies the
+        // conversation belongs to the authenticated user before continuing it.
         prepareSendMessagesRequest: ({ messages }) => ({
             body: {
                 message: messages
@@ -110,6 +125,7 @@ const chat = new Chat({
                     ?.parts.filter((part) => part.type === 'text')
                     .map((part) => part.text)
                     .join('\n'),
+                conversation_id: conversationId.value,
             },
             headers: { 'X-XSRF-TOKEN': csrfToken() },
         }),
@@ -118,6 +134,33 @@ const chat = new Chat({
 
 const messages = computed(() => chat.messages);
 const status = computed(() => chat.status);
+const lastMessageId = computed(() => messages.value.at(-1)?.id);
+
+/**
+ * In flight: the message left the browser but nothing has come back yet. The
+ * status flips to 'streaming' as soon as the first token lands, so this only
+ * covers the wait before any reply exists.
+ */
+function isPending(message: UIMessage): boolean {
+    return (
+        status.value === 'submitted' &&
+        message.role === 'user' &&
+        message.id === lastMessageId.value
+    );
+}
+
+/**
+ * The send failed outright. Session expiry raises its own dialog, so it is
+ * excluded here rather than reported in two places at once.
+ */
+function isUndelivered(message: UIMessage): boolean {
+    return (
+        status.value === 'error' &&
+        !sessionExpired.value &&
+        message.role === 'user' &&
+        message.id === lastMessageId.value
+    );
+}
 
 /**
  * vue-stick-to-bottom only re-pins when its internal isAtBottom flag is already
@@ -189,6 +232,22 @@ watch(
     pinToBottom,
 );
 
+/**
+ * Inertia reuses this component when moving between sessions, so the Chat
+ * instance has to be reset by hand. initialMessages is a fresh array on every
+ * visit, which makes it the reliable signal -- conversationId is not, because
+ * starting a new chat goes /chat -> /chat with the prop null both times.
+ */
+watch(
+    () => props.initialMessages,
+    (initial) => {
+        conversationId.value = props.conversationId;
+        chat.messages = initial;
+        stick.value = true;
+        pinToBottom();
+    },
+);
+
 function goToLogin() {
     window.location.href = route('login');
 }
@@ -237,9 +296,22 @@ function handleSubmit(message: PromptInputMessage) {
                                 v-for="message in messages"
                                 :key="message.id"
                                 :from="message.role"
+                                :class="
+                                    message.role === 'user'
+                                        ? 'flex-col items-end'
+                                        : undefined
+                                "
                                 :data-testid="`message-${message.id}`"
                             >
-                                <MessageContent>
+                                <MessageContent
+                                    :class="
+                                        isPending(message) &&
+                                        'animate-pulse opacity-60'
+                                    "
+                                    :data-pending="
+                                        isPending(message) || undefined
+                                    "
+                                >
                                     <template
                                         v-for="(part, index) in message.parts"
                                         :key="index"
@@ -263,12 +335,18 @@ function handleSubmit(message: PromptInputMessage) {
                                         />
                                     </template>
                                 </MessageContent>
-                            </Message>
 
-                            <Loader
-                                v-if="status === 'submitted'"
-                                data-testid="chat-loading"
-                            />
+                                <p
+                                    v-if="isUndelivered(message)"
+                                    class="text-destructive mt-1 flex items-center gap-1 text-xs"
+                                    :data-testid="`undelivered-${message.id}`"
+                                >
+                                    <CircleAlertIcon
+                                        class="size-3.5 shrink-0"
+                                    />
+                                    {{ $t('Not delivered') }}
+                                </p>
+                            </Message>
                         </ConversationContent>
 
                         <ConversationScrollButton />
@@ -286,7 +364,12 @@ function handleSubmit(message: PromptInputMessage) {
                                 />
                             </PromptInputBody>
                             <PromptInputFooter>
-                                <PromptInputTools />
+                                <PromptInputTools>
+                                    <PromptInputSpeechButton
+                                        :aria-label="$t('Dictate a message')"
+                                        data-testid="chat-mic"
+                                    />
+                                </PromptInputTools>
                                 <PromptInputSubmit
                                     :status="status"
                                     data-testid="chat-submit"

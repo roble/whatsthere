@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
-import { MicIcon } from '@lucide/vue';
+import { MicIcon, SquareIcon } from '@lucide/vue';
+import { trans } from 'laravel-vue-i18n';
+import { toast } from 'vue-sonner';
 import { cn } from '@/lib/utils';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { usePromptInput } from './context';
@@ -83,32 +85,47 @@ onMounted(() => {
         const sr = new SpeechRecognition();
         sr.continuous = true;
         sr.interimResults = true;
-        sr.lang = 'en-US';
+        sr.lang = document.documentElement.lang || 'en-US';
 
-        sr.onstart = () => (isListening.value = true);
+        // Whatever was already typed when dictation started. Results are
+        // appended to this rather than to the live value, because the whole
+        // utterance is rewritten on every event.
+        // ponytail: typing while dictating gets overwritten on the next
+        // result; track the caret instead if that turns out to matter.
+        let baseText = '';
+
+        sr.onstart = () => {
+            isListening.value = true;
+            baseText = textInput.value;
+        };
         sr.onend = () => (isListening.value = false);
 
+        /**
+         * Continuous mode accumulates every result of the session, so the full
+         * utterance is rebuilt each time. Interim results are included on
+         * purpose: they are what makes words appear while you speak, instead of
+         * the box staying empty until the provider finalises a segment.
+         */
         sr.onresult = (event: SpeechRecognitionEvent) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const result = event.results[i];
-                if (result.isFinal) {
-                    finalTranscript += result[0]?.transcript ?? '';
-                }
+            let transcript = '';
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0]?.transcript ?? '';
             }
 
-            if (finalTranscript) {
-                const newValue =
-                    textInput.value +
-                    (textInput.value ? ' ' : '') +
-                    finalTranscript;
-                setTextInput(newValue);
-            }
+            setTextInput(
+                baseText + (baseText && transcript ? ' ' : '') + transcript,
+            );
         };
 
         sr.onerror = (event: SpeechRecognitionErrorEvent) => {
-            console.error('Speech recognition error:', event.error);
             isListening.value = false;
+
+            // Stopping on purpose reports as 'aborted'; that is not a failure.
+            if (event.error !== 'aborted') {
+                toast.error(trans('Dictation failed'), {
+                    description: event.error,
+                });
+            }
         };
 
         recognition.value = sr;
@@ -132,16 +149,19 @@ function toggleListening() {
 <template>
     <PromptInputButton
         :disabled="!recognition"
+        :aria-pressed="isListening"
         :class="
             cn(
                 'relative transition-all duration-200',
-                isListening && 'bg-accent text-accent-foreground animate-pulse',
+                isListening &&
+                    'bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground dark:hover:bg-destructive animate-pulse',
                 props.class,
             )
         "
         v-bind="props"
         @click="toggleListening"
     >
-        <MicIcon class="size-4" />
+        <SquareIcon v-if="isListening" class="size-4 fill-current" />
+        <MicIcon v-else class="size-4" />
     </PromptInputButton>
 </template>

@@ -1,8 +1,8 @@
 {
     "$schema": "https://json.schemastore.org/package.json",
     "private": true,
-    "name": "saucebase",
-    "description": "A complete saas boilerplace powered with Vue, Filament, InertiaJS, and more",
+    "name": "whatsthere",
+    "description": "An AI chat about houses, locations, and what is nearby. Built on the Saucebase starter kit.",
     "type": "module",
     "scripts": {
         "build": "vite build && vite build --ssr",

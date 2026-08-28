@@ -376,7 +376,10 @@ class NavigationTest extends TestCase
 
         $grouped = $this->navigation->treeGrouped();
 
-        $this->assertArrayHasKey('main', $grouped);
+        // The core file registers public/landing navigation only. Everything in
+        // the application sidebar now comes from modules -- chat contributes the
+        // 'main' group, settings the 'user' and 'settings' groups.
+        $this->assertArrayHasKey('landing', $grouped);
     }
 
     public function test_load_discovers_modules_via_registry(): void

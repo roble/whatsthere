@@ -1,5 +1,7 @@
-// import { registerIcon } from '@/lib/navigation';
-// import IconExample from '~icons/lucide/example';
+import ChatSessions from '@modules/chat/resources/js/components/ChatSessions.vue';
+import { registerGlobalComponent } from '@/lib/globalComponents';
+import { registerIcon } from '@/lib/navigation';
+import IconMessageCircle from '~icons/lucide/message-circle';
 
 import '@modules/chat/resources/css/style.css';
 
@@ -8,10 +10,11 @@ import '@modules/chat/resources/css/style.css';
  * Called during app initialization before mounting
  */
 export function setup() {
-    console.debug('Chat module loaded');
+    // Session list and the new-chat shortcut, hung in the global sidebar.
+    registerGlobalComponent('sidebar-content', ChatSessions);
 
-    // Register icons for navigation items defined in routes/navigation.php
-    // registerIcon('chat', IconExample);
+    // Icon for navigation items defined in routes/navigation.php
+    registerIcon('chat', IconMessageCircle);
 }
 
 /**

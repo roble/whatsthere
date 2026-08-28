@@ -33,6 +33,22 @@ export default defineConfigWithVueTs(
         rules: {
             'vue/multi-word-component-names': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
+
+            // `const { size, variant: _, ...rest } = props` omits keys from the
+            // rest object. The named bindings are meant to be unused -- that is
+            // the whole point of writing them.
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                { ignoreRestSiblings: true },
+            ],
+
+            // `interface Props extends /* @vue-ignore */ Other {}` is how an SFC
+            // inherits another component's props. It has no members by design;
+            // collapsing it to a type alias breaks defineProps resolution.
+            '@typescript-eslint/no-empty-object-type': [
+                'error',
+                { allowInterfaces: 'with-single-extends' },
+            ],
         },
     },
     prettier,

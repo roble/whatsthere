@@ -42,17 +42,3 @@ Navigation::add('Profile', fn () => route('settings.profile'), function (Section
         'order' => 20,
     ]);
 });
-
-// Secondary navigation - Settings
-Navigation::add('Settings', fn () => route('settings.index'), function (Section $section) {
-    $section->attributes([
-        'group' => 'secondary',
-        'slug' => 'settings',
-        'icon' => 'settings',
-        'order' => 10,
-        'badge' => [
-            'content' => '1',
-            'variant' => 'destructive',
-        ],
-    ]);
-});

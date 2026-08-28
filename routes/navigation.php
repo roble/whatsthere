@@ -14,61 +14,6 @@ use Illuminate\Support\Facades\Auth;
 |
 */
 
-Navigation::add('Welcome', fn () => route('dashboard'), function (Section $section) {
-    $section->attributes([
-        'group' => 'main',
-        'slug' => 'dashboard',
-        'icon' => 'dashboard',
-        'order' => 0,
-    ]);
-});
-
-Navigation::add(
-    'Star us on Github',
-    'https://github.com/saucebase-dev/saucebase',
-    function (Section $section) {
-        $section->attributes([
-            'group' => 'secondary',
-            'slug' => 'github',
-            'icon' => 'github',
-            'external' => true,
-            'newPage' => true,
-            'order' => 0,
-        ]);
-    }
-);
-
-Navigation::add(
-    'Documentation',
-    'https://saucebase-dev.github.io/docs/',
-    function (Section $section) {
-        $section->attributes([
-            'group' => 'secondary',
-            'slug' => 'documentation',
-            'icon' => 'documentation',
-            'external' => true,
-            'newPage' => true,
-            'order' => 0,
-        ]);
-    }
-);
-
-Navigation::add(
-    'Discord',
-    'https://discord.gg/hCajBky39t',
-    function (Section $section) {
-        $section->attributes([
-            'group' => 'secondary',
-            'slug' => 'discord',
-            'icon' => 'discord',
-            'external' => true,
-            'newPage' => true,
-            'order' => 5,
-            'class' => 'bg-[#5865F2]/10 text-[#5865F2] hover:bg-[#5865F2]/20 hover:text-[#5865F2]/80 dark:hover:text-[#5865F2]',
-        ]);
-    }
-);
-
 Navigation::add(
     'Discord',
     'https://discord.gg/hCajBky39t',

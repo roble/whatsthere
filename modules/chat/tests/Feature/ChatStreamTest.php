@@ -3,7 +3,9 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Ai\Ai;
+use Laravel\Ai\Models\Conversation;
 use Modules\Chat\Ai\ChatAgent;
 use Tests\TestCase;
 
@@ -101,19 +103,117 @@ class ChatStreamTest extends TestCase
             ->assertSessionHasErrors('message');
     }
 
-    public function test_the_endpoint_ignores_a_client_supplied_conversation_id(): void
+    public function test_guests_cannot_open_a_conversation(): void
+    {
+        $this->get(route('chat.show', 'anything'))->assertRedirect(route('login'));
+    }
+
+    public function test_a_new_chat_reports_its_conversation_id(): void
     {
         Ai::fakeAgent(ChatAgent::class, ['Reply.']);
 
         $user = $this->createUser();
 
-        $this->actingAs($user)->post(route('chat.stream'), [
-            'message' => 'Hello',
-            'conversation_id' => 'not-my-conversation',
-        ])->streamedContent();
+        $response = $this->actingAs($user)
+            ->post(route('chat.stream'), ['message' => 'First message']);
 
-        $this->assertDatabaseMissing('agent_conversations', [
-            'id' => 'not-my-conversation',
+        $response->assertOk();
+
+        // The browser has no other way to learn the id of a chat it just
+        // started, and needs it to move onto /chat/{id}.
+        $id = $response->headers->get('X-Conversation-Id');
+
+        $this->assertNotNull($id);
+        $this->assertDatabaseHas('agent_conversations', [
+            'id' => $id,
+            'participant_type' => $user->getMorphClass(),
+            'participant_id' => $user->getKey(),
+            'title' => 'First message',
+        ]);
+    }
+
+    public function test_an_existing_conversation_restores_its_history(): void
+    {
+        Ai::fakeAgent(ChatAgent::class, ['Stored reply.']);
+
+        $user = $this->createUser();
+
+        $response = $this->actingAs($user)
+            ->post(route('chat.stream'), ['message' => 'Remember this']);
+        $response->streamedContent();
+
+        $id = $response->headers->get('X-Conversation-Id');
+
+        $this->actingAs($user)
+            ->get(route('chat.show', $id))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Chat::Index', false)
+                ->where('conversationId', $id)
+                ->has('initialMessages', 2)
+            );
+    }
+
+    public function test_a_user_cannot_open_another_users_conversation(): void
+    {
+        $conversation = $this->conversationFor($this->createUser());
+
+        $this->actingAs($this->createUser())
+            ->get(route('chat.show', $conversation->id))
+            ->assertNotFound();
+    }
+
+    public function test_a_user_cannot_stream_into_another_users_conversation(): void
+    {
+        Ai::fakeAgent(ChatAgent::class, ['Reply.']);
+
+        $conversation = $this->conversationFor($this->createUser());
+
+        $this->actingAs($this->createUser())->post(route('chat.stream'), [
+            'message' => 'Hello',
+            'conversation_id' => $conversation->id,
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('agent_conversation_messages', [
+            'conversation_id' => $conversation->id,
+        ]);
+    }
+
+    public function test_streaming_into_an_unknown_conversation_is_rejected(): void
+    {
+        Ai::fakeAgent(ChatAgent::class, ['Reply.']);
+
+        $this->actingAs($this->createUser())->post(route('chat.stream'), [
+            'message' => 'Hello',
+            'conversation_id' => 'not-a-conversation',
+        ])->assertNotFound();
+    }
+
+    public function test_the_session_list_only_contains_your_own_conversations(): void
+    {
+        $user = $this->createUser();
+
+        $this->conversationFor($user, 'Mine');
+        $this->conversationFor($this->createUser(), 'Theirs');
+
+        $this->actingAs($user)
+            ->get(route('chat.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('chat.sessions', 1)
+                ->where('chat.sessions.0.title', 'Mine')
+            );
+    }
+
+    /**
+     * Create a conversation owned by the given user.
+     */
+    protected function conversationFor(object $user, string $title = 'A chat'): Conversation
+    {
+        return Conversation::create([
+            'id' => (string) Str::uuid(),
+            'participant_type' => $user->getMorphClass(),
+            'participant_id' => $user->getKey(),
+            'title' => $title,
         ]);
     }
 }

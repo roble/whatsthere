@@ -48,6 +48,7 @@ const brandIsClaimed = hasGlobalComponent('sidebar-brand');
 
         <SidebarContent data-sidebar="content">
             <NavGroup :items="items" />
+            <GlobalComponents position="sidebar-content" />
             <NavGroup :items="secondaryItems" class="mt-auto" />
         </SidebarContent>
 

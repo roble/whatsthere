@@ -6,10 +6,11 @@
 
 The `chat` module serves a real chat interface — [ai-elements-vue](https://www.ai-elements-vue.com/)
 components on the front, `laravel/ai` streaming from Gemini on the back, with messages persisted to
-the existing `agent_conversations` table as **one conversation per user**.
+the existing `agent_conversations` table as **many conversations per user**, listed in the global
+sidebar.
 
 Done means: a signed-in user opens `/chat`, types, watches a reply stream in, reloads the page, and
-their history is still there. It is a **generic assistant** — it knows nothing about houses,
+their history is still there — and can start new sessions and switch between them from the sidebar. It is a **generic assistant** — it knows nothing about houses,
 locations, or what's nearby. That is the next map, not this one.
 
 ## Notes
@@ -75,8 +76,8 @@ default local-markdown tracker.
   basename-flattening trap entirely.
 - [The wire contract between the chat page and Laravel](tickets/05-wire-contract.md): **Vercel UI
   message stream protocol** via `usingVercelDataProtocol()`, with `@ai-sdk/vue`'s `Chat` on the
-  client. Decided on the *next* map's needs — tool calling for house data comes free. `POST
-  /chat/messages` behind `web` + `auth`; the request carries **no conversation id** (`continue()` has
+  client. Decided on the _next_ map's needs — tool calling for house data comes free. `POST
+/chat/messages` behind `web` + `auth`; the request carries **no conversation id** (`continue()` has
   no ownership check), so the server resolves it from the authenticated user.
 - [What does the chat page look like?](tickets/06-prototype-chat-page.md): **Built and verified live
   against Gemini** — send, stream, reload, history restored, both themes. Split layout with a
@@ -84,6 +85,18 @@ default local-markdown tracker.
   a persistent 503 on `gemini-3.7-flash` (pinned to `gemini-3.5-flash-lite`), an invalid
   `calc()` missing spaces that meant the height never applied, and broken streaming auto-scroll
   (now driven by the page, since `vue-stick-to-bottom` never arms its own stick).
+
+- **Sessions: list, create, navigate** (no ticket — scoped and built directly, superseding the
+  earlier "one conversation per user" boundary): sessions live in the **global** `AppSidebar` via a new
+  `sidebar-content` slot in `globalComponents.ts`, so they show on every page. `/chat` is a blank
+  session; `/chat/{id}` opens one. The conversation row is created **up front** in `stream()` rather
+  than mid-stream by `RememberConversation`, because the id must be known before the first byte —
+  it comes back as an `X-Conversation-Id` header and the page does `history.replaceState`. That
+  trade costs the package's LLM-generated title, so titles are the truncated opening message.
+  Collapsed, the sidebar keeps only New chat and a history icon that re-expands it.
+
+    **The guard is load-bearing**: `continue()` performs no ownership check, and the id now arrives
+    from the client, so `ownedConversation()` is the single gate every id-accepting path goes through.
 
 ## Not yet specified
 
@@ -97,8 +110,19 @@ default local-markdown tracker.
   path too. Still open: provider errors, rate limits, aborted streams, and very long replies.
   Mid-stream errors arrive as an SSE frame on an already-committed HTTP 200, and an aborted stream
   persists nothing for that turn.
+- **Session titles.** Currently the truncated first message. `laravel/ai` can generate a 3-5 word
+  title with the cheapest model, but only when it creates the conversation itself, which the id
+  handshake rules out. A queued retitle job after the first exchange would recover it.
 - **The right-hand pane.** Deliberately empty for now. What goes in it is the obvious next
   conversation, and it is where map-and-location context would naturally land.
+
+- **Spoken replies and audio attachments.** Voice _input_ is done: the mic uses the browser's
+  `SpeechRecognition` API and never touches the server, so it needed no protocol change. The two
+  remaining directions are unspecified by choice. Gemini implements both `AudioProvider` (TTS) and
+  `TranscriptionProvider` (STT) in `laravel/ai`, but `config/ai.php` points `default_for_audio` and
+  `default_for_transcription` at `openai`, which has no key here -- either would need that flipped to
+  `gemini`. Browser `speechSynthesis` is the free alternative for spoken replies. Revisit once the
+  house/location features show whether audio is part of the product.
 
 ## Out of scope
 
@@ -106,10 +130,10 @@ Ruled beyond this map's destination. These do not graduate; they return only as 
 
 - **House, location, and nearby knowledge** — the actual product. The whole point of deferring it is
   that the second map will be far better informed for having a working pipe to reason about.
-- **Multi-conversation UI** — thread lists, switching, deleting. Persistence here is deliberately one
-  conversation per user.
+- **Renaming and deleting sessions** — the session list is read-only apart from New chat. Both need a
+  route with the same ownership guard, and delete needs redirect handling for the open session.
 - **Geolocation capture** — asking the browser for coordinates, storing them, or acting on them.
-- **Tool calling / RAG / vector search** — how the assistant would ever *look something up*.
+- **Tool calling / RAG / vector search** — how the assistant would ever _look something up_.
 - **Queue + websocket streaming transport.** `laravel/ai` supports `queue()` / `broadcast()` natively
   and a queue worker is already running in Docker, but no websocket server exists in this stack
   (no Reverb, Pusher, or Soketi anywhere in `docker-compose.yml`, `composer.json`, `package.json`, or

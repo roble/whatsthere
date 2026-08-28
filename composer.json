@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "saucebase/saucebase",
+    "name": "whatsthere/whatsthere",
     "type": "project",
-    "description": "A complete modular Laravel foundation for building SaaS applications.",
+    "description": "An AI chat that answers questions about houses, locations, and what is nearby. Built on the Saucebase modular Laravel starter kit.",
     "license": "MIT",
     "require": {
         "php": "^8.4",
@@ -156,10 +156,10 @@
         }
     ],
     "keywords": [
-        "laravel starter kit",
-        "laravel boilerplate",
-        "saas starter kit",
-        "saas boilerplate"
+        "laravel",
+        "ai chat",
+        "inertia",
+        "vue"
     ],
     "repositories": [
         {

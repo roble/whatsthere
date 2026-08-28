@@ -1,20 +1,25 @@
-## Saucebase
+## Whatsthere
 
-Saucebase is a modular Laravel SaaS starter kit. Treat the implementation and
-manifests as authoritative; do not infer dependency versions or tool settings
-from prose.
+Whatsthere is a Laravel application **built on** the Saucebase modular starter
+kit. Saucebase supplies the module system and the `auth`, `settings`, and
+`breadcrumbs` modules; everything else here is application code. This is a
+starting point, not a vendored dependency: inherited code that no longer suits
+the application is fair game to change.
+
+Treat the implementation and manifests as authoritative; do not infer dependency
+versions or tool settings from prose.
 
 ### Sources of Truth
 
 - Backend dependencies and constraints: `composer.json`
+- Frontend dependencies: `package.json`
 - Static-analysis configuration: `phpstan.neon`
-- Vue stack: `stubs/saucebase/stack/vue/package.json`
-- React stack: `stubs/saucebase/stack/react/package.json`
-- Module behavior: `app/Providers/ModuleServiceProvider.php`,
-  `module-loader.js`, and the recipe stubs
+- Module behavior: `app/Providers/ModuleServiceProvider.php` and `module-loader.js`
 
-The root `package.json` is framework-neutral before stack selection. Do not use
-it alone to determine the supported Vue or React dependencies.
+This project is **Vue only**. The starter kit also ships a React tree and a
+stack-selection step; neither exists here, so there is no second implementation
+to mirror frontend changes into and no `stubs/saucebase/stack/*` manifests to
+consult. The root `package.json` is the real frontend source of truth.
 
 ### Module Conventions
 
@@ -34,21 +39,20 @@ Use lowercase module identifiers in frontend checks such as
 
 ### Frontend Conventions
 
-Saucebase supports both Vue and React. Apply shared frontend infrastructure
-changes to both implementations.
-
-In contributor mode, edit the real sources under `resources/js/vue/` and
-`resources/js/react/`. Do not edit generated root entry-point passthroughs or
-generated TypeScript declarations.
-
 All components must support light and dark themes. Use stable `data-testid`
 attributes for E2E selectors; never select translated text, labels, or role
 names. Item-specific selectors use `{action}-${item.id}`.
 
 ### Verification
 
-Run the smallest relevant checks from `CONTRIBUTING.md`. Run module PHPUnit
-tests with a 2048 MB PHP memory limit.
+Run the smallest relevant checks:
+
+- PHP: `php artisan test --compact`, plus `vendor/bin/pint --dirty` before finishing
+- Frontend: `npm run lint` and `npx prettier --check`
+- Run module PHPUnit tests with a 2048 MB PHP memory limit
+
+`CONTRIBUTING.md` is still the upstream Saucebase contributor guide. It describes
+a stack-selection workflow and source layout that do not apply to this repository.
 
 Update these source guidelines when a durable project convention changes, then
 regenerate agent instructions with `composer boost:update`. Never edit the
