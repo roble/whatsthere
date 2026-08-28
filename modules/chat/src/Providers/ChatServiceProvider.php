@@ -6,6 +6,7 @@ use App\Providers\ModuleServiceProvider;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Laravel\Ai\Models\Conversation;
+use Modules\Chat\Jobs\GenerateConversationTitle;
 
 class ChatServiceProvider extends ModuleServiceProvider
 {
@@ -22,6 +23,10 @@ class ChatServiceProvider extends ModuleServiceProvider
      */
     protected function shareInertiaData(): void
     {
+        // The page schedules a refresh after these counts so a newly generated
+        // title appears without polling. Shared so the list is not duplicated.
+        Inertia::share('chat.retitle_at', GenerateConversationTitle::RETITLE_AT);
+
         Inertia::share('chat.sessions', function (): array {
             $user = Auth::user();
 
@@ -34,11 +39,7 @@ class ChatServiceProvider extends ModuleServiceProvider
                 ->where('participant_id', Conversation::participantKey($user))
                 ->latest('updated_at')
                 ->get(['id', 'title'])
-                ->map(fn (Conversation $conversation): array => [
-                    'id' => $conversation->id,
-                    'title' => $conversation->title,
-                ])
-                ->all();
+                ->toArray();
         });
     }
 }

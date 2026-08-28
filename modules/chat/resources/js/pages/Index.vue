@@ -40,7 +40,10 @@ import {
     ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { useWebMcpTools } from '@/webmcp';
+import { chatTools } from '@modules/chat/resources/js/webmcp/chatTools';
 import { Chat } from '@ai-sdk/vue';
+import { router, usePage } from '@inertiajs/vue3';
 import { CircleAlertIcon } from '@lucide/vue';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
@@ -105,7 +108,17 @@ async function guardedFetch(
 
     if (id && id !== conversationId.value) {
         conversationId.value = id;
-        window.history.replaceState({}, '', route('chat.show', id));
+
+        // One partial visit moves the URL and refreshes the shared sidebar
+        // props together, keeping Inertia's page.url honest. `only` keeps
+        // initialMessages out of the response, which is what stops the reset
+        // watcher wiping the chat that is mid-stream.
+        router.visit(route('chat.show', id), {
+            replace: true,
+            preserveState: true,
+            preserveScroll: true,
+            only: ['chat'],
+        });
     }
 
     return response;
@@ -248,6 +261,63 @@ watch(
     },
 );
 
+const page = usePage<{
+    chat?: {
+        sessions: { id: string; title: string }[];
+        retitle_at?: number[];
+    };
+}>();
+
+const sessions = computed(() => page.props.chat?.sessions ?? []);
+
+const currentTitle = computed(
+    () =>
+        sessions.value.find((session) => session.id === conversationId.value)
+            ?.title ?? null,
+);
+
+let retitleTimer: ReturnType<typeof setTimeout> | undefined;
+
+function refreshSessions() {
+    router.reload({ only: ['chat'] });
+}
+
+/**
+ * The title is rewritten by a queued job, so the browser is never told. Rather
+ * than poll, refresh once a reply lands and again a few seconds after a
+ * milestone, which is the only moment the title can have changed.
+ */
+function scheduleSessionRefresh() {
+    refreshSessions();
+
+    const userMessages = messages.value.filter(
+        (message) => message.role === 'user',
+    ).length;
+
+    if (page.props.chat?.retitle_at?.includes(userMessages)) {
+        clearTimeout(retitleTimer);
+        retitleTimer = setTimeout(refreshSessions, 5000);
+    }
+}
+
+watch(status, (next, previous) => {
+    if (previous === 'streaming' && next === 'ready') {
+        scheduleSessionRefresh();
+    }
+});
+
+onBeforeUnmount(() => clearTimeout(retitleTimer));
+
+// A constant array: every execute reads live state when called, so the browser
+// never re-registers just because a session was added or a message arrived.
+useWebMcpTools(
+    chatTools({
+        chat,
+        sessions: () => sessions.value,
+        currentConversationId: () => conversationId.value,
+    }),
+);
+
 function goToLogin() {
     window.location.href = route('login');
 }
@@ -262,7 +332,10 @@ function handleSubmit(message: PromptInputMessage) {
 </script>
 
 <template>
-    <AppLayout :title="$t(title)" :breadcrumbs="[{ title: $t(title) }]">
+    <AppLayout
+        :title="currentTitle ?? $t(title)"
+        :breadcrumbs="[{ title: currentTitle ?? $t('New chat') }]"
+    >
         <div
             class="flex h-[calc(100svh_-_3.5rem_-_6px)] flex-col md:h-[calc(100svh_-_4.5rem_-_6px)]"
             data-testid="chat-page"

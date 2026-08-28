@@ -3,10 +3,13 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Ai\Ai;
 use Laravel\Ai\Models\Conversation;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Ai\ConversationTitleAgent;
+use Modules\Chat\Jobs\GenerateConversationTitle;
 use Tests\TestCase;
 
 class ChatStreamTest extends TestCase
@@ -132,6 +135,137 @@ class ChatStreamTest extends TestCase
         ]);
     }
 
+    public function test_title_generation_is_queued_after_the_third_user_message(): void
+    {
+        Queue::fake([GenerateConversationTitle::class]);
+        Ai::fakeAgent(ChatAgent::class, ['First reply.', 'Second reply.', 'Third reply.', 'Fourth reply.']);
+
+        $user = $this->createUser();
+        $conversationId = $this->sendMessages($user, [
+            'First message',
+            'Second message',
+        ]);
+
+        Queue::assertNotPushed(GenerateConversationTitle::class);
+
+        $this->sendMessages($user, ['Third message'], $conversationId);
+
+        Queue::assertPushed(
+            GenerateConversationTitle::class,
+            fn (GenerateConversationTitle $job): bool => $job->conversationId === $conversationId,
+        );
+
+        $this->sendMessages($user, ['Fourth message'], $conversationId);
+
+        // Four is not a milestone, so no second job.
+        Queue::assertPushed(GenerateConversationTitle::class, 1);
+    }
+
+    public function test_the_title_is_regenerated_at_later_milestones(): void
+    {
+        Queue::fake([GenerateConversationTitle::class]);
+        Ai::fakeAgent(ChatAgent::class, array_fill(0, 12, 'Reply.'));
+
+        $user = $this->createUser();
+        $conversationId = $this->sendMessages($user, ['Message 1', 'Message 2', 'Message 3']);
+
+        for ($i = 4; $i <= 10; $i++) {
+            $this->sendMessages($user, ["Message {$i}"], $conversationId);
+        }
+
+        // Milestones 3 and 10 both fire, and carry distinct unique ids so the
+        // first does not suppress the second.
+        Queue::assertPushed(GenerateConversationTitle::class, 2);
+        Queue::assertPushed(
+            GenerateConversationTitle::class,
+            fn (GenerateConversationTitle $job): bool => $job->atMessageCount === 10
+                && $job->uniqueId() === $conversationId.':10',
+        );
+    }
+
+    public function test_renaming_a_conversation_does_not_reorder_the_sidebar(): void
+    {
+        // Without this the sync queue runs the job inline on the third message,
+        // consuming the single faked title before the assertion below.
+        Queue::fake([GenerateConversationTitle::class]);
+        Ai::fakeAgent(ChatAgent::class, ['Reply one.', 'Reply two.', 'Reply three.']);
+        Ai::fakeAgent(ConversationTitleAgent::class, ['A better title']);
+
+        $user = $this->createUser();
+        $conversationId = $this->sendMessages($user, ['One', 'Two', 'Three']);
+
+        $before = Conversation::query()->findOrFail($conversationId)->getAttribute('updated_at');
+
+        $this->travel(10)->minutes();
+        (new GenerateConversationTitle($conversationId))->handle(new ConversationTitleAgent);
+
+        $conversation = Conversation::query()->findOrFail($conversationId);
+
+        $this->assertSame('A better title', $conversation->getAttribute('title'));
+        $this->assertEquals(
+            $before,
+            $conversation->getAttribute('updated_at'),
+            'Renaming must not touch updated_at, which orders the session list.',
+        );
+    }
+
+    public function test_a_user_can_read_one_of_their_conversations_as_json(): void
+    {
+        Ai::fakeAgent(ChatAgent::class, ['Stored reply.']);
+
+        $user = $this->createUser();
+        $conversationId = $this->sendMessages($user, ['Remember this']);
+
+        $response = $this->actingAs($user)->getJson(route('chat.messages', $conversationId));
+
+        $response->assertOk();
+        $response->assertJsonPath('id', $conversationId);
+        $response->assertJsonPath('messages.0.role', 'user');
+        $response->assertJsonPath('messages.0.text', 'Remember this');
+        $response->assertJsonCount(2, 'messages');
+    }
+
+    public function test_a_user_cannot_read_another_users_conversation_as_json(): void
+    {
+        $conversation = $this->conversationFor($this->createUser());
+
+        $this->actingAs($this->createUser())
+            ->getJson(route('chat.messages', $conversation->id))
+            ->assertNotFound();
+    }
+
+    public function test_guests_cannot_read_a_conversation_as_json(): void
+    {
+        $this->get(route('chat.messages', 'anything'))->assertRedirect(route('login'));
+    }
+
+    public function test_the_title_agent_renames_the_conversation_from_its_first_three_turns(): void
+    {
+        Queue::fake([GenerateConversationTitle::class]);
+        Ai::fakeAgent(ChatAgent::class, ['First reply.', 'Second reply.', 'Third reply.']);
+        Ai::fakeAgent(ConversationTitleAgent::class, ['Laravel queue monitoring']);
+
+        $user = $this->createUser();
+        $conversationId = $this->sendMessages($user, [
+            'How do I monitor my Laravel queues?',
+            'I am using the database driver.',
+            'Can I see failed jobs too?',
+        ]);
+
+        (new GenerateConversationTitle($conversationId))->handle(new ConversationTitleAgent);
+
+        $this->assertSame(
+            'Laravel queue monitoring',
+            Conversation::query()->findOrFail($conversationId)->getAttribute('title'),
+        );
+
+        Ai::assertAgentWasPrompted(
+            ConversationTitleAgent::class,
+            fn ($prompt): bool => $prompt->contains('How do I monitor my Laravel queues?')
+                && $prompt->contains('Can I see failed jobs too?'),
+        );
+    }
+
     public function test_an_existing_conversation_restores_its_history(): void
     {
         Ai::fakeAgent(ChatAgent::class, ['Stored reply.']);
@@ -215,5 +349,26 @@ class ChatStreamTest extends TestCase
             'participant_id' => $user->getKey(),
             'title' => $title,
         ]);
+    }
+
+    /**
+     * @param  list<string>  $messages
+     */
+    protected function sendMessages(object $user, array $messages, ?string $conversationId = null): string
+    {
+        foreach ($messages as $message) {
+            $response = $this->actingAs($user)->post(route('chat.stream'), array_filter([
+                'message' => $message,
+                'conversation_id' => $conversationId,
+            ]));
+
+            $response->assertOk();
+            $response->streamedContent();
+            $conversationId ??= $response->headers->get('X-Conversation-Id');
+        }
+
+        $this->assertNotNull($conversationId);
+
+        return $conversationId;
     }
 }

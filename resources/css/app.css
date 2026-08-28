@@ -14,6 +14,23 @@
 @layer base {
     html {
         scroll-behavior: smooth;
+
+        /*
+         * Themed scrollbars, once. Browsers default to a light-on-white
+         * scrollbar regardless of the page, which reads as a white gutter in
+         * dark mode. scrollbar-color inherits, so declaring it here covers
+         * every scroll container -- the sidebar, the chat thread, dialogs --
+         * instead of each one opting in and the next one forgetting.
+         */
+        scrollbar-color: var(--border) transparent;
+    }
+
+    /*
+     * scrollbar-color inherits; scrollbar-width does not, so it has to be set
+     * on the elements that actually scroll rather than just on html.
+     */
+    * {
+        scrollbar-width: thin;
     }
     * {
         @apply border-border outline-ring/50;

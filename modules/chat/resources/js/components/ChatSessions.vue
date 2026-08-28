@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
     SidebarGroup,
     SidebarGroupContent,
     SidebarGroupLabel,
@@ -10,6 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import TypewriterText from './TypewriterText.vue';
+import IconChevronRight from '~icons/lucide/chevron-right';
 import IconHistory from '~icons/lucide/history';
 import IconSquarePen from '~icons/lucide/square-pen';
 
@@ -66,28 +73,57 @@ const currentId = computed(
         </SidebarGroupContent>
     </SidebarGroup>
 
-    <SidebarGroup
+    <!--
+        The only scroll container in the sidebar. `min-h-0` on both this and the
+        content is what lets it take the leftover height and scroll internally,
+        instead of growing and pushing the user menu off the bottom.
+    -->
+    <Collapsible
         v-if="sessions.length"
-        class="group-data-[collapsible=icon]:hidden"
-        data-testid="chat-sessions"
+        default-open
+        class="group/chats flex min-h-0 flex-1 flex-col"
     >
-        <SidebarGroupLabel>{{ $t('Chats') }}</SidebarGroupLabel>
-        <SidebarGroupContent>
-            <SidebarMenu>
-                <SidebarMenuItem v-for="session in sessions" :key="session.id">
-                    <SidebarMenuButton
-                        as-child
-                        :is-active="session.id === currentId"
-                    >
-                        <Link
-                            :href="route('chat.show', session.id)"
-                            :data-testid="`session-${session.id}`"
+        <SidebarGroup
+            class="flex min-h-0 flex-1 flex-col group-data-[collapsible=icon]:hidden"
+            data-testid="chat-sessions"
+        >
+            <SidebarGroupLabel as-child>
+                <CollapsibleTrigger
+                    class="hover:bg-sidebar-accent flex w-full items-center rounded-md"
+                    data-testid="chat-sessions-toggle"
+                >
+                    {{ $t('Chats') }}
+                    <IconChevronRight
+                        class="ml-auto transition-transform duration-200 group-data-[state=open]/chats:rotate-90"
+                    />
+                </CollapsibleTrigger>
+            </SidebarGroupLabel>
+
+            <CollapsibleContent
+                class="min-h-0 flex-1 overflow-y-auto"
+                data-testid="chat-sessions-list"
+            >
+                <SidebarGroupContent>
+                    <SidebarMenu>
+                        <SidebarMenuItem
+                            v-for="session in sessions"
+                            :key="session.id"
                         >
-                            <span>{{ session.title }}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-        </SidebarGroupContent>
-    </SidebarGroup>
+                            <SidebarMenuButton
+                                as-child
+                                :is-active="session.id === currentId"
+                            >
+                                <Link
+                                    :href="route('chat.show', session.id)"
+                                    :data-testid="`session-${session.id}`"
+                                >
+                                    <TypewriterText :text="session.title" />
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </CollapsibleContent>
+        </SidebarGroup>
+    </Collapsible>
 </template>

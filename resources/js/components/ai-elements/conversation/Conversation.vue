@@ -34,14 +34,7 @@ const delegatedProps = reactiveOmit(props, 'class');
 <template>
     <StickToBottom
         v-bind="delegatedProps"
-        :class="
-            cn(
-                'relative flex-1 overflow-y-hidden',
-                '[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent]',
-                '[&>div]:[scrollbar-width:thin] [&>div]:[scrollbar-color:var(--border)_transparent]',
-                props.class,
-            )
-        "
+        :class="cn('relative flex-1 overflow-y-hidden', props.class)"
         role="log"
     >
         <slot />

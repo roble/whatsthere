@@ -2,6 +2,7 @@
 
 namespace Modules\Chat\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -9,6 +10,7 @@ use Inertia\Response;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Models\Conversation;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Jobs\GenerateConversationTitle;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ChatController
@@ -51,6 +53,33 @@ class ChatController
     }
 
     /**
+     * Return one conversation's transcript as JSON.
+     *
+     * Lets an agent read a saved conversation without navigating the visitor
+     * away from the one they are looking at.
+     */
+    public function messages(Request $request, string $conversation): JsonResponse
+    {
+        $owned = $this->ownedConversation($request, $conversation);
+
+        $messages = (new ChatAgent)
+            ->continue($owned->id, $request->user())
+            ->messages();
+
+        return response()->json([
+            'id' => $owned->id,
+            'title' => $owned->getAttribute('title'),
+            'messages' => collect($messages)
+                ->values()
+                ->map(fn (Message $message): array => [
+                    'role' => $message->role->value,
+                    'text' => $message->content ?? '',
+                ])
+                ->all(),
+        ]);
+    }
+
+    /**
      * Stream an assistant reply, creating the conversation on first use.
      */
     public function stream(Request $request): SymfonyResponse
@@ -64,9 +93,23 @@ class ChatController
             ? $this->ownedConversation($request, $validated['conversation_id'])
             : $this->startConversation($request, $validated['message']);
 
-        $response = (new ChatAgent)
+        $stream = (new ChatAgent)
             ->continue($conversation->id, $request->user())
             ->stream($validated['message'])
+            ->then(function () use ($conversation): void {
+                $userMessageCount = $conversation->messages()
+                    ->where('role', 'user')
+                    ->count();
+
+                if (in_array($userMessageCount, GenerateConversationTitle::RETITLE_AT, true)) {
+                    GenerateConversationTitle::dispatch(
+                        $conversation->id,
+                        $userMessageCount,
+                    );
+                }
+            });
+
+        $response = $stream
             ->usingVercelDataProtocol()
             ->toResponse($request);
 

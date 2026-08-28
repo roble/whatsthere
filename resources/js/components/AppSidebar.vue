@@ -15,6 +15,7 @@ import AppBrand from './AppBrand.vue';
 import GlobalComponents from './GlobalComponents.vue';
 import NavGroup from './ui/navigation/NavGroup.vue';
 import NavUser from './ui/navigation/NavUser.vue';
+import WebMcpMenuItem from './WebMcpMenuItem.vue';
 
 withDefaults(defineProps<SidebarProps>(), {
     collapsible: 'icon',
@@ -53,6 +54,7 @@ const brandIsClaimed = hasGlobalComponent('sidebar-brand');
         </SidebarContent>
 
         <SidebarFooter>
+            <WebMcpMenuItem />
             <NavUser v-if="user" :user="user" :items="userItems" />
         </SidebarFooter>
     </Sidebar>

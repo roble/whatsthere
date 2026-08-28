@@ -98,6 +98,19 @@ default local-markdown tracker.
     **The guard is load-bearing**: `continue()` performs no ownership check, and the id now arrives
     from the client, so `ownedConversation()` is the single gate every id-accepting path goes through.
 
+- **Agent-accessible via WebMCP** (no ticket — built directly): the page registers tools through
+  `document.modelContext.registerTool`, so a visitor's own AI agent can list sessions, read one by id,
+  switch between them, start a new one, and put a question to the assistant. Registration lives in
+  core (`resources/js/webmcp/`) with a per-component `useWebMcpTools()` composable, so a future module
+  contributes domain tools by returning one more array. Three API facts, established by probing Chrome
+  151 rather than from the spec: `registerTool` takes an `AbortSignal`, aborting is the **only**
+  unregister, and re-registering a name is silently ignored.
+
+- **Conversation titles** (no ticket): a conversation is first named after its opening message, then
+  re-titled by `ConversationTitleAgent` at the milestones in `GenerateConversationTitle::RETITLE_AT`.
+  Requires a running queue worker, and **the worker must be restarted whenever a job class changes** —
+  a stale worker cannot autoload it and fails with `__PHP_Incomplete_Class`.
+
 ## Not yet specified
 
 - **Playwright e2e coverage.** The build has seven passing PHPUnit feature tests, but
@@ -110,9 +123,10 @@ default local-markdown tracker.
   path too. Still open: provider errors, rate limits, aborted streams, and very long replies.
   Mid-stream errors arrive as an SSE frame on an already-committed HTTP 200, and an aborted stream
   persists nothing for that turn.
-- **Session titles.** Currently the truncated first message. `laravel/ai` can generate a 3-5 word
-  title with the cheapest model, but only when it creates the conversation itself, which the id
-  handshake rules out. A queued retitle job after the first exchange would recover it.
+- **Guest access.** Every route is behind `auth`, so a signed-out visitor sees a login form and their
+  agent discovers no WebMCP tools at all. This is the blocker for any public demo.
+- **`read_current_chat` returns an unbounded transcript**, which floods an agent's context on a long
+  conversation. Wants a `limit` with an explicit `offset`.
 - **The right-hand pane.** Deliberately empty for now. What goes in it is the obvious next
   conversation, and it is where map-and-location context would naturally land.
 

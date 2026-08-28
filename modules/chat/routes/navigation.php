@@ -1,8 +1,5 @@
 <?php
 
-use App\Facades\Navigation;
-use App\Navigation\Section;
-
 /*
 |--------------------------------------------------------------------------
 | Chat Module Navigation
@@ -13,14 +10,5 @@ use App\Navigation\Section;
 |
 */
 
-Navigation::add('Chat', fn () => route('chat.index'), function (Section $section) {
-    $section->attributes([
-        'group' => 'main',
-        'slug' => 'chat',
-        'icon' => 'chat',
-        'badge' => [
-            'content' => 'New',
-            'variant' => 'info',
-        ],
-    ]);
-});
+// Chat is the landing page, so it needs no sidebar entry of its own: the
+// session list and the New chat button in the footer are the whole navigation.
