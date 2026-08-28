@@ -26,6 +26,15 @@ import {
     ReasoningTrigger,
 } from '@/components/ai-elements/reasoning';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
@@ -58,10 +67,40 @@ function csrfToken(): string {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
+const sessionExpired = ref(false);
+
+/**
+ * fetch follows redirects transparently, so an expired session arrives here as
+ * a 200 containing the login page rather than an error -- the SDK would parse
+ * it as an empty stream and show nothing. A real stream is never redirected,
+ * so that flag distinguishes the two. Covers both expiry routes: the auth
+ * redirect to login, and a 419 CSRF failure, which the exception handler turns
+ * into a redirect back to this page.
+ */
+async function guardedFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit,
+): Promise<Response> {
+    const response = await fetch(input, init);
+
+    if (
+        response.redirected ||
+        response.status === 401 ||
+        response.status === 419
+    ) {
+        sessionExpired.value = true;
+
+        throw new Error('Session expired.');
+    }
+
+    return response;
+}
+
 const chat = new Chat({
     messages: props.initialMessages,
     transport: new DefaultChatTransport({
         api: route('chat.stream'),
+        fetch: guardedFetch,
         // The server derives the conversation from the authenticated user, so
         // only the new message is sent -- never a conversation id.
         prepareSendMessagesRequest: ({ messages }) => ({
@@ -149,6 +188,10 @@ watch(
             .join(''),
     pinToBottom,
 );
+
+function goToLogin() {
+    window.location.href = route('login');
+}
 
 function handleSubmit(message: PromptInputMessage) {
     if (!message.text.trim()) {
@@ -268,5 +311,30 @@ function handleSubmit(message: PromptInputMessage) {
                 </ResizablePanel>
             </ResizablePanelGroup>
         </div>
+
+        <AlertDialog :open="sessionExpired">
+            <AlertDialogContent data-testid="session-expired-dialog">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {{ $t('Your session has expired') }}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {{
+                            $t(
+                                'You were signed out, so your message was not sent. Sign in again to continue the conversation.',
+                            )
+                        }}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction
+                        data-testid="session-expired-login"
+                        @click="goToLogin"
+                    >
+                        {{ $t('Go to login') }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </AppLayout>
 </template>

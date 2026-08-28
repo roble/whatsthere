@@ -18,8 +18,15 @@ class ChatStreamTest extends TestCase
 
     public function test_guests_cannot_stream_a_message(): void
     {
-        $this->post(route('chat.stream'), ['message' => 'Hello'])
-            ->assertRedirect(route('login'));
+        $response = $this->post(route('chat.stream'), ['message' => 'Hello']);
+
+        $response->assertRedirect(route('login'));
+
+        // The chat page detects an expired session via `response.redirected`,
+        // because fetch follows the redirect and would otherwise hand the SDK a
+        // 200 containing the login page. If this ever became a 200 or a JSON
+        // error, that detection would silently stop working.
+        $this->assertTrue($response->isRedirect());
     }
 
     public function test_chat_page_renders_for_an_authenticated_user(): void

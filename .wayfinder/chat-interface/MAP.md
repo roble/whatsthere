@@ -91,10 +91,12 @@ default local-markdown tracker.
   `modules/chat/tests/e2e/index.spec.ts` still targets the old scaffold page. The `data-testid`
   hooks are in place (`chat-page`, `chat-pane`, `context-pane`, `chat-input`, `chat-submit`,
   `chat-messages`, `chat-empty`), so this is specifiable, just not yet written.
-- **Failure and edge-case UX.** Provider errors, rate limits, aborted streams, empty input, very long
-  replies. Partly sharpened: mid-stream errors arrive as an SSE frame on an already-committed HTTP
-  200, and an aborted stream persists nothing for that turn. What the user should *see* in each case
-  is still open, and depends on the prototype.
+- **Failure and edge-case UX.** Session expiry is now handled: the page detects it via
+  `response.redirected` (fetch follows the auth redirect, so an expired session otherwise arrives as
+  a 200 containing the login page and shows nothing) and raises an `AlertDialog`. Covers the 419 CSRF
+  path too. Still open: provider errors, rate limits, aborted streams, and very long replies.
+  Mid-stream errors arrive as an SSE frame on an already-committed HTTP 200, and an aborted stream
+  persists nothing for that turn.
 - **The right-hand pane.** Deliberately empty for now. What goes in it is the obvious next
   conversation, and it is where map-and-location context would naturally land.
 
