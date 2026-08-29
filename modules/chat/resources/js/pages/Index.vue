@@ -149,7 +149,7 @@ const messages = computed(() => chat.messages);
 const status = computed(() => chat.status);
 
 /** The chat pane's floor, and the width it opens at. */
-const CHAT_MIN_SIZE = 30;
+const CHAT_MIN_SIZE = 25;
 
 /** Where the map sits until a conversation gives it somewhere better. */
 const defaultView: MapView = {

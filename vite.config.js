@@ -30,6 +30,12 @@ async function createConfig() {
             __SAUCEBASE_DEV__: JSON.stringify(frontendJson.dev === true),
             __SAUCEBASE_FRAMEWORK__: JSON.stringify(frontendJson.framework ?? 'vue'),
         },
+        worker: {
+            // MapLibre spawns its worker with { type: 'module' }, so the bundle
+            // Vite emits for it has to be an ES module rather than the default
+            // IIFE, or the browser refuses to start it.
+            format: 'es',
+        },
         optimizeDeps: {
             // MapLibre ships its renderer as a web worker, which the dep
             // optimizer rewrites into a path it then cannot resolve. Excluding

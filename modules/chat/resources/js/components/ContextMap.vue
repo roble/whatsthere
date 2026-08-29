@@ -29,7 +29,7 @@ import {
     setWorkerUrl,
     type LngLatBoundsLike,
 } from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 
@@ -40,9 +40,13 @@ import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
  * production build is whichever chunk it was bundled into -- here
  * `assets/chat/Index-*.js`, so it asks for `assets/chat/maplibre-gl-worker.mjs`
  * and gets a 404. Nothing throws: the map draws its background, controls and
- * markers, and simply never renders a tile. Importing the worker with `?url`
- * makes Vite emit it as a real asset and hand back the hashed path it can be
- * fetched from.
+ * markers, and simply never renders a tile.
+ *
+ * `?worker&url` rather than `?url`: the shipped worker is not self-contained,
+ * it imports `./maplibre-gl-shared.mjs`. Copying the one file as an asset
+ * leaves that import dangling and the worker dies on load, just as silently.
+ * `?worker` makes Vite bundle the worker with its dependencies and hand back
+ * the URL of the result.
  */
 setWorkerUrl(maplibreWorkerUrl);
 
