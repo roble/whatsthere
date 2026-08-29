@@ -51,6 +51,23 @@ Run the smallest relevant checks:
 - Frontend: `npm run lint` and `npx prettier --check`
 - Run module PHPUnit tests with a 2048 MB PHP memory limit
 
+### Feature Workflow
+
+Build the feature first, then verify the behaviour by hand with Chrome DevTools
+against the running app. Do not write tests alongside code that is still
+changing shape.
+
+Once the feature works and the user agrees it is finished, **ask** whether to
+add and run e2e tests covering the main scenarios. Write them only after that
+agreement, never speculatively.
+
+Delete tests that no longer describe how a feature works. A stale test is worse
+than no test.
+
+E2E setup runs `migrate` and idempotent seeders against the same database the
+dev app serves. It must never run `migrate:fresh`, which would destroy the
+team's working data.
+
 `CONTRIBUTING.md` is still the upstream Saucebase contributor guide. It describes
 a stack-selection workflow and source layout that do not apply to this repository.
 

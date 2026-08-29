@@ -30,6 +30,12 @@ async function createConfig() {
             __SAUCEBASE_DEV__: JSON.stringify(frontendJson.dev === true),
             __SAUCEBASE_FRAMEWORK__: JSON.stringify(frontendJson.framework ?? 'vue'),
         },
+        optimizeDeps: {
+            // MapLibre ships its renderer as a web worker, which the dep
+            // optimizer rewrites into a path it then cannot resolve. Excluding
+            // it keeps the worker as the package shipped it.
+            exclude: ['maplibre-gl'],
+        },
         server: hasSSL
             ? {
                   https: {

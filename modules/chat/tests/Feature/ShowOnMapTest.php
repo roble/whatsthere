@@ -1,0 +1,108 @@
+<?php
+
+namespace Modules\Chat\Tests\Feature;
+
+use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Tools\Request;
+use Modules\Chat\Ai\Tools\ShowOnMap;
+use Tests\TestCase;
+
+class ShowOnMapTest extends TestCase
+{
+    public function test_it_returns_a_view_the_map_embed_can_use(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '38.8355446',
+                'lon' => '-9.3522371',
+                'display_name' => 'Sintra, Lisboa, Portugal',
+                // Nominatim orders this south, north, west, east.
+                'boundingbox' => ['38.7385819', '38.9324322', '-9.5005266', '-9.2206908'],
+            ]]),
+        ]);
+
+        $result = (new ShowOnMap)->handle(new Request(['place' => 'Sintra, Portugal']));
+
+        $this->assertSame([
+            'label' => 'Sintra, Lisboa, Portugal',
+            // The map wants west, south, east, north. Getting this order
+            // wrong still renders a map, just of the wrong part of the world.
+            'bbox' => ['-9.5005266', '38.7385819', '-9.2206908', '38.9324322'],
+            'marker' => ['38.8355446', '-9.3522371'],
+        ], json_decode((string) $result, true));
+    }
+
+    public function test_it_only_geocodes_a_repeated_place_once(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '51.7057370',
+                'lon' => '-8.5229823',
+                'display_name' => 'Kinsale, County Cork, Ireland',
+                'boundingbox' => ['51.6927609', '51.7157766', '-8.5424283', '-8.4897026'],
+            ]]),
+        ]);
+
+        $first = (new ShowOnMap)->handle(new Request(['place' => 'Kinsale']));
+        $second = (new ShowOnMap)->handle(new Request(['place' => 'kinsale']));
+
+        $this->assertSame((string) $first, (string) $second);
+        Http::assertSentCount(1);
+    }
+
+    public function test_a_failed_lookup_is_not_cached(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::sequence()
+                ->push('', 503)
+                ->push([[
+                    'lat' => '51.7057370',
+                    'lon' => '-8.5229823',
+                    'display_name' => 'Kinsale, County Cork, Ireland',
+                    'boundingbox' => ['51.6927609', '51.7157766', '-8.5424283', '-8.4897026'],
+                ]]),
+        ]);
+
+        $failed = (string) (new ShowOnMap)->handle(new Request(['place' => 'Kinsale']));
+        $retried = (string) (new ShowOnMap)->handle(new Request(['place' => 'Kinsale']));
+
+        $this->assertStringContainsString('Could not find', $failed);
+        $this->assertSame(
+            'Kinsale, County Cork, Ireland',
+            json_decode($retried, true)['label'],
+        );
+    }
+
+    public function test_it_leaves_the_map_alone_when_the_place_is_not_found(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([]),
+        ]);
+
+        $result = (string) (new ShowOnMap)->handle(new Request(['place' => 'Nowhere at all']));
+
+        $this->assertStringContainsString('Could not find', $result);
+        $this->assertNull(json_decode($result, true));
+    }
+
+    public function test_it_leaves_the_map_alone_when_geocoding_fails(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response('', 503),
+        ]);
+
+        $result = (string) (new ShowOnMap)->handle(new Request(['place' => 'Kinsale']));
+
+        $this->assertStringContainsString('Could not find', $result);
+    }
+
+    public function test_it_does_not_call_the_geocoder_without_a_place(): void
+    {
+        Http::fake();
+
+        $result = (string) (new ShowOnMap)->handle(new Request(['place' => '  ']));
+
+        $this->assertStringContainsString('No place was given', $result);
+        Http::assertNothingSent();
+    }
+}

@@ -1,0 +1,133 @@
+name: 'Setup Laravel Application'
+description: 'Setup PHP, Node, dependencies, database, and build assets for Laravel testing'
+
+inputs:
+    php-version:
+        description: 'PHP version to use'
+        required: false
+        default: '8.4'
+    node-version:
+        description: 'Node.js version to use'
+        required: false
+        default: '22'
+    working-directory:
+        description: 'Directory where the Laravel app lives'
+        required: false
+        default: '.'
+    skip-composer:
+        description: 'Skip composer install (module workflow handles its own composer install)'
+        required: false
+        default: 'false'
+    skip-php:
+        description: 'Skip PHP setup (caller already set up PHP before this action)'
+        required: false
+        default: 'false'
+    skip-build:
+        description: 'Skip Node.js setup, npm install, and frontend build (barefoot PHP-only runs)'
+        required: false
+        default: 'false'
+    framework:
+        description: 'Frontend framework to activate (vue or react). Skipped when empty.'
+        required: false
+        default: ''
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Setup PHP
+          if: inputs.skip-php != 'true'
+          uses: shivammathur/setup-php@v2
+          with:
+              php-version: ${{ inputs.php-version }}
+              extensions: pdo, pdo_sqlite, mbstring, zip, pcntl, intl, exif
+              coverage: none
+
+        - name: Setup Node.js
+          if: inputs.skip-build != 'true'
+          uses: actions/setup-node@v5
+          with:
+              node-version: ${{ inputs.node-version }}
+              cache: 'npm'
+              cache-dependency-path: ${{ inputs.working-directory }}/stubs/saucebase/stack/${{ inputs.framework != '' && inputs.framework || 'vue' }}/package-lock.json
+
+        - name: Copy .env
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              cp .env.example .env
+              echo "DB_CONNECTION=sqlite" >> .env
+              echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+              echo "LOG_CHANNEL=stderr" >> .env
+              echo "TELESCOPE_ENABLED=false" >> .env
+              echo "MAIL_MAILER=log" >> .env
+              echo "APP_URL=http://localhost:8000" >> .env
+
+        - name: Install PHP dependencies
+          if: inputs.skip-composer != 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+        - name: Select framework
+          if: inputs.framework != ''
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          # saucebase:stack was an in-app artisan command; the installer is now a
+          # standalone global CLI, so pull it and invoke its `stack` command instead.
+          #
+          # ── BUMP HERE ─────────────────────────────────────────────────────────
+          # Pinned to the installer's major so a bad publish can't redden CI.
+          # To move to a new major, change SAUCEBASE_INSTALLER_VERSION below.
+          # ──────────────────────────────────────────────────────────────────────
+          env:
+              SAUCEBASE_INSTALLER_VERSION: '^2'
+          run: |
+              composer global require "saucebase/installer:${SAUCEBASE_INSTALLER_VERSION}" --no-interaction
+              "$(composer global config bin-dir --absolute)/saucebase" stack ${{ inputs.framework }} --dev --no-skip-worktree --no-install
+
+        - name: Install Node dependencies
+          if: inputs.skip-build != 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: npm ci
+
+        - name: Directory Permissions
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: chmod -R 777 storage bootstrap/cache
+
+        - name: Create SQLite Database
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              mkdir -p database
+              touch database/database.sqlite
+
+        - name: Generate application key
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: php artisan key:generate
+
+        - name: Publish Filament assets
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: php artisan filament:assets
+
+        - name: Run migrations
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: php artisan migrate --force --seed
+
+        - name: Create stub Vite manifest
+          if: inputs.skip-build == 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              mkdir -p public/build
+              echo '{"resources/js/app.ts":{"file":"assets/app.js","src":"resources/js/app.ts","isEntry":true}}' > public/build/manifest.json
+
+        - name: Build frontend assets
+          if: inputs.skip-build != 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: npm run build

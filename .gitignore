@@ -72,6 +72,10 @@ public/vendor/livewire/
 lang/php_*.json
 /resources/js/types/generated.d.ts
 
+# Transient lps-* scratch files, unanchored so they are ignored wherever
+# they are written
+lps-*
+
 _ide_helper.php
 _ide_helper_models.php
 .phpstorm.meta.php

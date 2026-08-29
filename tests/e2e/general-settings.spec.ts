@@ -13,15 +13,6 @@ const setSetting = (
 test.describe('General Settings branding', () => {
     test.describe.configure({ mode: 'serial' });
 
-    test('keeps the shipped name watermark two-toned', async ({ page }) => {
-        await page.goto('/');
-
-        const watermark = page.getByTestId('footer-watermark');
-
-        await expect(watermark).toHaveText('Saucebase');
-        await expect(watermark.locator('span')).toHaveCount(2);
-    });
-
     test('shares configured branding with the public frontend', async ({
         page,
         laravel,

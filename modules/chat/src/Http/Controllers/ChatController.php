@@ -8,8 +8,11 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Messages\Message;
+use Laravel\Ai\Messages\ToolResultMessage;
 use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Responses\Data\ToolResult;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Jobs\GenerateConversationTitle;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -23,6 +26,7 @@ class ChatController
         return Inertia::render('Chat::Index', [
             'conversationId' => null,
             'initialMessages' => [],
+            'initialMapView' => null,
         ]);
     }
 
@@ -49,7 +53,29 @@ class ChatController
                     ],
                 ])
                 ->all(),
+            'initialMapView' => $this->lastMapView($messages),
         ]);
+    }
+
+    /**
+     * Find the place the map was last showing in this conversation.
+     *
+     * The transcript is rebuilt as plain text, so the tool call that moved the
+     * map is dropped on the way to the browser. Without this, reopening a
+     * conversation snaps the map back to its default while the messages beside
+     * it still discuss somewhere else.
+     *
+     * @param  iterable<Message>  $messages
+     * @return array<string, mixed>|null
+     */
+    protected function lastMapView(iterable $messages): ?array
+    {
+        return collect($messages)
+            ->filter(fn (Message $message): bool => $message instanceof ToolResultMessage)
+            ->flatMap(fn (ToolResultMessage $message): array => $message->toolResults->all())
+            ->filter(fn (ToolResult $result): bool => $result->name === ShowOnMap::NAME)
+            ->map(fn (ToolResult $result): mixed => json_decode((string) $result->result, true))
+            ->last(fn (mixed $view): bool => is_array($view) && isset($view['bbox']));
     }
 
     /**

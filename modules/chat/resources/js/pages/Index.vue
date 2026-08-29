@@ -41,6 +41,9 @@ import {
 } from '@/components/ui/resizable';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useWebMcpTools } from '@/webmcp';
+import ContextMap, {
+    type MapView,
+} from '@modules/chat/resources/js/components/ContextMap.vue';
 import { chatTools } from '@modules/chat/resources/js/webmcp/chatTools';
 import { Chat } from '@ai-sdk/vue';
 import { router, usePage } from '@inertiajs/vue3';
@@ -58,6 +61,7 @@ import {
 const props = defineProps<{
     conversationId: string | null;
     initialMessages: UIMessage[];
+    initialMapView: MapView | null;
 }>();
 
 // Tracked separately from the prop: a brand new chat learns its id from the
@@ -147,6 +151,62 @@ const chat = new Chat({
 
 const messages = computed(() => chat.messages);
 const status = computed(() => chat.status);
+
+/** Where the map sits until a conversation gives it somewhere better. */
+const defaultView: MapView = {
+    label: 'Cork',
+    bbox: ['-8.55', '51.87', '-8.40', '51.92'],
+};
+
+/**
+ * The tool returns plain text when it cannot place somewhere, so anything that
+ * is not a well-formed view means "leave the map alone".
+ */
+function toMapView(output: unknown): MapView | null {
+    try {
+        const parsed = JSON.parse(String(output));
+
+        return Array.isArray(parsed?.bbox) && parsed.bbox.length === 4
+            ? (parsed as MapView)
+            : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The newest successful show_on_map call wins, so the map holds its last known
+ * place while the visitor asks follow-ups that are not about anywhere.
+ */
+const mapView = computed<MapView>(() => {
+    for (const message of [...messages.value].reverse()) {
+        const parts = [...message.parts].reverse() as Array<{
+            type: string;
+            state?: string;
+            output?: unknown;
+        }>;
+
+        for (const part of parts) {
+            if (
+                part.type !== 'tool-show_on_map' ||
+                part.state !== 'output-available'
+            ) {
+                continue;
+            }
+
+            const view = toMapView(part.output);
+
+            if (view) {
+                return view;
+            }
+        }
+    }
+
+    // Nothing streamed this visit, so fall back to where the transcript left
+    // the map -- which is what reopening a saved conversation hits.
+    return props.initialMapView ?? defaultView;
+});
+
 const lastMessageId = computed(() => messages.value.at(-1)?.id);
 
 /**
@@ -514,11 +574,7 @@ function handleSubmit(message: PromptInputMessage) {
                     :min-size="20"
                     data-testid="context-pane"
                 >
-                    <div
-                        class="text-muted-foreground flex h-full items-center justify-center p-8 text-center text-sm"
-                    >
-                        {{ $t('Nothing here yet.') }}
-                    </div>
+                    <ContextMap :view="mapView" />
                 </ResizablePanel>
             </ResizablePanelGroup>
         </div>

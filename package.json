@@ -70,6 +70,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "laravel-vue-i18n": "^2.8.0",
+        "maplibre-gl": "^6.6.0",
         "motion-v": "^2.4.0",
         "nanoid": "^6.0.1",
         "reka-ui": "^2.10.4",
