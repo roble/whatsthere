@@ -19,7 +19,9 @@ import WebMcpMenuItem from './WebMcpMenuItem.vue';
 
 withDefaults(defineProps<SidebarProps>(), {
     collapsible: 'icon',
-    variant: 'inset',
+    // Not 'inset': that variant insets the content area and rounds its corners,
+    // which leaves the map unable to sit flush against the window edge.
+    variant: 'sidebar',
     class: 'bg-transparent',
 });
 

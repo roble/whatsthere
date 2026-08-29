@@ -22,13 +22,18 @@ import {
 import Separator from '@/components/ui/separator/Separator.vue';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { Loader2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import IconGithub from '~icons/simple-icons/github';
 import IconGoogle from '~icons/simple-icons/google';
 
 const title = 'Profile';
+
+type SocialiteProvider = {
+    name: string;
+    label: string;
+};
 
 const props = defineProps<{
     user: User & {
@@ -38,11 +43,10 @@ const props = defineProps<{
             provider_avatar_url?: string;
         }>;
     };
-    available_providers?: Array<{
-        name: string;
-        label: string;
-    }>;
+    available_providers?: SocialiteProvider[];
 }>();
+
+const page = usePage();
 
 const getInitials = (name: string) => {
     return name
@@ -126,11 +130,52 @@ const getProviderIcon = (providerName: string) => {
     return providerIcons[providerName.toLowerCase()];
 };
 
+const enabledProviders = computed<SocialiteProvider[]>(() => {
+    const auth = page.props.auth as {
+        socialite_providers?: SocialiteProvider[];
+    };
+
+    return auth.socialite_providers ?? [];
+});
+
+const enabledProviderNames = computed(
+    () => new Set(enabledProviders.value.map((provider) => provider.name)),
+);
+
+const isProviderEnabled = (providerName: string): boolean => {
+    return enabledProviderNames.value.has(providerName);
+};
+
+const socialiteProviders = computed<SocialiteProvider[]>(() => {
+    const configuredProviders = new Map(
+        (props.available_providers ?? []).map((provider) => [
+            provider.name,
+            provider,
+        ]),
+    );
+    const providers = new Map(
+        enabledProviders.value.map((provider) => [provider.name, provider]),
+    );
+
+    for (const account of props.user.social_accounts ?? []) {
+        if (!providers.has(account.provider)) {
+            providers.set(
+                account.provider,
+                configuredProviders.get(account.provider) ?? {
+                    name: account.provider,
+                    label: account.provider,
+                },
+            );
+        }
+    }
+
+    return [...providers.values()];
+});
+
 const hasSocialiteProviders = computed(() => {
     return (
         route().has('auth.socialite.redirect') &&
-        props.available_providers &&
-        props.available_providers.length > 0
+        socialiteProviders.value.length > 0
     );
 });
 </script>
@@ -232,9 +277,10 @@ const hasSocialiteProviders = computed(() => {
                 <CardContent>
                     <div class="space-y-4">
                         <div
-                            v-for="provider in available_providers"
+                            v-for="provider in socialiteProviders"
                             :key="provider.name"
                             class="flex items-center justify-between rounded-lg border p-4"
+                            :data-testid="`socialite-account-${provider.name}`"
                         >
                             <div class="flex items-center gap-4">
                                 <!-- Provider Icon -->
@@ -286,6 +332,7 @@ const hasSocialiteProviders = computed(() => {
                                     variant="destructive"
                                     size="sm"
                                     @click="initiateDisconnect(provider.name)"
+                                    :data-testid="`disconnect-socialite-${provider.name}`"
                                     :disabled="
                                         isDisconnecting === provider.name
                                     "
@@ -304,7 +351,7 @@ const hasSocialiteProviders = computed(() => {
 
                                 <!-- Connect Button (for not connected providers) -->
                                 <Button
-                                    v-else
+                                    v-else-if="isProviderEnabled(provider.name)"
                                     as="a"
                                     :href="
                                         route(
@@ -314,6 +361,7 @@ const hasSocialiteProviders = computed(() => {
                                     "
                                     variant="default"
                                     size="sm"
+                                    :data-testid="`connect-socialite-${provider.name}`"
                                 >
                                     {{ $t('Connect') }}
                                 </Button>
@@ -342,11 +390,16 @@ const hasSocialiteProviders = computed(() => {
                 <DialogFooter>
                     <Button
                         variant="outline"
+                        data-testid="cancel-socialite-disconnect"
                         @click="isDisconnectDialogOpen = false"
                     >
                         {{ $t('Cancel') }}
                     </Button>
-                    <Button variant="destructive" @click="confirmDisconnect">
+                    <Button
+                        variant="destructive"
+                        data-testid="confirm-socialite-disconnect"
+                        @click="confirmDisconnect"
+                    >
                         {{ $t('Disconnect') }}
                     </Button>
                 </DialogFooter>

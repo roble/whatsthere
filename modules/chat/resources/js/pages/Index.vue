@@ -39,6 +39,7 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import AppHeader from '@/components/AppHeader.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { csrfToken } from '@/lib/utils';
 import { useWebMcpTools } from '@/webmcp';
@@ -482,11 +483,11 @@ function handleSubmit(message: PromptInputMessage) {
     <AppLayout
         :title="currentTitle ?? $t(title)"
         :breadcrumbs="[{ title: currentTitle ?? $t('New chat') }]"
+        :header="false"
     >
-        <div
-            class="flex h-[calc(100svh_-_3.5rem_-_6px)] flex-col md:h-[calc(100svh_-_4.5rem_-_6px)]"
-            data-testid="chat-page"
-        >
+        <!-- Full viewport height: the header now sits inside the left column
+             rather than above both, so nothing is stacked on top of this. -->
+        <div class="flex h-svh flex-col" data-testid="chat-page">
             <ResizablePanelGroup
                 direction="horizontal"
                 auto-save-id="chat-split"
@@ -498,6 +499,13 @@ function handleSubmit(message: PromptInputMessage) {
                     class="flex flex-col"
                     data-testid="chat-pane"
                 >
+                    <AppHeader
+                        :title="currentTitle ?? $t(title)"
+                        :breadcrumbs="[
+                            { title: currentTitle ?? $t('New chat') },
+                        ]"
+                    />
+
                     <Conversation ref="conversation">
                         <ConversationContent data-testid="chat-messages">
                             <ConversationEmptyState
