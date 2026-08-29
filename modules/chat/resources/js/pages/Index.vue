@@ -148,6 +148,9 @@ const chat = new Chat({
 const messages = computed(() => chat.messages);
 const status = computed(() => chat.status);
 
+/** The chat pane's floor, and the width it opens at. */
+const CHAT_MIN_SIZE = 30;
+
 /** Where the map sits until a conversation gives it somewhere better. */
 const defaultView: MapView = {
     label: 'Cork',
@@ -482,9 +485,11 @@ function handleSubmit(message: PromptInputMessage) {
                 direction="horizontal"
                 auto-save-id="chat-split"
             >
+                <!-- Opens at its minimum so the map gets the room by default;
+                     the divider is there for anyone who wants more text. -->
                 <ResizablePanel
-                    :default-size="55"
-                    :min-size="30"
+                    :default-size="CHAT_MIN_SIZE"
+                    :min-size="CHAT_MIN_SIZE"
                     ref="pane"
                     class="flex flex-col"
                     data-testid="chat-pane"
@@ -607,7 +612,7 @@ function handleSubmit(message: PromptInputMessage) {
                 <ResizableHandle with-handle />
 
                 <ResizablePanel
-                    :default-size="45"
+                    :default-size="100 - CHAT_MIN_SIZE"
                     :min-size="20"
                     data-testid="context-pane"
                 >
