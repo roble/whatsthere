@@ -176,14 +176,12 @@ function isUndelivered(message: UIMessage): boolean {
 }
 
 /**
- * vue-stick-to-bottom only re-pins when its internal isAtBottom flag is already
- * true, and its resize path never sets that flag, so streaming replies do not
- * follow the bottom. Drive it ourselves, releasing as soon as the user scrolls
- * up and re-arming when they come back.
+ * The reply is deliberately not followed as it streams: yanking the viewport
+ * while someone is reading is worse than making them press the scroll button,
+ * which doubles as the progress indicator. Only opening a conversation jumps
+ * to the end, so you land on the latest message.
  */
 const pane = ref<{ $el?: HTMLElement } | HTMLElement | null>(null);
-const stick = ref(true);
-let scroller: HTMLElement | null = null;
 
 function findScroller(): HTMLElement | null {
     const value = pane.value;
@@ -200,23 +198,9 @@ function findScroller(): HTMLElement | null {
     );
 }
 
-function distanceFromBottom(element: HTMLElement): number {
-    return element.scrollHeight - element.scrollTop - element.clientHeight;
-}
-
-function onScroll() {
-    if (scroller) {
-        stick.value = distanceFromBottom(scroller) < 48;
-    }
-}
-
-function pinToBottom() {
-    if (!stick.value) {
-        return;
-    }
-
+function scrollToEnd() {
     nextTick(() => {
-        scroller ??= findScroller();
+        const scroller = findScroller();
 
         if (scroller) {
             scroller.scrollTop = scroller.scrollHeight;
@@ -224,26 +208,7 @@ function pinToBottom() {
     });
 }
 
-onMounted(() => {
-    scroller = findScroller();
-    scroller?.addEventListener('scroll', onScroll, { passive: true });
-    pinToBottom();
-});
-
-onBeforeUnmount(() => scroller?.removeEventListener('scroll', onScroll));
-
-// Fires on every streamed delta, not just on new messages.
-watch(
-    () =>
-        messages.value
-            .map((message) =>
-                message.parts
-                    .map((part) => ('text' in part ? part.text : ''))
-                    .join(''),
-            )
-            .join(''),
-    pinToBottom,
-);
+onMounted(scrollToEnd);
 
 /**
  * Inertia reuses this component when moving between sessions, so the Chat
@@ -256,8 +221,7 @@ watch(
     (initial) => {
         conversationId.value = props.conversationId;
         chat.messages = initial;
-        stick.value = true;
-        pinToBottom();
+        scrollToEnd();
     },
 );
 
@@ -422,7 +386,7 @@ function handleSubmit(message: PromptInputMessage) {
                             </Message>
                         </ConversationContent>
 
-                        <ConversationScrollButton />
+                        <ConversationScrollButton :status="status" />
                     </Conversation>
 
                     <div class="p-4">
@@ -433,20 +397,22 @@ function handleSubmit(message: PromptInputMessage) {
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     :placeholder="$t('Send a message...')"
+                                    rows="1"
+                                    class="min-h-0"
                                     data-testid="chat-input"
                                 />
                             </PromptInputBody>
-                            <PromptInputFooter>
+                            <PromptInputFooter align="inline-end">
                                 <PromptInputTools>
                                     <PromptInputSpeechButton
                                         :aria-label="$t('Dictate a message')"
                                         data-testid="chat-mic"
                                     />
+                                    <PromptInputSubmit
+                                        :status="status"
+                                        data-testid="chat-submit"
+                                    />
                                 </PromptInputTools>
-                                <PromptInputSubmit
-                                    :status="status"
-                                    data-testid="chat-submit"
-                                />
                             </PromptInputFooter>
                         </PromptInput>
                     </div>

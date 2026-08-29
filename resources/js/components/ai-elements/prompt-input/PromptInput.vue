@@ -144,7 +144,7 @@ function onSubmit(e: Event) {
             @dragover.prevent="handleDragOver"
             @drop.prevent.stop="handleDrop"
         >
-            <InputGroup class="overflow-hidden">
+            <InputGroup class="items-end overflow-hidden has-[textarea]:h-auto">
                 <slot />
             </InputGroup>
         </form>

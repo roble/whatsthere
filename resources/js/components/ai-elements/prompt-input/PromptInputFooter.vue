@@ -5,21 +5,20 @@ import { cn } from '@/lib/utils';
 
 type PromptInputFooterProps = InstanceType<typeof InputGroupAddon>['$props'];
 
-interface Props extends /* @vue-ignore */ Omit<
-    PromptInputFooterProps,
-    'align'
-> {
+interface Props extends /* @vue-ignore */ PromptInputFooterProps {
     class?: HTMLAttributes['class'];
+    // 'inline-end' puts the tools on the same row as the textarea, which keeps
+    // a composer with no left-hand tools one line tall.
+    align?: PromptInputFooterProps['align'];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { align: 'block-end' });
 </script>
 
 <template>
     <InputGroupAddon
-        align="block-end"
+        :align="props.align"
         :class="cn('justify-between gap-1', props.class)"
-        v-bind="props"
     >
         <slot />
     </InputGroupAddon>
