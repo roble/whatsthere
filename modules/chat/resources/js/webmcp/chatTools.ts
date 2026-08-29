@@ -1,6 +1,8 @@
+import { csrfToken } from '@/lib/utils';
 import type { WebMcpTool } from '@/webmcp';
 import type { Chat } from '@ai-sdk/vue';
 import { router } from '@inertiajs/vue3';
+import type { MapView } from '@modules/chat/resources/js/map';
 import type { UIMessage } from 'ai';
 
 interface ChatSession {
@@ -13,6 +15,8 @@ interface ChatToolDeps {
     /** Read at call time so the tool list itself never has to be rebuilt. */
     sessions: () => ChatSession[];
     currentConversationId: () => string | null;
+    mapLocation: () => Record<string, unknown> | null;
+    showOnMap: (view: MapView) => void;
 }
 
 /** Flatten a UI message's parts down to the text an agent actually wants. */
@@ -38,6 +42,8 @@ export function chatTools({
     chat,
     sessions,
     currentConversationId,
+    mapLocation,
+    showOnMap,
 }: ChatToolDeps): WebMcpTool[] {
     return [
         {
@@ -124,6 +130,62 @@ export function chatTools({
                 router.visit(route('chat.show', id));
 
                 return `Opened session ${id}.`;
+            },
+        },
+        {
+            name: 'read_map_location',
+            description:
+                'Where the map beside the conversation is currently pointing. Returns the place name, centre coordinates, zoom, and whether the visitor has dragged it away from that place.',
+            inputSchema: { type: 'object', properties: {} },
+            readOnly: true,
+            requiresAuth: true,
+            execute: () =>
+                mapLocation() ?? 'The map has not reported a position yet.',
+        },
+        {
+            name: 'show_place_on_map',
+            description:
+                'Move the map beside the conversation to a place, without sending a message to the assistant. Use for "show me X" when the visitor wants to look rather than talk.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    place: {
+                        type: 'string',
+                        description:
+                            'The place to show, as specific as possible, e.g. "Douglas, Cork, Ireland".',
+                    },
+                },
+                required: ['place'],
+            },
+            requiresAuth: true,
+            execute: async (args) => {
+                const place = String(args.place ?? '').trim();
+
+                if (!place) {
+                    return 'A non-empty place is required.';
+                }
+
+                // Same-origin, so this reuses the geocoder and cache the
+                // assistant's own show_on_map tool goes through.
+                const response = await fetch(route('chat.place'), {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-XSRF-TOKEN': csrfToken(),
+                    },
+                    body: JSON.stringify({ place }),
+                });
+
+                if (!response.ok) {
+                    return `Could not place ${place} on the map (HTTP ${response.status}). Try a more specific name.`;
+                }
+
+                const view = (await response.json()) as MapView;
+
+                showOnMap(view);
+
+                return `The map is now showing ${view.label}.`;
             },
         },
         {

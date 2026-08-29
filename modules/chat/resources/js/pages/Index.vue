@@ -40,10 +40,14 @@ import {
     ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { csrfToken } from '@/lib/utils';
 import { useWebMcpTools } from '@/webmcp';
-import ContextMap, {
+import ContextMap from '@modules/chat/resources/js/components/ContextMap.vue';
+import {
+    viewKey,
     type MapView,
-} from '@modules/chat/resources/js/components/ContextMap.vue';
+    type MapViewport,
+} from '@modules/chat/resources/js/map';
 import { chatTools } from '@modules/chat/resources/js/webmcp/chatTools';
 import { Chat } from '@ai-sdk/vue';
 import { router, usePage } from '@inertiajs/vue3';
@@ -69,16 +73,6 @@ const props = defineProps<{
 const conversationId = ref(props.conversationId);
 
 const title = 'Chat';
-
-/**
- * Laravel's VerifyCsrfToken accepts the encrypted XSRF-TOKEN cookie as a header.
- * Inertia v3 dropped axios, so nothing sets this for us.
- */
-function csrfToken(): string {
-    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
-
-    return match ? decodeURIComponent(match[1]) : '';
-}
 
 const sessionExpired = ref(false);
 
@@ -143,6 +137,7 @@ const chat = new Chat({
                     .map((part) => part.text)
                     .join('\n'),
                 conversation_id: conversationId.value,
+                map: mapContext.value,
             },
             headers: { 'X-XSRF-TOKEN': csrfToken() },
         }),
@@ -178,7 +173,7 @@ function toMapView(output: unknown): MapView | null {
  * The newest successful show_on_map call wins, so the map holds its last known
  * place while the visitor asks follow-ups that are not about anywhere.
  */
-const mapView = computed<MapView>(() => {
+const conversationView = computed<MapView>(() => {
     for (const message of [...messages.value].reverse()) {
         const parts = [...message.parts].reverse() as Array<{
             type: string;
@@ -205,6 +200,46 @@ const mapView = computed<MapView>(() => {
     // Nothing streamed this visit, so fall back to where the transcript left
     // the map -- which is what reopening a saved conversation hits.
     return props.initialMapView ?? defaultView;
+});
+
+/**
+ * A place set straight from a WebMCP tool, bypassing the assistant.
+ *
+ * It outranks the conversation until the assistant moves the map itself, at
+ * which point the newer instruction wins and this is dropped.
+ */
+const overrideView = ref<MapView | null>(null);
+
+// Keyed, not by reference: the view is rebuilt from the transcript on every
+// token, so watching the object would clear the override immediately.
+watch(
+    () => viewKey(conversationView.value),
+    () => {
+        overrideView.value = null;
+    },
+);
+
+const mapView = computed<MapView>(
+    () => overrideView.value ?? conversationView.value,
+);
+
+const viewport = ref<MapViewport | null>(null);
+
+/**
+ * The map position worth telling the assistant about.
+ *
+ * A conversation that has never mentioned a place is sitting on the default
+ * region, which nobody chose. Sending that would invite the assistant to
+ * answer about Cork when the visitor never brought it up.
+ */
+const mapContext = computed<MapViewport | null>(() => {
+    if (!viewport.value) {
+        return null;
+    }
+
+    return !viewport.value.moved && mapView.value === defaultView
+        ? null
+        : viewport.value;
 });
 
 const lastMessageId = computed(() => messages.value.at(-1)?.id);
@@ -413,6 +448,10 @@ useWebMcpTools(
         chat,
         sessions: () => sessions.value,
         currentConversationId: () => conversationId.value,
+        mapLocation: () => mapContext.value,
+        showOnMap: (view) => {
+            overrideView.value = view;
+        },
     }),
 );
 
@@ -574,7 +613,7 @@ function handleSubmit(message: PromptInputMessage) {
                     :min-size="20"
                     data-testid="context-pane"
                 >
-                    <ContextMap :view="mapView" />
+                    <ContextMap :view="mapView" @viewport="viewport = $event" />
                 </ResizablePanel>
             </ResizablePanelGroup>
         </div>

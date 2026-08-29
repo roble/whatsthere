@@ -11,6 +11,7 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Messages\ToolResultMessage;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Responses\Data\ToolResult;
+use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Jobs\GenerateConversationTitle;
@@ -79,6 +80,32 @@ class ChatController
     }
 
     /**
+     * Resolve a place name to a map view.
+     *
+     * Lets a visitor's own agent move the map without going through the
+     * assistant, reusing the same geocoder and cache the ShowOnMap tool uses so
+     * there is one place where a place name becomes coordinates.
+     */
+    public function place(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'place' => ['required', 'string', 'max:200'],
+        ]);
+
+        $result = (string) (new ShowOnMap)->handle(
+            new ToolRequest(['place' => $validated['place']])
+        );
+
+        $view = json_decode($result, true);
+
+        // The tool answers in prose when it cannot place somewhere, which is
+        // the same signal the assistant gets.
+        return is_array($view)
+            ? response()->json($view)
+            : response()->json(['message' => $result], 404);
+    }
+
+    /**
      * Return one conversation's transcript as JSON.
      *
      * Lets an agent read a saved conversation without navigating the visitor
@@ -113,13 +140,22 @@ class ChatController
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:4000'],
             'conversation_id' => ['nullable', 'string', 'max:36'],
+            // Where the visitor's map is pointing. It reaches the model, so it
+            // is bounded here rather than trusted as the browser sent it.
+            'map' => ['nullable', 'array'],
+            'map.label' => ['required_with:map', 'string', 'max:200'],
+            'map.center' => ['required_with:map', 'array', 'size:2'],
+            'map.center.0' => ['required_with:map', 'numeric', 'between:-90,90'],
+            'map.center.1' => ['required_with:map', 'numeric', 'between:-180,180'],
+            'map.zoom' => ['required_with:map', 'numeric', 'between:0,24'],
+            'map.moved' => ['required_with:map', 'boolean'],
         ]);
 
         $conversation = isset($validated['conversation_id'])
             ? $this->ownedConversation($request, $validated['conversation_id'])
             : $this->startConversation($request, $validated['message']);
 
-        $stream = (new ChatAgent)
+        $stream = (new ChatAgent($validated['map'] ?? null))
             ->continue($conversation->id, $request->user())
             ->stream($validated['message'])
             ->then(function () use ($conversation): void {

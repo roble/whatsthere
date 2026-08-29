@@ -14,6 +14,19 @@ export function setCookie(name: string, value: string, days = 365): void {
     document.cookie = `${name}=${value};path=/;max-age=${days * 24 * 60 * 60};SameSite=Lax`;
 }
 
+/**
+ * Read the CSRF token Laravel expects on non-GET requests.
+ *
+ * VerifyCsrfToken accepts the encrypted XSRF-TOKEN cookie as a header. Inertia
+ * v3 dropped axios, so nothing sets this for us and every hand-rolled fetch has
+ * to send it.
+ */
+export function csrfToken(): string {
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
 export const resolveModularPageComponent = (name: string) => {
     if (name.includes('::')) {
         const [moduleName, componentPath] = name.split('::', 2);
