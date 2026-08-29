@@ -9,13 +9,11 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { useSidebar } from '@/components/ui/sidebar';
-import { PageProps } from '@/types';
-import type { Navigation } from '@/types/navigation';
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import IconMenu from '~icons/lucide/menu';
 
-const page = usePage<PageProps<{ navigation: Navigation }>>();
+const page = usePage();
 const { isMobile } = useSidebar();
 
 // Show settings navigation

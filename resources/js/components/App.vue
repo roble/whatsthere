@@ -6,7 +6,7 @@ import { syncWebMcpTools, webMcpAuthenticated } from '@/webmcp';
 import { usePage } from '@inertiajs/vue3';
 import { watchEffect } from 'vue';
 
-const page = usePage<{ auth?: { user?: unknown } }>();
+const page = usePage();
 
 // Gated tools are withheld while signed out, and restored the moment a visit
 // brings a user back, without anything re-registering by hand.

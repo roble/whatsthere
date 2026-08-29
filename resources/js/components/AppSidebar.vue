@@ -6,8 +6,6 @@ import {
     SidebarFooter,
     SidebarHeader,
 } from '@/components/ui/sidebar/index';
-import type { User } from '@/types';
-import type { Navigation } from '@/types/navigation';
 import { hasGlobalComponent } from '@/lib/globalComponents';
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -25,7 +23,7 @@ withDefaults(defineProps<SidebarProps>(), {
     class: 'bg-transparent',
 });
 
-const page = usePage<{ navigation: Navigation; auth: { user: User } }>();
+const page = usePage();
 
 // Always show main navigation in main sidebar
 const items = computed(() => page.props.navigation?.main || []);

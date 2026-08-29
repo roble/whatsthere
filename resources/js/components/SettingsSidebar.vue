@@ -2,8 +2,6 @@
 import { NavGroup } from '@/components/ui/navigation';
 import type { SidebarProps } from '@/components/ui/sidebar';
 import { Sidebar, SidebarContent, useSidebar } from '@/components/ui/sidebar';
-import { PageProps } from '@/types';
-import type { Navigation } from '@/types/navigation';
 import { usePage } from '@inertiajs/vue3';
 import { computed, provide } from 'vue';
 import IconSettings from '~icons/lucide/settings';
@@ -14,7 +12,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
     class: '',
 });
 
-const page = usePage<PageProps<{ navigation: Navigation }>>();
+const page = usePage();
 const { isMobile } = useSidebar();
 
 // Show settings navigation

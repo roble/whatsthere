@@ -20,12 +20,9 @@ import IconChevronRight from '~icons/lucide/chevron-right';
 import IconHistory from '~icons/lucide/history';
 import IconSquarePen from '~icons/lucide/square-pen';
 
-interface ChatSession {
-    id: string;
-    title: string;
-}
-
-const page = usePage<{ chat?: { sessions: ChatSession[] } }>();
+// The shape now lives in the module's page-props declaration, so the sidebar
+// and the chat page read one definition instead of restating it.
+const page = usePage();
 const { toggleSidebar } = useSidebar();
 
 const sessions = computed(() => page.props.chat?.sessions ?? []);

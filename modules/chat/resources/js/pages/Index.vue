@@ -388,12 +388,7 @@ watch(
     },
 );
 
-const page = usePage<{
-    chat?: {
-        sessions: { id: string; title: string }[];
-        retitle_at?: number[];
-    };
-}>();
+const page = usePage();
 
 const sessions = computed(() => page.props.chat?.sessions ?? []);
 
