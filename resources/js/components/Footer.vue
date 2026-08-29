@@ -46,8 +46,7 @@ const settings = useSettings();
                 <div class="flex items-center gap-1">
                     <span>{{ $t('Crafted with') }}</span>
                     <IconHeart class="h-4 w-4 text-red-500" />
-                    <span>{{ $t('for developers') }}</span>
-                    <span>{{ $t('by :name', { name: 'Renan Roble' }) }}</span>
+                    <span>{{ $t('for humans') }}</span>
                 </div>
             </div>
         </div>

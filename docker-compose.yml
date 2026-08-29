@@ -13,9 +13,9 @@ services:
             - APP_ENV=${APP_ENV:-local}
             - APP_KEY=${APP_KEY}
             - APP_DEBUG=${APP_DEBUG:-true}
-            - DB_CONNECTION=${DB_CONNECTION:-mysql}
-            - DB_HOST=mysql
-            - DB_PORT=${DB_PORT:-3306}
+            - DB_CONNECTION=${DB_CONNECTION:-pgsql}
+            - DB_HOST=pgsql
+            - DB_PORT=${DB_PORT:-5432}
             - DB_DATABASE=${DB_DATABASE}
             - DB_USERNAME=${DB_USERNAME}
             - DB_PASSWORD=${DB_PASSWORD}
@@ -29,7 +29,7 @@ services:
             - XDEBUG_MODE=${XDEBUG_MODE:-debug}
             - XDEBUG_CONFIG=${XDEBUG_CONFIG:-client_host=host.docker.internal client_port=9003}
         depends_on:
-            mysql:
+            pgsql:
                 condition: service_healthy
             redis:
                 condition: service_healthy
@@ -49,34 +49,32 @@ services:
         networks:
             - saucebase
 
-    mysql:
-        image: 'mysql:8.0'
+    pgsql:
+        # PostGIS ships the spatial libraries but enables nothing: the database
+        # behaves as plain Postgres until someone runs CREATE EXTENSION postgis.
+        # Starting here means adding geometry later is one SQL statement rather
+        # than an image swap and a restart.
+        #
+        # imresamu rather than the official postgis/postgis, which publishes no
+        # arm64 manifest and so will not run on an Apple Silicon machine. This
+        # one is multi-arch, so the same tag serves laptops and an amd64 VPS.
+        image: 'imresamu/postgis:17-3.5'
         restart: unless-stopped
         ports:
-            - '${FORWARD_DB_PORT:-3306}:3306'
+            - '${FORWARD_DB_PORT:-5432}:5432'
         environment:
-            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_DATABASE: '${DB_DATABASE}'
-            MYSQL_USER: '${DB_USERNAME}'
-            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD}'
         volumes:
-            - 'saucebase-mysql:/var/lib/mysql'
+            - 'saucebase-postgres:/var/lib/postgresql/data'
         networks:
             - saucebase
         healthcheck:
             test:
-                [
-                    'CMD',
-                    'mysqladmin',
-                    'ping',
-                    '-h',
-                    'localhost',
-                    '-u',
-                    '${DB_USERNAME}',
-                    '-p${DB_PASSWORD}',
-                ]
+                ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}']
             interval: 2s
-            retries: 3
+            retries: 5
             timeout: 5s
 
     redis:
@@ -115,9 +113,9 @@ services:
             - APP_ENV=${APP_ENV:-local}
             - APP_KEY=${APP_KEY}
             - APP_DEBUG=${APP_DEBUG:-true}
-            - DB_CONNECTION=${DB_CONNECTION:-mysql}
-            - DB_HOST=mysql
-            - DB_PORT=${DB_PORT:-3306}
+            - DB_CONNECTION=${DB_CONNECTION:-pgsql}
+            - DB_HOST=pgsql
+            - DB_PORT=${DB_PORT:-5432}
             - DB_DATABASE=${DB_DATABASE}
             - DB_USERNAME=${DB_USERNAME}
             - DB_PASSWORD=${DB_PASSWORD}
@@ -129,7 +127,7 @@ services:
             - MAIL_HOST=${MAIL_HOST:-mailpit}
             - MAIL_PORT=${MAIL_PORT:-1025}
         depends_on:
-            mysql:
+            pgsql:
                 condition: service_healthy
             redis:
                 condition: service_healthy
@@ -140,7 +138,7 @@ networks:
         driver: bridge
 
 volumes:
-    saucebase-mysql:
+    saucebase-postgres:
         driver: local
     saucebase-redis:
         driver: local

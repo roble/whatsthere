@@ -13,6 +13,7 @@ you are looking at when you ask "what's here?".
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org)
 [![Inertia.js](https://img.shields.io/badge/Inertia.js-3.x-9553E9)](https://inertiajs.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.x-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
 [![MapLibre](https://img.shields.io/badge/MapLibre%20GL-6.x-295DAA)](https://maplibre.org)
 
 </div>
@@ -47,6 +48,29 @@ docker compose exec app composer setup
 The app is served at https://localhost. Set an AI provider key in `.env` before
 the chat will answer.
 
+### The database
+
+PostgreSQL 17, via the `imresamu/postgis` image — the official `postgis/postgis`
+publishes no arm64 manifest and will not start on Apple Silicon. This one is
+multi-arch, so the same tag serves a laptop and an amd64 VPS.
+
+The image enables PostGIS on the database it creates, so geometry columns,
+spatial indexes and the `ST_*` functions are available now even though nothing
+uses them yet. That is the reason for the image choice: an app about drawing
+areas, placing points and computing routes will want them, and picking the
+plain `postgres` image would have made adding them later a deploy step rather
+than a migration.
+
+`pgvector` is **not** installed. When embeddings arrive, add it to the image:
+
+```dockerfile
+FROM imresamu/postgis:17-3.5
+RUN apt-get update && apt-get install -y postgresql-17-pgvector
+```
+
+Then `CREATE EXTENSION vector;`. Rebuilding the image does not touch the data
+volume.
+
 Frontend changes need Vite running:
 
 ```bash
@@ -62,11 +86,15 @@ vendor/bin/pint --dirty             # PHP formatting
 npm run lint && npm run format      # frontend
 ```
 
-`tests/bootstrap.php` pins the test connection to in-memory SQLite before
-anything reads it. That file is load-bearing: `docker-compose.yml` sets a real
-`DB_CONNECTION=mysql` in the container, and PHPUnit's `<env>` entries lose to
-real environment variables — without the pin, `RefreshDatabase` drops every
+`tests/TestCase::setUp()` pins the test connection to in-memory SQLite before
+the application boots. Those three lines are load-bearing: `docker-compose.yml`
+sets a real `DB_CONNECTION` in the container, and PHPUnit's `<env>` entries lose
+to real environment variables — without the pin, `RefreshDatabase` drops every
 table in the development database.
+
+The suite therefore does not exercise PostgreSQL. That is fine while the schema
+is portable; it stops being fine the day a migration adds a geometry or vector
+column, at which point tests need a real Postgres service.
 
 ## Modules
 
