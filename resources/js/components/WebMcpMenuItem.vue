@@ -62,7 +62,7 @@ const chatUrl = route('chat.index');
 
 const agentPrompt = computed(() =>
     trans(
-        "Open :url. Discover and use this page's WebMCP tools to help me. Ask before any action that changes data.",
+        "Open :url. Discover and use this page's WebMCP tools to help me",
         { url: chatUrl },
     ),
 );
