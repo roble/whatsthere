@@ -19,7 +19,7 @@ const forgotUrl = computed(() =>
 <template>
     <AuthCardLayout
         :title="$t('Welcome back')"
-        :description="$t('Login to your Saucebase account to continue')"
+        :description="$t('Login to your account to continue')"
     >
         <SocialiteProviders />
 

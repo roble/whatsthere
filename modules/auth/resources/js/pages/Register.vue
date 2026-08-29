@@ -28,7 +28,7 @@ const canSubmit = computed(
 <template>
     <AuthCardLayout
         :title="$t('Create your account')"
-        :description="$t('Sign up for Saucebase to start building your SaaS')"
+        :description="$t('Sign up for a new account to get started')"
     >
         <SocialiteProviders />
 

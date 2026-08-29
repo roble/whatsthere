@@ -14,21 +14,6 @@ use Illuminate\Support\Facades\Auth;
 |
 */
 
-Navigation::add(
-    'Discord',
-    'https://discord.gg/hCajBky39t',
-    function (Section $section) {
-        $section->attributes([
-            'group' => 'landing',
-            'slug' => 'discord',
-            'external' => true,
-            'newPage' => true,
-            'order' => 99,
-            'class' => 'text-[#5865F2] hover:text-[#5865F2]/70',
-        ]);
-    }
-);
-
 Navigation::addWhen(
     fn () => Auth::check() && Auth::user()->isAdmin(),
     'Admin',
