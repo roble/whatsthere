@@ -544,6 +544,12 @@ function handleSubmit(message: PromptInputMessage) {
                                             />
                                         </Reasoning>
 
+                                        <!-- animation-split is left on "auto"
+                                             deliberately: the library wraps every
+                                             unit in its own inline-block span, so
+                                             "char" means hundreds of boxes relaid
+                                             out on each streamed token. "auto"
+                                             splits latin text by word. -->
                                         <MessageResponse
                                             v-else-if="part.type === 'text'"
                                             :content="part.text"
@@ -552,7 +558,7 @@ function handleSubmit(message: PromptInputMessage) {
                                                     ? 'streaming'
                                                     : 'static'
                                             "
-                                            animation-split="char"
+                                            animation-split="auto"
                                             :animation-duration="90"
                                             caret="block"
                                         />
