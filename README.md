@@ -13,7 +13,7 @@ you are looking at when you ask "what's here?".
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org)
 [![Inertia.js](https://img.shields.io/badge/Inertia.js-3.x-9553E9)](https://inertiajs.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.x-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
 [![MapLibre](https://img.shields.io/badge/MapLibre%20GL-6.x-295DAA)](https://maplibre.org)
 
 </div>
@@ -50,9 +50,15 @@ the chat will answer.
 
 ### The database
 
-PostgreSQL 17, via the `imresamu/postgis` image — the official `postgis/postgis`
-publishes no arm64 manifest and will not start on Apple Silicon. This one is
-multi-arch, so the same tag serves a laptop and an amd64 VPS.
+PostgreSQL 18 with PostGIS 3.6, via the `imresamu/postgis` image — the official
+`postgis/postgis` publishes no arm64 manifest and will not start on Apple
+Silicon. This one is multi-arch, so the same tag serves a laptop and an amd64
+VPS.
+
+The major version matches Laravel Cloud, whose Serverless Postgres is Neon.
+Neon pins extension versions per major: PostGIS 3.5.0 and pgvector 0.8.0 on 17,
+3.6.0 and 0.8.6 on 18. Postgres majors cannot be swapped on an existing data
+directory, so local and production are pinned to the same one deliberately.
 
 The image enables PostGIS on the database it creates, so geometry columns,
 spatial indexes and the `ST_*` functions are available now even though nothing
@@ -64,8 +70,8 @@ than a migration.
 `pgvector` is **not** installed. When embeddings arrive, add it to the image:
 
 ```dockerfile
-FROM imresamu/postgis:17-3.5
-RUN apt-get update && apt-get install -y postgresql-17-pgvector
+FROM imresamu/postgis:18-3.6
+RUN apt-get update && apt-get install -y postgresql-18-pgvector
 ```
 
 Then `CREATE EXTENSION vector;`. Rebuilding the image does not touch the data

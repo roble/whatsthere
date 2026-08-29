@@ -22,6 +22,7 @@
         "laravel/framework": "^13.25.0",
         "laravel/sanctum": "^4.3.3",
         "laravel/tinker": "^3.0.2",
+        "league/flysystem-aws-s3-v3": "^3.35",
         "modules/chat": "*",
         "openplain/filament-shadcn-theme": "^1.1",
         "saucebase/auth": "*",

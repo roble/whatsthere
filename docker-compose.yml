@@ -58,7 +58,14 @@ services:
         # imresamu rather than the official postgis/postgis, which publishes no
         # arm64 manifest and so will not run on an Apple Silicon machine. This
         # one is multi-arch, so the same tag serves laptops and an amd64 VPS.
-        image: 'imresamu/postgis:17-3.5'
+        #
+        # 18 to match Laravel Cloud, whose Serverless Postgres is Neon. Neon
+        # pins extension versions per major, and 18 is where PostGIS 3.6 and
+        # pgvector 0.8.6 live -- 17 would pin production to older builds of the
+        # two extensions this project is being shaped around. Majors cannot be
+        # swapped on an existing data directory, so matching now avoids a dump
+        # and restore later.
+        image: 'imresamu/postgis:18-3.6'
         restart: unless-stopped
         ports:
             - '${FORWARD_DB_PORT:-5432}:5432'
@@ -67,7 +74,11 @@ services:
             POSTGRES_USER: '${DB_USERNAME}'
             POSTGRES_PASSWORD: '${DB_PASSWORD}'
         volumes:
-            - 'saucebase-postgres:/var/lib/postgresql/data'
+            # /var/lib/postgresql, not .../data: the 18+ images store data in a
+            # major-versioned subdirectory so pg_upgrade can work across a
+            # single mount. Mounting .../data makes the container refuse to
+            # start.
+            - 'saucebase-postgres:/var/lib/postgresql'
         networks:
             - saucebase
         healthcheck:
