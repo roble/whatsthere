@@ -72,9 +72,9 @@ public/vendor/livewire/
 lang/php_*.json
 /resources/js/types/generated.d.ts
 
-# Transient lps-* scratch files, unanchored so they are ignored wherever
-# they are written
-lps-*
+# Transient language-server scratch files, unanchored so they are ignored
+# wherever they are written -- they land in storage/framework
+lsp-*
 
 _ide_helper.php
 _ide_helper_models.php
