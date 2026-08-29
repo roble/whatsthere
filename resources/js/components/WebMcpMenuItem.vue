@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -19,11 +20,17 @@ import {
     webMcpSupported,
     webMcpTools,
 } from '@/webmcp';
-import { computed } from 'vue';
-import IconEye from '~icons/lucide/eye';
-import IconPencil from '~icons/lucide/pencil';
+import { trans } from 'laravel-vue-i18n';
+import { computed, onUnmounted, ref } from 'vue';
 import IconBot from '~icons/lucide/bot';
 import IconBotOff from '~icons/lucide/bot-off';
+import IconCheck from '~icons/lucide/check';
+import IconCopy from '~icons/lucide/copy';
+import IconEye from '~icons/lucide/eye';
+import IconPencil from '~icons/lucide/pencil';
+
+const copyState = ref<'idle' | 'copied' | 'failed'>('idle');
+let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
 const activeNames = computed(
     () => new Set(webMcpActiveTools.value.map((tool) => tool.name)),
@@ -50,6 +57,39 @@ const icon = computed(() => (webMcpSupported ? IconBot : IconBotOff));
 const stateColor = computed(() =>
     webMcpSupported ? 'bg-emerald-500' : 'bg-orange-500',
 );
+
+const chatUrl = route('chat.index');
+
+const agentPrompt = computed(() =>
+    trans(
+        "Open :url. Discover and use this page's WebMCP tools to help me. Ask before any action that changes data.",
+        { url: chatUrl },
+    ),
+);
+
+async function copyAgentPrompt(): Promise<void> {
+    if (copyResetTimer !== null) {
+        clearTimeout(copyResetTimer);
+    }
+
+    try {
+        await navigator.clipboard.writeText(agentPrompt.value);
+        copyState.value = 'copied';
+    } catch {
+        copyState.value = 'failed';
+    }
+
+    copyResetTimer = setTimeout(() => {
+        copyState.value = 'idle';
+        copyResetTimer = null;
+    }, 2000);
+}
+
+onUnmounted(() => {
+    if (copyResetTimer !== null) {
+        clearTimeout(copyResetTimer);
+    }
+});
 </script>
 
 <template>
@@ -153,7 +193,46 @@ const stateColor = computed(() =>
                         </li>
                     </ol>
 
-                    <ul class="-mx-6 max-h-80 min-h-0 overflow-y-auto px-6">
+                    <section
+                        class="bg-muted/40 -mx-6 -my-4 border-b px-6 py-4"
+                        data-testid="webmcp-agent-prompt"
+                    >
+                        <div
+                            class="mb-2 flex items-center justify-between gap-3"
+                        >
+                            <p class="text-sm font-medium">
+                                {{ $t('Prompt for your agent') }}
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                data-testid="webmcp-copy-prompt"
+                                aria-live="polite"
+                                @click="copyAgentPrompt"
+                            >
+                                <IconCheck
+                                    v-if="copyState === 'copied'"
+                                    class="text-emerald-600 dark:text-emerald-400"
+                                />
+                                <IconCopy v-else />
+                                <template v-if="copyState === 'copied'">
+                                    {{ $t('Copied') }}
+                                </template>
+                                <template v-else-if="copyState === 'failed'">
+                                    {{ $t('Copy failed') }}
+                                </template>
+                                <template v-else>{{ $t('Copy') }}</template>
+                            </Button>
+                        </div>
+                        <p
+                            class="text-muted-foreground text-xs leading-relaxed break-words"
+                        >
+                            {{ agentPrompt }}
+                        </p>
+                    </section>
+
+                    <ul class="-mx-6 max-h-80 min-h-0 overflow-y-auto px-6 py-2">
                         <li
                             v-for="tool in listed"
                             :key="tool.name"

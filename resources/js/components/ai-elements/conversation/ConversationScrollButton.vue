@@ -5,7 +5,7 @@ import { ArrowDownIcon } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { computed } from 'vue';
-import { useStickToBottomContext } from 'vue-stick-to-bottom';
+import { useConversationContext } from './context';
 
 interface Props {
     class?: HTMLAttributes['class'];
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+const { isAtBottom, scrollToBottom } = useConversationContext();
 const showScrollButton = computed(() => !isAtBottom.value);
 
 // A reply is on its way: the button doubles as the only progress indicator,
@@ -44,14 +44,54 @@ function handleClick() {
         @click="handleClick"
     >
         <span v-if="isBusy" class="flex items-center gap-0.5">
-            <span
-                class="size-1 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"
-            />
-            <span
-                class="size-1 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"
-            />
-            <span class="size-1 animate-bounce rounded-full bg-current" />
+            <span class="dot" />
+            <span class="dot" />
+            <span class="dot" />
         </span>
         <ArrowDownIcon v-else class="size-4" />
     </Button>
 </template>
+
+<style scoped>
+/*
+ * Tailwind's animate-bounce travels 25% of the element's own height, which on a
+ * 4px dot is a 1px twitch. The dots need a fixed travel, not a relative one.
+ */
+.dot {
+    width: 0.25rem;
+    height: 0.25rem;
+    border-radius: calc(infinity * 1px);
+    background-color: currentColor;
+    animation: dot-bounce 0.9s ease-in-out infinite;
+}
+
+/*
+ * The stagger lives here, not in an [animation-delay:] utility: the shorthand
+ * above is unlayered and would reset a delay coming from @layer utilities,
+ * leaving all three dots in lockstep.
+ */
+.dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes dot-bounce {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .dot {
+        animation: none;
+    }
+}
+</style>

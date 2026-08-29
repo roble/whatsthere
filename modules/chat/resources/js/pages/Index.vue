@@ -163,6 +163,18 @@ function isPending(message: UIMessage): boolean {
 }
 
 /**
+ * The caret and the per-character reveal belong only on the reply being written
+ * right now. Every other message is settled text and renders in one go.
+ */
+function isWriting(message: UIMessage): boolean {
+    return (
+        status.value === 'streaming' &&
+        message.role === 'assistant' &&
+        message.id === lastMessageId.value
+    );
+}
+
+/**
  * The send failed outright. Session expiry raises its own dialog, so it is
  * excluded here rather than reported in two places at once.
  */
@@ -176,12 +188,24 @@ function isUndelivered(message: UIMessage): boolean {
 }
 
 /**
- * The reply is deliberately not followed as it streams: yanking the viewport
- * while someone is reading is worse than making them press the scroll button,
- * which doubles as the progress indicator. Only opening a conversation jumps
- * to the end, so you land on the latest message.
+ * Scrolling is driven by sending, not by receiving. On send the new message is
+ * pulled up to the top of the pane and the reply is left to grow underneath it;
+ * the reply itself is never chased.
+ *
+ * The target is out of reach at first -- nothing sits below the new message yet
+ * -- so it clamps to the true bottom and creeps up as tokens arrive, settling
+ * the moment the message reaches the top. Any manual scroll releases the
+ * anchor, and nothing re-arms it until the next send.
  */
+const ANCHOR_OFFSET = 16;
+
 const pane = ref<{ $el?: HTMLElement } | HTMLElement | null>(null);
+const conversation = ref<{
+    pinToEnd: () => void;
+    releasePin: () => void;
+} | null>(null);
+let scroller: HTMLElement | null = null;
+let anchorId: string | null = null;
 
 function findScroller(): HTMLElement | null {
     const value = pane.value;
@@ -198,17 +222,66 @@ function findScroller(): HTMLElement | null {
     );
 }
 
-function scrollToEnd() {
-    nextTick(() => {
-        const scroller = findScroller();
+function releaseAnchor() {
+    anchorId = null;
+}
 
-        if (scroller) {
-            scroller.scrollTop = scroller.scrollHeight;
+function followAnchor() {
+    if (anchorId === null) {
+        return;
+    }
+
+    nextTick(() => {
+        scroller ??= findScroller();
+
+        const message = scroller?.querySelector<HTMLElement>(
+            `[data-testid="message-${anchorId}"]`,
+        );
+
+        if (!scroller || !message) {
+            return;
         }
+
+        // Measured from rects rather than offsetTop, which is relative to
+        // whichever ancestor happens to be positioned.
+        const top =
+            scroller.scrollTop +
+            message.getBoundingClientRect().top -
+            scroller.getBoundingClientRect().top;
+
+        scroller.scrollTop = Math.min(
+            top - ANCHOR_OFFSET,
+            scroller.scrollHeight - scroller.clientHeight,
+        );
     });
 }
 
-onMounted(scrollToEnd);
+onMounted(() => {
+    scroller = findScroller();
+    // Touching the scroll yourself ends the follow. Listening for the gesture
+    // rather than for scroll events is what distinguishes a reader's scroll
+    // from our own, which fires the same event.
+    scroller?.addEventListener('wheel', releaseAnchor, { passive: true });
+    scroller?.addEventListener('touchstart', releaseAnchor, { passive: true });
+});
+
+onBeforeUnmount(() => {
+    scroller?.removeEventListener('wheel', releaseAnchor);
+    scroller?.removeEventListener('touchstart', releaseAnchor);
+});
+
+// Fires on every streamed delta, not just on new messages.
+watch(
+    () =>
+        messages.value
+            .map((message) =>
+                message.parts
+                    .map((part) => ('text' in part ? part.text : ''))
+                    .join(''),
+            )
+            .join(''),
+    followAnchor,
+);
 
 /**
  * Inertia reuses this component when moving between sessions, so the Chat
@@ -221,7 +294,8 @@ watch(
     (initial) => {
         conversationId.value = props.conversationId;
         chat.messages = initial;
-        scrollToEnd();
+        releaseAnchor();
+        nextTick(() => conversation.value?.pinToEnd());
     },
 );
 
@@ -292,6 +366,16 @@ function handleSubmit(message: PromptInputMessage) {
     }
 
     chat.sendMessage({ text: message.text });
+
+    // The conversation holds itself at the end until now; from here the anchor
+    // owns the viewport, so the two must not both be driving it.
+    conversation.value?.releasePin();
+
+    // Anchor on the message just appended, once it has actually rendered.
+    nextTick(() => {
+        anchorId = messages.value.at(-1)?.id ?? null;
+        followAnchor();
+    });
 }
 </script>
 
@@ -315,10 +399,7 @@ function handleSubmit(message: PromptInputMessage) {
                     class="flex flex-col"
                     data-testid="chat-pane"
                 >
-                    <Conversation
-                        :initial="{ damping: 1, stiffness: 1, mass: 0.05 }"
-                        :resize="{ damping: 1, stiffness: 1, mass: 0.05 }"
-                    >
+                    <Conversation ref="conversation">
                         <ConversationContent data-testid="chat-messages">
                             <ConversationEmptyState
                                 v-if="!messages.length"
@@ -369,6 +450,14 @@ function handleSubmit(message: PromptInputMessage) {
                                         <MessageResponse
                                             v-else-if="part.type === 'text'"
                                             :content="part.text"
+                                            :mode="
+                                                isWriting(message)
+                                                    ? 'streaming'
+                                                    : 'static'
+                                            "
+                                            animation-split="char"
+                                            :animation-duration="90"
+                                            caret="block"
                                         />
                                     </template>
                                 </MessageContent>
