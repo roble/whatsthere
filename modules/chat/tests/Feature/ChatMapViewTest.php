@@ -3,6 +3,7 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Modules\Chat\Ai\ChatAgent;
@@ -67,6 +68,43 @@ class ChatMapViewTest extends TestCase
             fn ($page) => $page->component('Chat::Index', false)
                 ->where('initialMapView', null)
         );
+    }
+
+    public function test_a_dragged_map_is_named_from_where_it_now_points(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/reverse*' => Http::response([
+                'display_name' => 'Douglas, Cork, County Cork, Ireland',
+            ]),
+        ]);
+
+        $instructions = (string) (new ChatAgent([
+            'label' => 'Dublin, County Dublin, Ireland',
+            'center' => [51.7921, -8.4234],
+            'zoom' => 13.0,
+            'moved' => true,
+        ]))->instructions();
+
+        $this->assertStringContainsString('Douglas, Cork, County Cork, Ireland', $instructions);
+        // The stale label is what made the assistant answer about Dublin while
+        // the visitor was looking at Cork.
+        $this->assertStringNotContainsString('Dublin', $instructions);
+    }
+
+    public function test_an_untouched_map_keeps_the_label_the_conversation_set(): void
+    {
+        Http::fake();
+
+        $instructions = (string) (new ChatAgent([
+            'label' => 'Dublin, County Dublin, Ireland',
+            'center' => [53.3547, -6.2509],
+            'zoom' => 10.9,
+            'moved' => false,
+        ]))->instructions();
+
+        $this->assertStringContainsString('Dublin, County Dublin, Ireland', $instructions);
+        // Every message would otherwise pay for a geocoder round trip.
+        Http::assertNothingSent();
     }
 
     protected function conversationFor(mixed $user): Conversation

@@ -1,19 +1,31 @@
 <script setup lang="ts">
 import SiteLayout from '@/layouts/SiteLayout.vue';
-import {
-    ModuleCard,
-    ModuleModal,
-    useModuleList,
-} from '@/components/ui/saucebase';
 import { useSettings } from '@/composables/useSettings';
-import { BookOpen } from '@lucide/vue';
-import { ref } from 'vue';
-
-import type { Module } from '@/components/ui/saucebase';
+import { MapPinned, MessagesSquare, Plug } from '@lucide/vue';
 
 const settings = useSettings();
-const modules = useModuleList();
-const selectedMod = ref<Module | null>(null);
+
+// Plain data rather than markup so the three read as one list and stay in step.
+const features = [
+    {
+        icon: MessagesSquare,
+        title: 'Ask in plain language',
+        description:
+            'Describe somewhere, or ask a question about it. The assistant answers in the conversation.',
+    },
+    {
+        icon: MapPinned,
+        title: 'The map keeps up',
+        description:
+            'Answers about a place move the map beside you. Pan it yourself and the assistant knows what you are looking at.',
+    },
+    {
+        icon: Plug,
+        title: 'Bring your own agent',
+        description:
+            'The page publishes WebMCP tools, so your own AI agent can read the chat and drive the map.',
+    },
+];
 </script>
 
 <template>
@@ -26,33 +38,45 @@ const selectedMod = ref<Module | null>(null);
                     <h1
                         class="text-foreground/80 dark:text-muted-foreground text-center text-4xl font-bold [text-shadow:0_4px_25px_color-mix(in_oklch,var(--color-primary)_15%,var(--color-background))] md:text-5xl"
                     >
-                        {{ $t('Your foundation is ready!') }}
+                        {{ $t('Every question is about somewhere') }}
                     </h1>
                     <h2
                         class="text-secondary mt-1 text-center text-5xl font-bold md:text-7xl"
                     >
-                        {{ $t("Let's get started") }}
+                        {{ $t('Ask what’s there') }}
                     </h2>
                     <p
-                        class="text-muted-foreground mt-3 text-center text-xl tracking-tighter md:text-3xl"
+                        class="text-muted-foreground mx-auto mt-3 max-w-2xl text-center text-xl tracking-tighter md:text-3xl"
                     >
                         {{
-                            $t('Your recipe first. Modules for everything else')
+                            $t(
+                                'A chat about places, with a live map that follows the conversation.',
+                            )
                         }}
                     </p>
                 </div>
-                <!-- Module cards — grid is transformed as one unit for correct alignment -->
+
                 <div
-                    class="relative z-10 mx-auto grid max-w-6xl grid-cols-1 gap-8 gap-y-2 px-6 pt-8 pb-16 font-mono has-[[data-card]:hover]:*:data-card:opacity-40 sm:grid-cols-2 sm:px-10 lg:grid-cols-3 lg:px-20 xl:grid-cols-4"
+                    class="relative z-10 mx-auto grid max-w-5xl grid-cols-1 gap-6 px-6 pt-8 pb-16 sm:px-10 md:grid-cols-3 lg:px-20"
                 >
-                    <ModuleCard
-                        v-for="(mod, index) in modules"
-                        :key="mod.id"
-                        :module="mod"
-                        :index="index"
-                        module-class="rotate-[-5deg] skew-x-10"
-                        @select="selectedMod = $event"
-                    />
+                    <div
+                        v-for="feature in features"
+                        :key="feature.title"
+                        class="bg-background/70 rounded-xl border p-6 backdrop-blur-sm"
+                        :data-testid="`feature-${feature.title}`"
+                    >
+                        <component
+                            :is="feature.icon"
+                            class="text-secondary size-6"
+                            aria-hidden="true"
+                        />
+                        <h3 class="mt-4 text-lg font-semibold">
+                            {{ $t(feature.title) }}
+                        </h3>
+                        <p class="text-muted-foreground mt-2 text-sm">
+                            {{ $t(feature.description) }}
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Light mode pattern -->
@@ -74,25 +98,34 @@ const selectedMod = ref<Module | null>(null);
                     "
                 />
 
-                <div class="my-8 mb-36 flex justify-center">
+                <div
+                    class="my-8 mb-36 flex flex-col items-center justify-center gap-6"
+                >
                     <div class="relative inline-flex">
-                        <!-- Stripe layer behind docs button -->
+                        <!-- Stripe layer behind the call to action -->
                         <div
                             class="stripe absolute inset-0 translate-y-3 rounded-full"
                             :style="{ '--mod-color': 'var(--foreground)' }"
                         />
                         <a
-                            href="https://saucebase-dev.github.io/docs/"
+                            :href="route('register')"
                             class="hover:bg-foreground/80 text-background bg-foreground/90 relative flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold shadow-[0_5px_0_0_color-mix(in_oklch,var(--color-foreground)_85%,black)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_9px_0_0_color-mix(in_oklch,var(--color-foreground)_85%,black)]"
+                            data-testid="landing-register"
                         >
-                            <BookOpen class="size-5" aria-hidden="true" />
-                            {{ $t('Read the Documentation') }}
+                            <MapPinned class="size-5" aria-hidden="true" />
+                            {{ $t('Start exploring') }}
                         </a>
                     </div>
+
+                    <a
+                        :href="route('login')"
+                        class="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+                        data-testid="landing-login"
+                    >
+                        {{ $t('Already have an account? Sign in') }}
+                    </a>
                 </div>
             </div>
         </main>
     </SiteLayout>
-
-    <ModuleModal :selected-mod="selectedMod" @close="selectedMod = null" />
 </template>

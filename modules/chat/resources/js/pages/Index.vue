@@ -138,7 +138,7 @@ const chat = new Chat({
                     .map((part) => part.text)
                     .join('\n'),
                 conversation_id: conversationId.value,
-                map: mapContext.value,
+                map: viewport.value,
             },
             headers: { 'X-XSRF-TOKEN': csrfToken() },
         }),
@@ -224,24 +224,14 @@ const mapView = computed<MapView>(
     () => overrideView.value ?? conversationView.value,
 );
 
-const viewport = ref<MapViewport | null>(null);
-
 /**
- * The map position worth telling the assistant about.
+ * Where the map is pointing, sent with every message.
  *
- * A conversation that has never mentioned a place is sitting on the default
- * region, which nobody chose. Sending that would invite the assistant to
- * answer about Cork when the visitor never brought it up.
+ * Null only until the map has settled once. It is sent even when nothing in the
+ * conversation put it there: the visitor can see the map, so "where am I?" on a
+ * fresh chat is a question the assistant should be able to answer.
  */
-const mapContext = computed<MapViewport | null>(() => {
-    if (!viewport.value) {
-        return null;
-    }
-
-    return !viewport.value.moved && mapView.value === defaultView
-        ? null
-        : viewport.value;
-});
+const viewport = ref<MapViewport | null>(null);
 
 const lastMessageId = computed(() => messages.value.at(-1)?.id);
 
@@ -449,7 +439,7 @@ useWebMcpTools(
         chat,
         sessions: () => sessions.value,
         currentConversationId: () => conversationId.value,
-        mapLocation: () => mapContext.value,
+        mapLocation: () => viewport.value,
         showOnMap: (view) => {
             overrideView.value = view;
         },

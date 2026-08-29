@@ -96,6 +96,34 @@ class ShowOnMapTest extends TestCase
         $this->assertStringContainsString('Could not find', $result);
     }
 
+    public function test_it_names_the_place_at_a_point_once(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/reverse*' => Http::response([
+                'display_name' => 'Douglas, Cork, County Cork, Ireland',
+            ]),
+        ]);
+
+        $tool = new ShowOnMap;
+
+        // Metres apart, so both round to the same cached square.
+        $first = $tool->placeAt(51.7921, -8.4234);
+        $second = $tool->placeAt(51.7923, -8.4231);
+
+        $this->assertSame('Douglas, Cork, County Cork, Ireland', $first);
+        $this->assertSame($first, $second);
+        Http::assertSentCount(1);
+    }
+
+    public function test_it_names_no_place_when_the_reverse_lookup_fails(): void
+    {
+        Http::fake([
+            'nominatim.openstreetmap.org/reverse*' => Http::response('', 503),
+        ]);
+
+        $this->assertNull((new ShowOnMap)->placeAt(51.7921, -8.4234));
+    }
+
     public function test_it_does_not_call_the_geocoder_without_a_place(): void
     {
         Http::fake();

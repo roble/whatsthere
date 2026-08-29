@@ -94,30 +94,65 @@ class ShowOnMap implements Tool
     }
 
     /**
+     * Name the place a point falls in.
+     *
+     * The browser can say where the visitor dragged the map, but only as
+     * coordinates, and a model cannot turn 53.35, -6.25 into "Dublin". Rounding
+     * to roughly a kilometre before caching keeps small pans off Nominatim.
+     */
+    public function placeAt(float $latitude, float $longitude): ?string
+    {
+        $latitude = round($latitude, 2);
+        $longitude = round($longitude, 2);
+        $key = "reverse-geocode:{$latitude},{$longitude}";
+
+        if ($cached = Cache::get($key)) {
+            return $cached;
+        }
+
+        // zoom 14 names the suburb or town rather than the house number: the
+        // visitor panned to look at an area, not at a doorstep.
+        $name = $this->nominatim('reverse', [
+            'lat' => $latitude,
+            'lon' => $longitude,
+            'zoom' => 14,
+        ])['display_name'] ?? null;
+
+        if ($name !== null) {
+            Cache::put($key, $name, now()->addDay());
+        }
+
+        return $name;
+    }
+
+    /**
      * Ask Nominatim where a place is.
      *
      * @return array{display_name: string, lat: string, lon: string, boundingbox: array{string, string, string, string}}|null
      */
     protected function lookup(string $place): ?array
     {
-        $response = Http::timeout(5)
-            // Nominatim's usage policy rejects requests that do not identify themselves.
-            ->withUserAgent(config('app.name').' ('.config('app.url').')')
-            ->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $place,
-                'format' => 'jsonv2',
-                'limit' => 1,
-            ]);
-
-        if ($response->failed()) {
-            return null;
-        }
-
-        $match = $response->json('0');
+        $match = $this->nominatim('search', ['q' => $place, 'limit' => 1])[0] ?? null;
 
         return isset($match['boundingbox']) && count($match['boundingbox']) === 4
             ? $match
             : null;
+    }
+
+    /**
+     * Call Nominatim, or return null if it will not answer.
+     *
+     * @param  array<string, mixed>  $query
+     * @return array<mixed>|null
+     */
+    protected function nominatim(string $path, array $query): ?array
+    {
+        $response = Http::timeout(5)
+            // Nominatim's usage policy rejects requests that do not identify themselves.
+            ->withUserAgent(config('app.name').' ('.config('app.url').')')
+            ->get("https://nominatim.openstreetmap.org/{$path}", $query + ['format' => 'jsonv2']);
+
+        return $response->failed() ? null : $response->json();
     }
 
     /**

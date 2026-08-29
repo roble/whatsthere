@@ -1,82 +1,99 @@
-<p align="center">
-  <br/>
-  <a href="https://saucebase-dev.github.io/docs/">Saucebase</a> is a modular Laravel SaaS starter kit for the modern web &mdash;
-  <br/>
-  own your code, ship faster.
-  <br/><br/>
-</p>
+# Whatsthere
+
+Ask about a place in plain language and watch the map keep up.
+
+Whatsthere pairs a streaming AI chat with a live map. Ask about somewhere and the
+assistant moves the map to it; drag the map yourself and the assistant knows what
+you are looking at when you ask "what's here?".
 
 <div align="center">
 
-[![Tests](https://github.com/saucebase-dev/saucebase/actions/workflows/test.yml/badge.svg)](https://github.com/saucebase-dev/saucebase/actions/workflows/test.yml)
 [![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.4+-777BB4?logo=php&logoColor=white)](https://php.net)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)](https://vite.dev)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.x-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org)
 [![Inertia.js](https://img.shields.io/badge/Inertia.js-3.x-9553E9)](https://inertiajs.com)
-[![Filament](https://img.shields.io/badge/Filament-5.x-10B981)](https://filamentphp.com)
-[![Playwright](https://img.shields.io/badge/Playwright-1.x-000000?logo=playwright&logoColor=white)](https://playwright.dev)
-
-Works with:<br/>
-[![Vue 3.5](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org) [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.x-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![MapLibre](https://img.shields.io/badge/MapLibre%20GL-6.x-295DAA)](https://maplibre.org)
 
 </div>
 
-## Install
+## How it works
 
-The **recommended** way to install Saucebase is by running the command below:
+**The assistant places things for you.** It never invents coordinates. When an
+answer is about somewhere, it calls a `show_on_map` tool that geocodes the name
+through [Nominatim](https://nominatim.openstreetmap.org/), and the map follows.
+
+**The map answers back.** Every message carries where the map is pointing. Pan
+away from where the conversation left it and the new centre is named afresh, so
+"here" means what you can see rather than what was last discussed.
+
+**Your own agent can drive it.** The chat page publishes
+[WebMCP](https://github.com/webmachinelearning/webmcp) tools — list and read
+conversations, move the map, read its position, ask the assistant a question.
+They run in the page inside your existing session, so there are no tokens and no
+second auth surface.
+
+Tiles come from [OpenFreeMap](https://openfreemap.org/), which serves
+OpenStreetMap vector data with no key and no quota.
+
+## Getting started
 
 ```bash
-curl -fsSL https://install.saucebase.dev | bash
+cp .env.example .env
+docker compose up -d
+docker compose exec app composer setup
 ```
 
-The CLI installs PHP/Composer if needed, then guides you through choosing a frontend framework and installing your first modules.
+The app is served at https://localhost. Set an AI provider key in `.env` before
+the chat will answer.
 
-Looking for help? Start with our [Getting Started](https://saucebase-dev.github.io/docs/) guide.
+Frontend changes need Vite running:
 
-Want to see it live? [Try the online demo](https://demo.saucebase.dev/).
+```bash
+npm run dev
+```
 
-## Documentation
+## Testing
 
-Visit our [official documentation](https://saucebase-dev.github.io/docs/).
+```bash
+php artisan test --compact          # PHP
+npm run test:e2e                    # Playwright
+vendor/bin/pint --dirty             # PHP formatting
+npm run lint && npm run format      # frontend
+```
 
-The version badges above show the supported major (or minor, for Vue) lines
-declared by the project and stack manifests. Exact dependency constraints live
-in `composer.json`, `package.json`, and `stubs/saucebase/stack/*/package.json`.
-
-## Support
-
-Having trouble? Get help in the official [Saucebase Discord](https://discord.gg/CuhSFA7qY).
-
-## Contributing
-
-**New contributors welcome!** Check out our [Contributors Guide](CONTRIBUTING.md) for help getting started.
+`tests/bootstrap.php` pins the test connection to in-memory SQLite before
+anything reads it. That file is load-bearing: `docker-compose.yml` sets a real
+`DB_CONNECTION=mysql` in the container, and PHPUnit's `<env>` entries lose to
+real environment variables — without the pin, `RefreshDatabase` drops every
+table in the development database.
 
 ## Modules
 
-| Module | Version | Description |
-| ------ | ------- | ----------- |
-| [auth](https://github.com/saucebase-dev/auth) | [![auth version](https://img.shields.io/packagist/v/saucebase/auth.svg?label=%20)](https://github.com/saucebase-dev/auth) | Authentication, social login, email verification, and admin impersonation |
-| [settings](https://github.com/saucebase-dev/settings) | [![settings version](https://img.shields.io/packagist/v/saucebase/settings.svg?label=%20)](https://github.com/saucebase-dev/settings) | User profile management, avatar uploads, and password changes |
-| [billing](https://github.com/saucebase-dev/billing) | [![billing version](https://img.shields.io/packagist/v/saucebase/billing.svg?label=%20)](https://github.com/saucebase-dev/billing) | Subscriptions, checkout sessions, and payment processing |
-| [announcements](https://github.com/saucebase-dev/announcements) | [![announcements version](https://img.shields.io/packagist/v/saucebase/announcements.svg?label=%20)](https://github.com/saucebase-dev/announcements) | Site-wide announcement banners with scheduling and dismissal support |
-| [roadmap](https://github.com/saucebase-dev/roadmap) | [![roadmap version](https://img.shields.io/packagist/v/saucebase/roadmap.svg?label=%20)](https://github.com/saucebase-dev/roadmap) | Feature requests, voting, and public product roadmap |
-| [themes](https://github.com/saucebase-dev/themes) | [![themes version](https://img.shields.io/packagist/v/saucebase/themes.svg?label=%20)](https://github.com/saucebase-dev/themes) | Visual theme editor for designing and baking your app's look and feel |
-| [blog](https://github.com/saucebase-dev/blog) | [![blog version](https://img.shields.io/packagist/v/saucebase/blog.svg?label=%20)](https://github.com/saucebase-dev/blog) | Public blog with categories, cover images, scheduling, and SEO |
+Modules are copy-and-own packages under `modules/`. An installed module is
+active; there is no enable/disable toggle.
 
-Several official packages are maintained outside of this repo:
+| Module     | Description                                                      |
+| ---------- | ---------------------------------------------------------------- |
+| `chat`     | The streaming assistant, the map beside it, and the WebMCP tools |
+| `auth`     | Authentication, social login, email verification, impersonation  |
+| `settings` | Profile management, avatar uploads, password changes             |
 
-| Package | Repository |
-| ------- | ---------- |
-| [saucebase/breadcrumbs](https://github.com/saucebase-dev/breadcrumbs) | [saucebase-dev/breadcrumbs](https://github.com/saucebase-dev/breadcrumbs) |
-| [saucebase/laravel-playwright](https://github.com/saucebase-dev/laravel-playwright) | [saucebase-dev/laravel-playwright](https://github.com/saucebase-dev/laravel-playwright) |
+`chat` is the application's home: `/` and `/dashboard` both redirect there once
+you are signed in.
+
+## Built on Saucebase
+
+Whatsthere is built on [Saucebase](https://saucebase-dev.github.io/docs/), a
+modular Laravel starter kit, which supplies the module system and the `auth` and
+`settings` modules. This is a starting point rather than a vendored dependency —
+inherited code that no longer suits the application is fair game to change.
+
+`CONTRIBUTING.md` is still the upstream Saucebase contributor guide and describes
+a workflow that does not apply here.
 
 ## Links
 
 - [License (MIT)](LICENSE)
-- [Contributing](CONTRIBUTING.md)
-- [Documentation](https://saucebase-dev.github.io/docs/)
-- [Demo](https://demo.saucebase.dev/)
 - [Third-party PHP / Composer licenses](THIRD_PARTY_LICENSES.md)
 - [Third-party JavaScript / npm licenses](THIRD_PARTY_PACKAGE_LICENSES.md)

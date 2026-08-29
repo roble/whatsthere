@@ -55,14 +55,28 @@ class ChatAgent implements Agent, HasTools, RemembersConversationsContract
         }
 
         [$latitude, $longitude] = $this->mapViewport['center'];
-        $label = $this->mapViewport['label'];
+        $label = $this->placeLabel($latitude, $longitude);
         $point = round($latitude, 5).', '.round($longitude, 5);
 
-        // A panned map means the label describes where the conversation left
-        // the camera, not what the visitor is looking at now.
-        return $this->mapViewport['moved']
-            ? "The visitor has dragged the map away from {$label}. It is now centred on {$point}. Treat that point as what they mean by \"here\" or \"this area\", and call show_on_map if you need to confirm the place by name."
-            : "The map beside the conversation is showing {$label}, centred on {$point}. When the visitor says \"here\", \"there\" or \"this area\" without naming a place, they mean {$label}.";
+        return "The map beside the conversation is showing {$label}, centred on {$point}. When the visitor says \"here\", \"there\" or \"this area\" without naming a place, they mean {$label}.";
+    }
+
+    /**
+     * Name what the map is centred on.
+     *
+     * The browser's label is whatever the conversation last put on the map, so
+     * once the visitor drags the camera elsewhere it describes the wrong place.
+     * The centre is then named afresh, because coordinates on their own tell
+     * the model nothing it can answer with.
+     */
+    protected function placeLabel(float $latitude, float $longitude): string
+    {
+        if (! $this->mapViewport['moved']) {
+            return $this->mapViewport['label'];
+        }
+
+        return (new ShowOnMap)->placeAt($latitude, $longitude)
+            ?? $this->mapViewport['label'];
     }
 
     /**
