@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8f38b475cced429e9e442662183007fc",
+    "content-hash": "eb2ce36e33a2551ac8f2dcac2db62bb9",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -7479,16 +7479,10 @@
         {
             "name": "saucebase/auth",
             "version": "v2.5.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/saucebase-dev/auth.git",
-                "reference": "2df0e50e933d51a2eb491cbd1cdf394200765f73"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/saucebase-dev/auth/zipball/2df0e50e933d51a2eb491cbd1cdf394200765f73",
-                "reference": "2df0e50e933d51a2eb491cbd1cdf394200765f73",
-                "shasum": ""
+                "type": "path",
+                "url": "modules/auth",
+                "reference": "37ba228b17cf24b4cebc6cc30e4535d2feac6fc1"
             },
             "require": {
                 "laravel/socialite": "^5.30.1",
@@ -7496,27 +7490,31 @@
             },
             "type": "saucebase-module",
             "extra": {
-                "laravel": {
-                    "aliases": [],
-                    "providers": [
-                        "Modules\\Auth\\Providers\\AuthServiceProvider"
-                    ]
-                },
                 "saucebase": {
                     "frameworks": [
                         "vue",
                         "react"
                     ]
+                },
+                "laravel": {
+                    "providers": [
+                        "Modules\\Auth\\Providers\\AuthServiceProvider"
+                    ],
+                    "aliases": []
                 }
             },
             "autoload": {
                 "psr-4": {
                     "Modules\\Auth\\": "src/",
-                    "Modules\\Auth\\Database\\Seeders\\": "database/seeders/",
-                    "Modules\\Auth\\Database\\Factories\\": "database/factories/"
+                    "Modules\\Auth\\Database\\Factories\\": "database/factories/",
+                    "Modules\\Auth\\Database\\Seeders\\": "database/seeders/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Modules\\Auth\\Tests\\": "tests/"
+                }
+            },
             "license": [
                 "proprietary"
             ],
@@ -7527,11 +7525,10 @@
                 }
             ],
             "description": "Authentication module for Saucebase",
-            "support": {
-                "issues": "https://github.com/saucebase-dev/auth/issues",
-                "source": "https://github.com/saucebase-dev/auth/tree/v2.5.0"
-            },
-            "time": "2026-08-29T16:22:49+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "saucebase/breadcrumbs",
@@ -7647,34 +7644,32 @@
         {
             "name": "saucebase/settings",
             "version": "v2.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/saucebase-dev/settings.git",
-                "reference": "3917bf9ea36100e339a5fd6e33a0e6d1af7b5e76"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/saucebase-dev/settings/zipball/3917bf9ea36100e339a5fd6e33a0e6d1af7b5e76",
-                "reference": "3917bf9ea36100e339a5fd6e33a0e6d1af7b5e76",
-                "shasum": ""
+                "type": "path",
+                "url": "modules/settings",
+                "reference": "9ed9ef95b5b83aa65dd2b59ac9f5c652a85d5af2"
             },
             "type": "saucebase-module",
             "extra": {
                 "laravel": {
-                    "aliases": [],
                     "providers": [
                         "Modules\\Settings\\Providers\\SettingsServiceProvider"
-                    ]
+                    ],
+                    "aliases": []
                 }
             },
             "autoload": {
                 "psr-4": {
                     "Modules\\Settings\\": "src/",
-                    "Modules\\Settings\\Database\\Seeders\\": "database/seeders/",
-                    "Modules\\Settings\\Database\\Factories\\": "database/factories/"
+                    "Modules\\Settings\\Database\\Factories\\": "database/factories/",
+                    "Modules\\Settings\\Database\\Seeders\\": "database/seeders/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Modules\\Settings\\Tests\\": "tests/"
+                }
+            },
             "license": [
                 "proprietary"
             ],
@@ -7685,11 +7680,10 @@
                 }
             ],
             "description": "Settings module",
-            "support": {
-                "issues": "https://github.com/saucebase-dev/settings/issues",
-                "source": "https://github.com/saucebase-dev/settings/tree/v2.1.0"
-            },
-            "time": "2026-08-29T16:39:34+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "scrivo/highlight.php",
