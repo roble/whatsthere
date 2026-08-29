@@ -40,13 +40,7 @@ class ChatAgent implements Agent, HasTools, RemembersConversationsContract
     public function tools(): iterable
     {
         return [
-            new InterviewUser,
-            new SearchPlaces,
-            
             new ShowOnMap,
-            new SerchDaft,
-            new EnrichData,
-            new CyclingRoutes,
         ];
     }
 }
