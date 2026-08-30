@@ -28,11 +28,20 @@ use Stringable;
  * five. Searching the web, resolving an Eircode, moving the map and then
  * answering spends four on its own, leaving no room to recover from a miss.
  */
-#[Model('gpt-5.4-mini')]
+#[Model(self::MODEL)]
 #[MaxSteps(8)]
 class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConversationsContract
 {
     use Promptable, RemembersConversations;
+
+    /**
+     * The model this assistant runs on.
+     *
+     * A constant rather than a literal in the attribute so there is one place
+     * to change it, and so the admin pricing form can offer it as the rate
+     * that actually matters.
+     */
+    public const string MODEL = 'gpt-5.4-mini';
 
     /**
      * @param  array{label: string, center: array{float, float}, zoom: float, moved: bool}|null  $mapViewport
