@@ -14,19 +14,9 @@ use App\Navigation\Section;
 */
 
 // User menu - Settings
-Navigation::add('Settings', fn () => route('settings.index'), function (Section $section) {
+Navigation::add('Settings', fn () => route('settings.profile'), function (Section $section) {
     $section->attributes([
         'group' => 'user',
-        'slug' => 'settings',
-        'icon' => 'settings',
-        'order' => 10,
-    ]);
-});
-
-// Settings sidebar - General
-Navigation::add('General', fn () => route('settings.index'), function (Section $section) {
-    $section->attributes([
-        'group' => 'settings',
         'slug' => 'settings',
         'icon' => 'settings',
         'order' => 10,
@@ -39,6 +29,6 @@ Navigation::add('Profile', fn () => route('settings.profile'), function (Section
         'group' => 'settings',
         'slug' => 'profile',
         'icon' => 'profile',
-        'order' => 20,
+        'order' => 10,
     ]);
 });

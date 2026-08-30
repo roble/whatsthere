@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eb2ce36e33a2551ac8f2dcac2db62bb9",
+    "content-hash": "8f38b475cced429e9e442662183007fc",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -7478,11 +7478,17 @@
         },
         {
             "name": "saucebase/auth",
-            "version": "v2.5.0",
+            "version": "v2.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/saucebase-dev/auth.git",
+                "reference": "8bb2a501218cbf181ea1ddfa99fb4081a9d415cd"
+            },
             "dist": {
-                "type": "path",
-                "url": "modules/auth",
-                "reference": "37ba228b17cf24b4cebc6cc30e4535d2feac6fc1"
+                "type": "zip",
+                "url": "https://api.github.com/repos/saucebase-dev/auth/zipball/8bb2a501218cbf181ea1ddfa99fb4081a9d415cd",
+                "reference": "8bb2a501218cbf181ea1ddfa99fb4081a9d415cd",
+                "shasum": ""
             },
             "require": {
                 "laravel/socialite": "^5.30.1",
@@ -7490,31 +7496,27 @@
             },
             "type": "saucebase-module",
             "extra": {
+                "laravel": {
+                    "aliases": [],
+                    "providers": [
+                        "Modules\\Auth\\Providers\\AuthServiceProvider"
+                    ]
+                },
                 "saucebase": {
                     "frameworks": [
                         "vue",
                         "react"
                     ]
-                },
-                "laravel": {
-                    "providers": [
-                        "Modules\\Auth\\Providers\\AuthServiceProvider"
-                    ],
-                    "aliases": []
                 }
             },
             "autoload": {
                 "psr-4": {
                     "Modules\\Auth\\": "src/",
-                    "Modules\\Auth\\Database\\Factories\\": "database/factories/",
-                    "Modules\\Auth\\Database\\Seeders\\": "database/seeders/"
+                    "Modules\\Auth\\Database\\Seeders\\": "database/seeders/",
+                    "Modules\\Auth\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Modules\\Auth\\Tests\\": "tests/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "proprietary"
             ],
@@ -7525,10 +7527,11 @@
                 }
             ],
             "description": "Authentication module for Saucebase",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/saucebase-dev/auth/issues",
+                "source": "https://github.com/saucebase-dev/auth/tree/v2.6.0"
+            },
+            "time": "2026-08-30T20:13:25+00:00"
         },
         {
             "name": "saucebase/breadcrumbs",
@@ -7643,33 +7646,35 @@
         },
         {
             "name": "saucebase/settings",
-            "version": "v2.1.0",
+            "version": "v2.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/saucebase-dev/settings.git",
+                "reference": "83a4965e922762a34427f5e65b481c7cbbf1d65e"
+            },
             "dist": {
-                "type": "path",
-                "url": "modules/settings",
-                "reference": "9ed9ef95b5b83aa65dd2b59ac9f5c652a85d5af2"
+                "type": "zip",
+                "url": "https://api.github.com/repos/saucebase-dev/settings/zipball/83a4965e922762a34427f5e65b481c7cbbf1d65e",
+                "reference": "83a4965e922762a34427f5e65b481c7cbbf1d65e",
+                "shasum": ""
             },
             "type": "saucebase-module",
             "extra": {
                 "laravel": {
+                    "aliases": [],
                     "providers": [
                         "Modules\\Settings\\Providers\\SettingsServiceProvider"
-                    ],
-                    "aliases": []
+                    ]
                 }
             },
             "autoload": {
                 "psr-4": {
                     "Modules\\Settings\\": "src/",
-                    "Modules\\Settings\\Database\\Factories\\": "database/factories/",
-                    "Modules\\Settings\\Database\\Seeders\\": "database/seeders/"
+                    "Modules\\Settings\\Database\\Seeders\\": "database/seeders/",
+                    "Modules\\Settings\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Modules\\Settings\\Tests\\": "tests/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "proprietary"
             ],
@@ -7680,10 +7685,11 @@
                 }
             ],
             "description": "Settings module",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/saucebase-dev/settings/issues",
+                "source": "https://github.com/saucebase-dev/settings/tree/v2.1.1"
+            },
+            "time": "2026-08-30T20:13:19+00:00"
         },
         {
             "name": "scrivo/highlight.php",
@@ -11486,16 +11492,16 @@
         },
         {
             "name": "symfony/service-contracts",
-            "version": "v3.7.1",
+            "version": "v3.7.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/service-contracts.git",
-                "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0"
+                "reference": "15e6a07ec2a2c75ceb1b21dd98105ee8456d2257"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/service-contracts/zipball/c0a284bab1ed8aa0417e3d69250ab437739563a0",
-                "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0",
+                "url": "https://api.github.com/repos/symfony/service-contracts/zipball/15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+                "reference": "15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
                 "shasum": ""
             },
             "require": {
@@ -11549,7 +11555,7 @@
                 "standards"
             ],
             "support": {
-                "source": "https://github.com/symfony/service-contracts/tree/v3.7.1"
+                "source": "https://github.com/symfony/service-contracts/tree/v3.7.3"
             },
             "funding": [
                 {
@@ -11569,7 +11575,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-16T09:55:08+00:00"
+            "time": "2026-07-27T15:39:01+00:00"
         },
         {
             "name": "symfony/string",
@@ -13798,11 +13804,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.2.9",
+            "version": "2.2.10",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/13d6b4f347bad222da436580c8304fa6f83e6bd0",
-                "reference": "13d6b4f347bad222da436580c8304fa6f83e6bd0",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/36d1509c998b0602811824143526b4a9ee2774e7",
+                "reference": "36d1509c998b0602811824143526b4a9ee2774e7",
                 "shasum": ""
             },
             "require": {
@@ -13858,7 +13864,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-22T07:38:16+00:00"
+            "time": "2026-08-30T12:46:16+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
