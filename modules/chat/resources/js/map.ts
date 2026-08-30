@@ -48,3 +48,29 @@ export type MapViewport = {
 export function viewKey(view: MapView): string {
     return `${view.label}|${view.bbox.join(',')}`;
 }
+
+/**
+ * The tools whose results move the map.
+ *
+ * Mirrors `ChatController::MAP_TOOLS`. Streamed parts are named `tool-<name>`,
+ * so these are the bare names and the `tool-` prefix is added where matched.
+ */
+export const MAP_TOOLS = ['show_on_map', 'eircode_to_geolocation'] as const;
+
+/**
+ * Read a map view out of a tool result.
+ *
+ * The map tools answer in prose when they cannot place somewhere, so anything
+ * that is not a well-formed view means "leave the map alone".
+ */
+export function toMapView(output: unknown): MapView | null {
+    try {
+        const parsed = JSON.parse(String(output));
+
+        return Array.isArray(parsed?.bbox) && parsed.bbox.length === 4
+            ? (parsed as MapView)
+            : null;
+    } catch {
+        return null;
+    }
+}

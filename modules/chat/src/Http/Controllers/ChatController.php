@@ -13,12 +13,25 @@ use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Responses\Data\ToolResult;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Jobs\GenerateConversationTitle;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ChatController
 {
+    /**
+     * The tools whose results move the map.
+     *
+     * Kept here rather than checked one name at a time: a second map-moving
+     * tool that is not listed reopens a conversation on the wrong place, and
+     * the failure is silent.
+     */
+    public const array MAP_TOOLS = [
+        ShowOnMap::NAME,
+        EircodeToGeoLocation::NAME,
+    ];
+
     /**
      * Show a blank chat. No row exists until the first message is sent.
      */
@@ -74,7 +87,7 @@ class ChatController
         return collect($messages)
             ->filter(fn (Message $message): bool => $message instanceof ToolResultMessage)
             ->flatMap(fn (ToolResultMessage $message): array => $message->toolResults->all())
-            ->filter(fn (ToolResult $result): bool => $result->name === ShowOnMap::NAME)
+            ->filter(fn (ToolResult $result): bool => in_array($result->name, self::MAP_TOOLS, true))
             ->map(fn (ToolResult $result): mixed => json_decode((string) $result->result, true))
             ->last(fn (mixed $view): bool => is_array($view) && isset($view['bbox']));
     }

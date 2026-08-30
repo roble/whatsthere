@@ -13,23 +13,34 @@ class ShowOnMapTest extends TestCase
     {
         Http::fake([
             'nominatim.openstreetmap.org/*' => Http::response([[
-                'lat' => '38.8355446',
-                'lon' => '-9.3522371',
-                'display_name' => 'Sintra, Lisboa, Portugal',
+                'lat' => '51.8985143',
+                'lon' => '-8.4756035',
+                'display_name' => 'Cork, County Cork, Ireland',
                 // Nominatim orders this south, north, west, east.
-                'boundingbox' => ['38.7385819', '38.9324322', '-9.5005266', '-9.2206908'],
+                'boundingbox' => ['51.8574000', '51.9295000', '-8.5340000', '-8.3960000'],
             ]]),
         ]);
 
-        $result = (new ShowOnMap)->handle(new Request(['place' => 'Sintra, Portugal']));
+        $result = (new ShowOnMap)->handle(new Request(['place' => 'Cork']));
 
         $this->assertSame([
-            'label' => 'Sintra, Lisboa, Portugal',
+            'label' => 'Cork, County Cork, Ireland',
             // The map wants west, south, east, north. Getting this order
             // wrong still renders a map, just of the wrong part of the world.
-            'bbox' => ['-9.5005266', '38.7385819', '-9.2206908', '38.9324322'],
-            'marker' => ['38.8355446', '-9.3522371'],
+            'bbox' => ['-8.5340000', '51.8574000', '-8.3960000', '51.9295000'],
+            'marker' => ['51.8985143', '-8.4756035'],
         ], json_decode((string) $result, true));
+    }
+
+    public function test_it_only_ever_asks_the_geocoder_for_irish_places(): void
+    {
+        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([])]);
+
+        (new ShowOnMap)->handle(new Request(['place' => 'Paris, France']));
+
+        // The instructions ask the model to stay in Ireland; this is the half
+        // of the scope it cannot talk its way around.
+        Http::assertSent(fn ($request) => $request['countrycodes'] === 'ie');
     }
 
     public function test_it_only_geocodes_a_repeated_place_once(): void
