@@ -48,7 +48,10 @@ runs:
           with:
               node-version: ${{ inputs.node-version }}
               cache: 'npm'
-              cache-dependency-path: ${{ inputs.working-directory }}/stubs/saucebase/stack/${{ inputs.framework != '' && inputs.framework || 'vue' }}/package-lock.json
+              # The root lockfile, not stubs/saucebase/stack/*: this app has no
+              # stack-selection tree, so that path never resolved and setup-node
+              # failed before a single test ran.
+              cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
         - name: Copy .env
           shell: bash
