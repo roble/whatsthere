@@ -21,10 +21,14 @@ import {
     type PromptInputMessage,
 } from '@/components/ai-elements/prompt-input';
 import {
-    Reasoning,
-    ReasoningContent,
-    ReasoningTrigger,
-} from '@/components/ai-elements/reasoning';
+    ChainOfThought,
+    ChainOfThoughtContent,
+    ChainOfThoughtHeader,
+    ChainOfThoughtImage,
+    ChainOfThoughtSearchResult,
+    ChainOfThoughtSearchResults,
+    ChainOfThoughtStep,
+} from '@/components/ai-elements/chain-of-thought';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,16 +43,21 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import { Button } from '@/components/ui/button';
 import AppHeader from '@/components/AppHeader.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { csrfToken } from '@/lib/utils';
 import { useWebMcpTools } from '@/webmcp';
 import ContextMap from '@modules/chat/resources/js/components/ContextMap.vue';
+import ThinkingIndicator from '@modules/chat/resources/js/components/ThinkingIndicator.vue';
 import {
+    toMapView,
     viewKey,
+    MAP_TOOLS,
     type MapView,
     type MapViewport,
 } from '@modules/chat/resources/js/map';
+import { thoughtsFor } from '@modules/chat/resources/js/thoughts';
 import { chatTools } from '@modules/chat/resources/js/webmcp/chatTools';
 import { Chat } from '@ai-sdk/vue';
 import { router, usePage } from '@inertiajs/vue3';
@@ -151,31 +160,21 @@ const status = computed(() => chat.status);
 /** The chat pane's floor, and the width it opens at. */
 const CHAT_MIN_SIZE = 25;
 
-/** Where the map sits until a conversation gives it somewhere better. */
+/**
+ * Where the map sits until a conversation gives it somewhere better.
+ *
+ * The whole country, because that is the whole subject: opening on one city
+ * suggests the assistant is about that city. Matches the `countrycodes=ie`
+ * restriction on the geocoder, so nothing findable falls outside this frame.
+ */
 const defaultView: MapView = {
-    label: 'Cork',
-    bbox: ['-8.55', '51.87', '-8.40', '51.92'],
+    label: 'Ireland',
+    bbox: ['-10.48', '51.42', '-5.99', '55.44'],
 };
 
 /**
- * The tool returns plain text when it cannot place somewhere, so anything that
- * is not a well-formed view means "leave the map alone".
- */
-function toMapView(output: unknown): MapView | null {
-    try {
-        const parsed = JSON.parse(String(output));
-
-        return Array.isArray(parsed?.bbox) && parsed.bbox.length === 4
-            ? (parsed as MapView)
-            : null;
-    } catch {
-        return null;
-    }
-}
-
-/**
- * The newest successful show_on_map call wins, so the map holds its last known
- * place while the visitor asks follow-ups that are not about anywhere.
+ * The newest successful call to a map tool wins, so the map holds its last
+ * known place while the visitor asks follow-ups that are not about anywhere.
  */
 const conversationView = computed<MapView>(() => {
     for (const message of [...messages.value].reverse()) {
@@ -187,7 +186,7 @@ const conversationView = computed<MapView>(() => {
 
         for (const part of parts) {
             if (
-                part.type !== 'tool-show_on_map' ||
+                !MAP_TOOLS.some((tool) => part.type === `tool-${tool}`) ||
                 part.state !== 'output-available'
             ) {
                 continue;
@@ -274,6 +273,36 @@ function isUndelivered(message: UIMessage): boolean {
         message.role === 'user' &&
         message.id === lastMessageId.value
     );
+}
+
+/**
+ * How many times one message may be resent by hand.
+ *
+ * A send that has failed three times is failing for a reason retrying will not
+ * fix, and an offer that never stops being offered reads as a broken button.
+ */
+const RETRY_LIMIT = 3;
+
+/** Attempts so far, per message id. */
+const retries = ref<Record<string, number>>({});
+
+function retriesLeft(message: UIMessage): number {
+    return RETRY_LIMIT - (retries.value[message.id] ?? 0);
+}
+
+/**
+ * Send a failed message again.
+ *
+ * regenerate() keeps a *user* message and re-requests from it, so the bubble
+ * stays put rather than being appended a second time. The failure surfaces the
+ * same way it did the first time -- through the error status -- so there is
+ * nothing to catch here that is not already shown.
+ */
+function retry(message: UIMessage) {
+    retries.value[message.id] = (retries.value[message.id] ?? 0) + 1;
+
+    chat.clearError();
+    chat.regenerate({ messageId: message.id });
 }
 
 /**
@@ -383,6 +412,7 @@ watch(
     (initial) => {
         conversationId.value = props.conversationId;
         chat.messages = initial;
+        retries.value = {};
         releaseAnchor();
         nextTick(() => conversation.value?.pinToEnd());
     },
@@ -443,6 +473,16 @@ useWebMcpTools(
         },
     }),
 );
+
+/**
+ * The steps to show beside a reply.
+ *
+ * Which parts become steps, and how each one reads, lives in the thought
+ * registry -- adding a kind is an entry there, not a branch in this template.
+ */
+function thoughts(message: UIMessage) {
+    return thoughtsFor(message.parts);
+}
 
 function goToLogin() {
     window.location.href = route('login');
@@ -527,23 +567,106 @@ function handleSubmit(message: PromptInputMessage) {
                                         isPending(message) || undefined
                                     "
                                 >
+                                    <!-- The whole process in one collapsible,
+                                         reasoning and tool calls interleaved in
+                                         the order they streamed.
+
+                                         Labelled "Route of thought": the
+                                         components keep the upstream ai-elements
+                                         names so they still diff against the
+                                         registry, only the visible string is
+                                         ours. -->
+                                    <ChainOfThought
+                                        v-if="thoughts(message).length"
+                                        :default-open="isWriting(message)"
+                                        :data-testid="`thoughts-${message.id}`"
+                                    >
+                                        <ChainOfThoughtHeader>
+                                            <template
+                                                v-if="isWriting(message)"
+                                                #icon
+                                            >
+                                                <span />
+                                            </template>
+                                            <ThinkingIndicator
+                                                v-if="isWriting(message)"
+                                            />
+                                            <template v-else>
+                                                {{ $t('Route of thought') }}
+                                            </template>
+                                        </ChainOfThoughtHeader>
+
+                                        <ChainOfThoughtContent>
+                                            <ChainOfThoughtStep
+                                                v-for="thought in thoughts(
+                                                    message,
+                                                )"
+                                                :key="thought.id"
+                                                :label="
+                                                    $t(
+                                                        thought.label,
+                                                        thought.params,
+                                                    )
+                                                "
+                                                :description="
+                                                    thought.description
+                                                "
+                                                :status="thought.status"
+                                                :data-testid="`thought-${message.id}-${thought.id}`"
+                                            >
+                                                <template #icon>
+                                                    <component
+                                                        :is="thought.icon"
+                                                        class="size-4"
+                                                    />
+                                                </template>
+
+                                                <!-- One branch per ThoughtBody
+                                                     variant in the registry. -->
+                                                <MessageResponse
+                                                    v-if="
+                                                        thought.body?.kind ===
+                                                        'markdown'
+                                                    "
+                                                    :content="thought.body.text"
+                                                    mode="static"
+                                                />
+                                                <ChainOfThoughtSearchResults
+                                                    v-else-if="
+                                                        thought.body?.kind ===
+                                                        'results'
+                                                    "
+                                                >
+                                                    <ChainOfThoughtSearchResult
+                                                        v-for="item in thought
+                                                            .body.items"
+                                                        :key="item"
+                                                    >
+                                                        {{ item }}
+                                                    </ChainOfThoughtSearchResult>
+                                                </ChainOfThoughtSearchResults>
+                                                <ChainOfThoughtImage
+                                                    v-else-if="
+                                                        thought.body?.kind ===
+                                                        'image'
+                                                    "
+                                                    :caption="
+                                                        thought.body.caption
+                                                    "
+                                                >
+                                                    <img
+                                                        :src="thought.body.src"
+                                                        alt=""
+                                                    />
+                                                </ChainOfThoughtImage>
+                                            </ChainOfThoughtStep>
+                                        </ChainOfThoughtContent>
+                                    </ChainOfThought>
+
                                     <template
                                         v-for="(part, index) in message.parts"
                                         :key="index"
                                     >
-                                        <Reasoning
-                                            v-if="part.type === 'reasoning'"
-                                            :is-streaming="
-                                                status === 'streaming'
-                                            "
-                                            :data-testid="`reasoning-${message.id}`"
-                                        >
-                                            <ReasoningTrigger />
-                                            <ReasoningContent
-                                                :content="part.text"
-                                            />
-                                        </Reasoning>
-
                                         <!-- animation-split is left on "auto"
                                              deliberately: the library wraps every
                                              unit in its own inline-block span, so
@@ -551,7 +674,7 @@ function handleSubmit(message: PromptInputMessage) {
                                              out on each streamed token. "auto"
                                              splits latin text by word. -->
                                         <MessageResponse
-                                            v-else-if="part.type === 'text'"
+                                            v-if="part.type === 'text'"
                                             :content="part.text"
                                             :mode="
                                                 isWriting(message)
@@ -565,17 +688,41 @@ function handleSubmit(message: PromptInputMessage) {
                                     </template>
                                 </MessageContent>
 
-                                <p
+                                <div
                                     v-if="isUndelivered(message)"
-                                    class="text-destructive mt-1 flex items-center gap-1 text-xs"
+                                    class="mt-1 flex flex-col items-end gap-0.5"
                                     :data-testid="`undelivered-${message.id}`"
                                 >
-                                    <CircleAlertIcon
-                                        class="size-3.5 shrink-0"
-                                    />
-                                    {{ $t('Not delivered') }}
-                                </p>
+                                    <p
+                                        class="text-destructive flex items-center gap-1 text-xs"
+                                    >
+                                        <CircleAlertIcon
+                                            class="size-3.5 shrink-0"
+                                        />
+                                        {{ $t('Not delivered') }}
+                                    </p>
+
+                                    <!-- Withdrawn once the attempts are spent,
+                                         rather than left there doing nothing. -->
+                                    <Button
+                                        v-if="retriesLeft(message) > 0"
+                                        variant="link"
+                                        size="sm"
+                                        class="text-muted-foreground h-auto p-0 text-xs"
+                                        :data-testid="`retry-${message.id}`"
+                                        @click="retry(message)"
+                                    >
+                                        {{ $t('Try again') }}
+                                    </Button>
+                                </div>
                             </Message>
+
+                            <!-- Sent, nothing back yet: no assistant message
+                                 exists to hang a chain of thought on. -->
+                            <ThinkingIndicator
+                                v-if="status === 'submitted'"
+                                class="px-1"
+                            />
                         </ConversationContent>
 
                         <ConversationScrollButton :status="status" />

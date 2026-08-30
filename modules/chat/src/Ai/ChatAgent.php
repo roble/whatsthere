@@ -2,18 +2,35 @@
 
 namespace Modules\Chat\Ai;
 
-use Laravel\Ai\Attributes\UseCheapestModel;
+use Laravel\Ai\Attributes\MaxSteps;
+use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\RemembersConversations as RemembersConversationsContract;
 use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
+use Laravel\Ai\Providers\Tools\ToolSearch;
+use Laravel\Ai\Providers\Tools\WebSearch;
+use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Stringable;
 
-#[UseCheapestModel]
-class ChatAgent implements Agent, HasTools, RemembersConversationsContract
+/**
+ * Pinned rather than UseCheapestModel, which resolves to gpt-5.4-nano: OpenAI
+ * rejects the hosted tool_search tool on nano outright ("Tool 'tool_search' is
+ * not supported"), so deferred tool loading costs this model bump. gpt-5.4-mini
+ * is the cheapest that accepts it.
+ *
+ * The step budget is otherwise derived as 1.5x the tool count, which lands on
+ * five. Searching the web, resolving an Eircode, moving the map and then
+ * answering spends four on its own, leaving no room to recover from a miss.
+ */
+#[Model('gpt-5.4-mini')]
+#[MaxSteps(8)]
+class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConversationsContract
 {
     use Promptable, RemembersConversations;
 
@@ -32,12 +49,22 @@ class ChatAgent implements Agent, HasTools, RemembersConversationsContract
     public function instructions(): Stringable|string
     {
         $instructions = <<<'INSTRUCTIONS'
-        You are a helpful assistant. Answer clearly and concisely.
+        You are a helpful assistant who answers questions about places in Ireland.
+
+        Ireland is the whole of your subject. Answer questions about Irish towns,
+        streets, addresses, Eircodes, landmarks and neighbourhoods, and about
+        what is in them or near them. If a visitor asks about somewhere outside
+        Ireland, or about something that is not about a place at all, say
+        plainly that you only cover Irish locations and offer to help with one
+        instead. Do not answer it anyway.
 
         A map sits beside the conversation. Whenever your answer is about a place
         the visitor could look at, call show_on_map so the map follows along, then
         answer normally. Do not mention the map or the tool in your reply, and do
         not read coordinates out loud: the visitor can already see it.
+
+        When the visitor gives an Eircode, resolve it with the Eircode tool
+        rather than guessing which address it belongs to.
         INSTRUCTIONS;
 
         $viewport = $this->viewportContext();
@@ -82,12 +109,40 @@ class ChatAgent implements Agent, HasTools, RemembersConversationsContract
     /**
      * Get the tools available to the agent.
      *
+     * ShowOnMap is called on nearly every turn, so it stays loaded rather than
+     * deferred; the provider searches for the rest only when the prompt calls
+     * for them. Anthropic additionally requires at least one tool outside the
+     * ToolSearch wrapper, which is satisfied either way.
+     *
      * @return iterable<Tool>
      */
     public function tools(): iterable
     {
         return [
             new ShowOnMap,
+            (new WebSearch)->location(country: 'IE'),
+            new ToolSearch(tools: [
+                new EircodeToGeoLocation,
+            ]),
         ];
+    }
+
+    /**
+     * Get provider-specific generation options.
+     *
+     * OpenAI streams no reasoning summaries unless they are asked for, so
+     * without this the route of thought beside the reply has nothing to show
+     * but the tool calls.
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        return match ($provider) {
+            // Both halves are load-bearing. Without `summary` OpenAI reasons
+            // silently and streams nothing to summarise; without `effort` the
+            // model does not reason at all, so `summary` has nothing to say.
+            // Low already yields a few hundred deltas on a question like this.
+            Lab::OpenAI => ['reasoning' => ['effort' => 'low', 'summary' => 'auto']],
+            default => [],
+        };
     }
 }

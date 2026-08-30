@@ -13,12 +13,27 @@ use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Responses\Data\ToolResult;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Jobs\GenerateConversationTitle;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ChatController
 {
+    /**
+     * The tools whose results move the map.
+     *
+     * Kept here rather than checked one name at a time: a second map-moving
+     * tool that is not listed reopens a conversation on the wrong place, and
+     * the failure is silent.
+     */
+    public const array MAP_TOOLS = [
+        ShowOnMap::NAME,
+        EircodeToGeoLocation::NAME,
+    ];
+
     /**
      * Show a blank chat. No row exists until the first message is sent.
      */
@@ -74,7 +89,7 @@ class ChatController
         return collect($messages)
             ->filter(fn (Message $message): bool => $message instanceof ToolResultMessage)
             ->flatMap(fn (ToolResultMessage $message): array => $message->toolResults->all())
-            ->filter(fn (ToolResult $result): bool => $result->name === ShowOnMap::NAME)
+            ->filter(fn (ToolResult $result): bool => in_array($result->name, self::MAP_TOOLS, true))
             ->map(fn (ToolResult $result): mixed => json_decode((string) $result->result, true))
             ->last(fn (mixed $view): bool => is_array($view) && isset($view['bbox']));
     }
@@ -181,7 +196,60 @@ class ChatController
         // extra frames.
         $response->headers->set('X-Conversation-Id', $conversation->id);
 
-        return $response;
+        return $this->keepFailuresInTheStream($response);
+    }
+
+    /**
+     * Report a mid-stream failure as a protocol frame rather than an exception.
+     *
+     * The Vercel encoder iterates the provider with no try/catch, so anything
+     * the provider raises -- an expired key, a rate limit -- escapes after the
+     * response headers have gone out. Laravel then renders an entire HTML error
+     * page and sends *its* headers on top of the ones already written, which is
+     * what produced nginx's "upstream sent duplicate header line: Date" warning,
+     * a merged Cache-Control, and a 37KB error document delivered as
+     * text/event-stream.
+     *
+     * Caught here it stays one well-formed stream: an error part the browser can
+     * show, then the terminator the protocol requires. The status is already 200
+     * by this point -- headers are sent before the callback runs -- which is why
+     * the protocol carries errors in band rather than in the status line.
+     */
+    protected function keepFailuresInTheStream(SymfonyResponse $response): SymfonyResponse
+    {
+        if (! $response instanceof StreamedResponse || ($stream = $response->getCallback()) === null) {
+            return $response;
+        }
+
+        return $response->setCallback(function () use ($stream): void {
+            try {
+                $stream();
+            } catch (Throwable $e) {
+                // Still an error worth paging over; it just must not escape.
+                report($e);
+
+                // The provider's own message can name keys and account state, so
+                // the visitor gets a fixed one. The retry lives in the UI.
+                $this->writeFrame(['type' => 'error', 'errorText' => __('The assistant could not be reached. Please try again.')]);
+                $this->writeFrame('[DONE]');
+            }
+        });
+    }
+
+    /**
+     * Write one server-sent event, flushing as the streamed response does.
+     *
+     * @param  array<string, mixed>|string  $frame
+     */
+    protected function writeFrame(array|string $frame): void
+    {
+        echo 'data: '.(is_string($frame) ? $frame : json_encode($frame, JSON_THROW_ON_ERROR))."\n\n";
+
+        if (ob_get_level() > 0) {
+            ob_flush();
+        }
+
+        flush();
     }
 
     /**

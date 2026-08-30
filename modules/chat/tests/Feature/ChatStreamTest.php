@@ -10,6 +10,7 @@ use Laravel\Ai\Models\Conversation;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\ConversationTitleAgent;
 use Modules\Chat\Jobs\GenerateConversationTitle;
+use RuntimeException;
 use Tests\TestCase;
 
 class ChatStreamTest extends TestCase
@@ -63,6 +64,34 @@ class ChatStreamTest extends TestCase
         $this->assertSame('Hello from the assistant.', $this->textFrom($stream));
 
         Ai::assertAgentWasPrompted(ChatAgent::class, 'Hi there');
+    }
+
+    public function test_a_provider_failure_stays_inside_the_stream(): void
+    {
+        // Thrown while the stream is being iterated, which is where a real
+        // provider failure lands -- after the response headers have gone out.
+        Ai::fakeAgent(ChatAgent::class, fn () => throw new RuntimeException('Incorrect API key provided: sk-abc.'));
+
+        $response = $this->actingAs($this->createUser())
+            ->post(route('chat.stream'), ['message' => 'Hi there']);
+
+        // 200, because the headers were committed before the provider was
+        // reached. The protocol carries the error in a frame instead.
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/event-stream; charset=utf-8');
+
+        $stream = $response->streamedContent();
+
+        $this->assertStringContainsString('"type":"error"', $stream);
+        $this->assertStringContainsString('data: [DONE]', $stream);
+
+        // Letting it escape the generator made Laravel render a whole HTML
+        // error page over the top of the stream, which is what sent nginx a
+        // second set of headers and produced the duplicate Date warning.
+        $this->assertStringNotContainsString('<!DOCTYPE html>', $stream);
+
+        // The provider names keys and account state in its errors.
+        $this->assertStringNotContainsString('sk-abc', $stream);
     }
 
     public function test_the_reply_is_persisted_against_the_user(): void

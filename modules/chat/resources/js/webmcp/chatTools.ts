@@ -152,7 +152,7 @@ export function chatTools({
                     place: {
                         type: 'string',
                         description:
-                            'The place to show, as specific as possible, e.g. "Douglas, Cork, Ireland".',
+                            'The place in Ireland to show, as specific as possible, e.g. "Douglas, Cork".',
                     },
                 },
                 required: ['place'],
