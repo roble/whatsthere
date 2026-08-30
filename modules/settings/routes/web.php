@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Settings\Http\Controllers\PasswordController;
 use Modules\Settings\Http\Controllers\ProfileController;
-use Modules\Settings\Http\Controllers\SettingsController;
 
 Route::middleware('web')->group(function (): void {
     Route::group(['middleware' => [
@@ -12,7 +11,7 @@ Route::middleware('web')->group(function (): void {
         'role:admin|user',
     ]], function (): void {
         Route::prefix('settings')->group(function (): void {
-            Route::get('/', [SettingsController::class, 'index'])
+            Route::redirect('/', '/settings/profile')
                 ->name('settings.index');
 
             Route::get('profile', [ProfileController::class, 'show'])
