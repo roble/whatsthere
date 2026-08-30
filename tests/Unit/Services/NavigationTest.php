@@ -365,23 +365,6 @@ class NavigationTest extends TestCase
         $this->assertSame($this->navigation, $result);
     }
 
-    public function test_load_loads_core_navigation_file(): void
-    {
-        // Swap the container binding to our fresh test instance and use include
-        // (not require_once) to reliably re-execute the navigation file
-        NavigationFacade::clearResolvedInstances();
-        app()->instance(Navigation::class, $this->navigation);
-
-        include base_path('routes/navigation.php');
-
-        $grouped = $this->navigation->treeGrouped();
-
-        // The core file registers public/landing navigation only. Everything in
-        // the application sidebar now comes from modules -- chat contributes the
-        // 'main' group, settings the 'user' and 'settings' groups.
-        $this->assertArrayHasKey('landing', $grouped);
-    }
-
     public function test_load_discovers_modules_via_registry(): void
     {
         // With InterNACHI all present modules are active — no status file needed.

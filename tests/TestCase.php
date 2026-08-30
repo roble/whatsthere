@@ -26,6 +26,13 @@ abstract class TestCase extends BaseTestCase
         $_SERVER['DB_DATABASE'] = ':memory:';
 
         parent::setUp();
+
+        // No PHP test should need `npm run build` to have run first. Blade
+        // layouts that call @vite -- Filament's admin panel among them -- read
+        // public/build/manifest.json, which is gitignored and absent in the
+        // `phpunit-raw` CI job, so a page test that renders one fails there and
+        // passes locally only because the Vite dev server is up.
+        $this->withoutVite();
     }
 
     /** @return User&Authenticatable */
