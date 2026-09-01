@@ -1,5 +1,11 @@
-import { BrainIcon, CogIcon, MapPinIcon, SignpostIcon } from '@lucide/vue';
-import { toMapView } from '@modules/chat/resources/js/map';
+import {
+    BrainIcon,
+    CogIcon,
+    MapPinIcon,
+    MapPinnedIcon,
+    SignpostIcon,
+} from '@lucide/vue';
+import { toMapView, type MapView } from '@modules/chat/resources/js/map';
 import type { Component } from 'vue';
 
 /**
@@ -56,6 +62,18 @@ export type ThoughtKind = {
  * A new *body* shape is the one change that costs two edits: a variant on
  * ThoughtBody above, and a branch in the step template in Index.vue.
  */
+/**
+ * How many a search turned up, as the step should word it.
+ *
+ * The tool asks for one more than it keeps, so a capped result means there
+ * were others it never showed -- "40" would be a total it cannot vouch for.
+ */
+function countOf(view: MapView | null): string {
+    const found = view?.markers?.length ?? 0;
+
+    return view?.capped ? `${found}+` : String(found);
+}
+
 export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
     reasoning: {
         icon: BrainIcon,
@@ -86,6 +104,35 @@ export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
         succeeded: (part) => toMapView(part.output) !== null,
         params: (part) => ({ eircode: String(part.input?.eircode ?? '') }),
         description: (part) => toMapView(part.output)?.label,
+    },
+
+    'tool-find_places': {
+        icon: MapPinnedIcon,
+        label: 'Searching :area for :category',
+        doneLabel: 'Found :count :category in :area',
+        failedLabel: 'Found no :category in :area',
+        // The map tools answer in prose when they come up empty, so a parsed
+        // view is the only proof the call landed anywhere.
+        succeeded: (part) => toMapView(part.output) !== null,
+        params: (part) => ({
+            // The tool sends the plural back with its result; the raw key
+            // is only the fallback for the moment before it answers.
+            category:
+                toMapView(part.output)?.category ??
+                String(part.input?.category ?? '').replace(/_/g, ' '),
+            area: String(part.input?.area ?? ''),
+            count: countOf(toMapView(part.output)),
+        }),
+        description: (part) => toMapView(part.output)?.label,
+        // Reuses the `results` body the registry already had rather than
+        // inventing a fourth shape: a list of names is exactly what it draws.
+        body: (part) => {
+            const found = toMapView(part.output)?.markers ?? [];
+
+            return found.length
+                ? { kind: 'results', items: found.map((place) => place.name) }
+                : undefined;
+        },
     },
 };
 

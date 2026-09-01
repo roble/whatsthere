@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
+import { ChevronDownIcon } from '@lucide/vue';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { ref } from 'vue';
+
+defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
     defineProps<{
@@ -20,32 +29,55 @@ const statusStyles = {
     active: 'text-foreground',
     pending: 'text-muted-foreground/50',
 };
+
+const isOpen = ref(true);
 </script>
 
 <template>
-    <div
-        :class="
-            cn(
-                'flex gap-2 text-sm',
-                statusStyles[props.status],
-                'fade-in-0 slide-in-from-top-2 animate-in',
-                props.class,
-            )
-        "
-        v-bind="$attrs"
-    >
-        <div class="relative mt-0.5">
-            <slot name="icon" />
-            <div
-                class="bg-border absolute top-7 bottom-0 left-1/2 -mx-px w-px"
-            />
-        </div>
-        <div class="flex-1 space-y-2">
-            <div>{{ props.label }}</div>
-            <div v-if="props.description" class="text-muted-foreground text-xs">
-                {{ props.description }}
+    <Collapsible v-model:open="isOpen">
+        <div
+            :class="
+                cn(
+                    'flex gap-2 text-sm',
+                    statusStyles[props.status],
+                    'fade-in-0 slide-in-from-top-2 animate-in',
+                    props.class,
+                )
+            "
+            v-bind="$attrs"
+        >
+            <div class="relative mt-0.5">
+                <slot name="icon" />
+                <div
+                    class="bg-border absolute top-3 bottom-0 left-1/2 -mx-px w-px"
+                />
             </div>
-            <slot />
+            <div class="min-w-0 flex-1">
+                <CollapsibleTrigger
+                    class="hover:text-foreground flex w-full items-center gap-2 text-left transition-colors"
+                >
+                    <span class="min-w-0 flex-1">{{ props.label }}</span>
+                    <ChevronDownIcon
+                        :class="
+                            cn(
+                                'size-3.5 shrink-0 transition-transform',
+                                isOpen ? 'rotate-180' : 'rotate-0',
+                            )
+                        "
+                    />
+                </CollapsibleTrigger>
+                <CollapsibleContent
+                    class="data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=open]:animate-in mt-2 space-y-2 outline-none"
+                >
+                    <div
+                        v-if="props.description"
+                        class="text-muted-foreground text-xs"
+                    >
+                        {{ props.description }}
+                    </div>
+                    <slot />
+                </CollapsibleContent>
+            </div>
         </div>
-    </div>
+    </Collapsible>
 </template>

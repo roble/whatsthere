@@ -23,11 +23,25 @@ export function styleUrlFor(preference: MapStyleId, isDark: boolean): string {
     return `https://tiles.openfreemap.org/styles/${style}`;
 }
 
-/** What the ShowOnMap tool hands back, once parsed. */
+/** One of many results, as FindPlaces hands them back. */
+export type MapMarker = {
+    lat: number;
+    lon: number;
+    name: string;
+};
+
+/** What a map tool hands back, once parsed. */
 export type MapView = {
     label: string;
     bbox: [string, string, string, string];
+    /** A single located place, from ShowOnMap or an Eircode lookup. */
     marker?: [string, string];
+    /** Everything of one kind in an area, from FindPlaces. */
+    markers?: MapMarker[];
+    /** What was searched for, already pluralised by the tool. */
+    category?: string;
+    /** Set when there were more results than the tool was willing to show. */
+    capped?: boolean;
 };
 
 /** Where the map actually sits right now, which the visitor may have panned. */
@@ -46,7 +60,10 @@ export type MapViewport = {
  * this instead means the camera only moves when the place actually differs.
  */
 export function viewKey(view: MapView): string {
-    return `${view.label}|${view.bbox.join(',')}`;
+    // The marker count is part of the identity, not decoration. Two searches
+    // of the same town share a bounding box, so without it "cafes in Galway"
+    // after "pubs in Galway" would leave the first set of pins on the map.
+    return `${view.label}|${view.bbox.join(',')}|${view.markers?.length ?? 0}`;
 }
 
 /**
@@ -55,7 +72,11 @@ export function viewKey(view: MapView): string {
  * Mirrors `ChatController::MAP_TOOLS`. Streamed parts are named `tool-<name>`,
  * so these are the bare names and the `tool-` prefix is added where matched.
  */
-export const MAP_TOOLS = ['show_on_map', 'eircode_to_geolocation'] as const;
+export const MAP_TOOLS = [
+    'show_on_map',
+    'eircode_to_geolocation',
+    'find_places',
+] as const;
 
 /**
  * Read a map view out of a tool result.

@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Http;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -33,6 +34,27 @@ abstract class TestCase extends BaseTestCase
         // `phpunit-raw` CI job, so a page test that renders one fails there and
         // passes locally only because the Vite dev server is up.
         $this->withoutVite();
+
+        // Inertia server-renders the landing page, and it does so through two
+        // different addresses: the Vite dev server while `npm run dev` is up,
+        // and the standalone SSR bundle at inertia.ssr.url otherwise. Both are
+        // faked because faking only the first is green exactly where a dev
+        // server happens to be running -- it passes here and fails in CI, on a
+        // URL that never appears locally.
+        $rendered = fn () => Http::response(['head' => [], 'body' => '']);
+
+        Http::fake([
+            '*__inertia_ssr*' => $rendered,
+            // From config rather than written out, so moving the SSR server
+            // does not quietly stop the fake matching it.
+            rtrim((string) config('inertia.ssr.url'), '/').'/*' => $rendered,
+        ]);
+
+        // Nothing else may leave the process. Laravel\Ai, Nominatim and
+        // Overpass all go through this client, so a test that forgets its
+        // Http::fake() would otherwise reach the real service -- and with a
+        // live OPENAI_API_KEY loaded, spend money and still pass.
+        Http::preventStrayRequests();
     }
 
     /** @return User&Authenticatable */

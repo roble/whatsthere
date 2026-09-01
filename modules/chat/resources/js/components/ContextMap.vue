@@ -26,6 +26,7 @@ import {
     Map as MapLibreMap,
     Marker,
     NavigationControl,
+    Popup,
     setWorkerUrl,
     type LngLatBoundsLike,
 } from 'maplibre-gl';
@@ -73,7 +74,7 @@ const container = ref<HTMLDivElement | null>(null);
 // shallowRef: the map is a large non-reactive object, and letting Vue walk it
 // deeply would be pure overhead.
 const map = shallowRef<MapLibreMap | null>(null);
-const marker = shallowRef<Marker | null>(null);
+const markers = shallowRef<Marker[]>([]);
 
 const isDark = ref(false);
 
@@ -112,14 +113,48 @@ function showView(view: MapView, animate: boolean): void {
         maxZoom: 16,
     });
 
-    marker.value?.remove();
-    marker.value = null;
+    dropMarkers();
+
+    const placed: Marker[] = [];
 
     if (view.marker) {
         const [lat, lng] = view.marker.map(Number);
 
-        marker.value = new Marker().setLngLat([lng, lat]).addTo(instance);
+        placed.push(new Marker().setLngLat([lng, lat]).addTo(instance));
     }
+
+    for (const place of view.markers ?? []) {
+        placed.push(
+            new Marker({ scale: 0.8 })
+                .setLngLat([place.lon, place.lat])
+                // setText, never setHTML: these names come from OpenStreetMap,
+                // which anyone can edit, so they are somebody else's input.
+                .setPopup(
+                    // focusAfterOpen: MapLibre moves focus to the close button
+                    // as the popup opens, so every pin you click comes up with
+                    // a focus ring already drawn on its X. Keyboard users
+                    // still reach it by tabbing, which is when the ring is
+                    // actually telling them something.
+                    new Popup({ offset: 24, focusAfterOpen: false }).setText(
+                        place.name,
+                    ),
+                )
+                .addTo(instance),
+        );
+    }
+
+    markers.value = placed;
+}
+
+/**
+ * Take every pin off the map.
+ *
+ * One list covers the single located place and a whole search of them, so
+ * there is one removal path rather than a second one to forget.
+ */
+function dropMarkers(): void {
+    markers.value.forEach((pin) => pin.remove());
+    markers.value = [];
 }
 
 /**
@@ -178,7 +213,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-    marker.value?.remove();
+    dropMarkers();
     map.value?.remove();
     map.value = null;
 });
@@ -252,7 +287,7 @@ watch(show3d, (enabled) => {
  */
 useResizeObserver(container, () => map.value?.resize());
 
-// setStyle keeps the camera and the marker, so switching basemap does not
+// setStyle keeps the camera and the markers, so switching basemap does not
 // throw away the place the conversation put us on.
 watch(stylePreference, () => map.value?.setStyle(styleUrl(isDark.value)));
 
@@ -330,3 +365,79 @@ useMutationObserver(
         </div>
     </div>
 </template>
+
+<!--
+    Deliberately not `scoped`. MapLibre builds the popup itself, outside Vue,
+    so the element never receives a scope attribute and a scoped rule would
+    never match it. Every selector below is the library's own class name.
+-->
+<style>
+/*
+ * Left alone the popup paints itself white and inherits the app's text colour,
+ * which in dark mode is near-white -- so the name is white on white. The close
+ * button has the same problem, and the CSS reset strips the padding it relies
+ * on for its size, collapsing it to a 7px sliver.
+ */
+.maplibregl-popup-content {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    /* Not var(--radius): that is tuned for cards and reads as a lozenge here. */
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+    /* Right side leaves room for the close button to sit out of the text. */
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+}
+
+/*
+ * The tip is drawn as a CSS triangle out of borders, so its colour has to
+ * follow the popup or a white arrow is left pointing at a dark card. Which
+ * border carries the colour depends on which side the popup opened.
+ */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+    border-bottom-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+    border-top-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+    border-right-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+    border-left-color: var(--popover);
+}
+
+.maplibregl-popup-close-button {
+    position: absolute;
+    top: 0.125rem;
+    right: 0.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Explicit box: the reset removed the padding that used to size it. */
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border-radius: 0.25rem;
+    color: var(--popover-foreground);
+    font-size: 1.125rem;
+    line-height: 1;
+    opacity: 0.55;
+    cursor: pointer;
+}
+
+.maplibregl-popup-close-button:hover,
+.maplibregl-popup-close-button:focus-visible {
+    background: var(--accent);
+    opacity: 1;
+}
+</style>

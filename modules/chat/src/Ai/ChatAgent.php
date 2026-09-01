@@ -15,6 +15,7 @@ use Laravel\Ai\Promptable;
 use Laravel\Ai\Providers\Tools\ToolSearch;
 use Laravel\Ai\Providers\Tools\WebSearch;
 use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
+use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Stringable;
 
@@ -74,6 +75,13 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
 
         When the visitor gives an Eircode, resolve it with the Eircode tool
         rather than guessing which address it belongs to.
+
+        When they ask what is in or around somewhere rather than where one place
+        is, use the find_places tool so the map shows them all at once. Never
+        list every result back to them: the map is already showing the pins, so
+        say how many you found and mention the ones worth singling out. If that
+        result comes back marked capped, there are more than you were shown, so
+        say "at least" rather than giving the number as a total.
         INSTRUCTIONS;
 
         $viewport = $this->viewportContext();
@@ -132,6 +140,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             (new WebSearch)->location(country: 'IE'),
             new ToolSearch(tools: [
                 new EircodeToGeoLocation,
+                new FindPlaces,
             ]),
         ];
     }
@@ -149,8 +158,8 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             // Both halves are load-bearing. Without `summary` OpenAI reasons
             // silently and streams nothing to summarise; without `effort` the
             // model does not reason at all, so `summary` has nothing to say.
-            // Low already yields a few hundred deltas on a question like this.
-            Lab::OpenAI => ['reasoning' => ['effort' => 'low', 'summary' => 'auto']],
+            // Keep the visible route useful without letting it compete with the reply.
+            Lab::OpenAI => ['reasoning' => ['effort' => 'low', 'summary' => 'concise']],
             default => [],
         };
     }
