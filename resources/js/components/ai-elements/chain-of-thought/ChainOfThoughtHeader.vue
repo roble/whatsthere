@@ -7,6 +7,7 @@ import { useChainOfThought } from './context';
 
 const props = defineProps<{
     class?: HtmlHTMLAttributes['class'];
+    hideLabel?: boolean;
 }>();
 
 const { isOpen, setIsOpen } = useChainOfThought();
@@ -26,9 +27,10 @@ const { isOpen, setIsOpen } = useChainOfThought();
             <slot name="icon">
                 <BrainIcon class="size-4" />
             </slot>
-            <span class="flex-1 text-left">
+            <span v-if="!props.hideLabel" class="flex-1 text-left">
                 <slot>Chain of Thought</slot>
             </span>
+            <span v-else class="flex-1" aria-hidden="true" />
             <ChevronDownIcon
                 :class="
                     cn(

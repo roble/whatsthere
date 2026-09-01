@@ -32,9 +32,19 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file" />
         <env name="BCRYPT_ROUNDS" value="4" />
         <env name="CACHE_STORE" value="array" />
+        <!-- Off by default whatever a developer has in .env: the suite must
+             test the real path unless a test asks for canned replies. -->
+        <env name="CHAT_TEST_MODE" value="false" />
         <env name="DB_CONNECTION" value="sqlite" />
         <env name="DB_DATABASE" value=":memory:" />
         <env name="MAIL_MAILER" value="array" />
+        <!-- Belt and braces beside Http::preventStrayRequests(): a call that
+             escapes the fakes fails on auth rather than spending real money.
+             Add any further provider key from config/ai.php here as it is
+             adopted: a key that is readable under test is one a forgotten
+             Http::fake() can spend. -->
+        <env name="OPENAI_API_KEY" value="" />
+        <env name="GEMINI_API_KEY" value="" />
         <env name="QUEUE_CONNECTION" value="sync" />
         <env name="SESSION_DRIVER" value="array" />
         <env name="PULSE_ENABLED" value="false" />

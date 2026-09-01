@@ -132,10 +132,22 @@ async function guardedFetch(
     return response;
 }
 
+/**
+ * Which canned reply to ask for, when the server is in test mode.
+ *
+ * `?scenario=places` on the page pins what comes back, so a state can be
+ * returned to while it is being worked on rather than refreshed towards. It
+ * does nothing at all unless the server is in test mode, which production
+ * refuses outright.
+ */
+const scenario = new URLSearchParams(window.location.search).get('scenario');
+
 const chat = new Chat({
     messages: props.initialMessages,
     transport: new DefaultChatTransport({
-        api: route('chat.stream'),
+        api:
+            route('chat.stream') +
+            (scenario ? `?scenario=${encodeURIComponent(scenario)}` : ''),
         fetch: guardedFetch,
         // The id is echoed back, but the server never trusts it: it verifies the
         // conversation belongs to the authenticated user before continuing it.
@@ -238,6 +250,31 @@ const viewport = ref<MapViewport | null>(null);
 const lastMessageId = computed(() => messages.value.at(-1)?.id);
 
 /**
+ * The status the composer should show, which is not always the chat's.
+ *
+ * A failed reply leaves the chat in 'error' until the next send, and the
+ * submit button renders that as a cross -- so the composer sits there looking
+ * broken while the visitor is perfectly able to ask something else. The
+ * failure is already reported on the message it belongs to, with the retry
+ * beside it, so the composer goes back to accepting the next question.
+ */
+const composerStatus = computed(() =>
+    status.value === 'error' ? 'ready' : status.value,
+);
+
+/**
+ * The newest question, which is not always the newest message.
+ *
+ * The stream announces the reply with a `start` part before the model has
+ * produced anything, so a failure leaves an empty assistant message sitting
+ * after the question. Anchoring "not delivered" to the last message would then
+ * look for it on that stub and never find it.
+ */
+const lastUserMessageId = computed(
+    () => messages.value.findLast((message) => message.role === 'user')?.id,
+);
+
+/**
  * In flight: the message left the browser but nothing has come back yet. The
  * status flips to 'streaming' as soon as the first token lands, so this only
  * covers the wait before any reply exists.
@@ -271,8 +308,19 @@ function isUndelivered(message: UIMessage): boolean {
         status.value === 'error' &&
         !sessionExpired.value &&
         message.role === 'user' &&
-        message.id === lastMessageId.value
+        message.id === lastUserMessageId.value
     );
+}
+
+/**
+ * An assistant message the model never wrote anything into.
+ *
+ * The `start` part creates it before the first token, so a reply that fails
+ * outright leaves this stub behind. Rendered, it is an empty bubble sitting
+ * where the answer should be, which reads as the thoughts having vanished.
+ */
+function isEmptyReply(message: UIMessage): boolean {
+    return message.role === 'assistant' && message.parts.length === 0;
 }
 
 /**
@@ -549,6 +597,7 @@ function handleSubmit(message: PromptInputMessage) {
 
                             <Message
                                 v-for="message in messages"
+                                v-show="!isEmptyReply(message)"
                                 :key="message.id"
                                 :from="message.role"
                                 :class="
@@ -581,19 +630,16 @@ function handleSubmit(message: PromptInputMessage) {
                                         :default-open="isWriting(message)"
                                         :data-testid="`thoughts-${message.id}`"
                                     >
-                                        <ChainOfThoughtHeader>
-                                            <template
-                                                v-if="isWriting(message)"
-                                                #icon
-                                            >
-                                                <span />
+                                        <ChainOfThoughtHeader
+                                            v-if="isWriting(message)"
+                                            hide-label
+                                        >
+                                            <template #icon>
+                                                <ThinkingIndicator />
                                             </template>
-                                            <ThinkingIndicator
-                                                v-if="isWriting(message)"
-                                            />
-                                            <template v-else>
-                                                {{ $t('Route of thought') }}
-                                            </template>
+                                        </ChainOfThoughtHeader>
+                                        <ChainOfThoughtHeader v-else>
+                                            {{ $t('Route of thought') }}
                                         </ChainOfThoughtHeader>
 
                                         <ChainOfThoughtContent>
@@ -628,14 +674,23 @@ function handleSubmit(message: PromptInputMessage) {
                                                         thought.body?.kind ===
                                                         'markdown'
                                                     "
+                                                    class="text-muted-foreground! text-xs leading-relaxed"
                                                     :content="thought.body.text"
                                                     mode="static"
                                                 />
+                                                <!-- The vendored component is
+                                                     a single non-wrapping row,
+                                                     so a search of any size
+                                                     runs off the edge. Set
+                                                     here rather than upstream
+                                                     so it still diffs against
+                                                     the registry. -->
                                                 <ChainOfThoughtSearchResults
                                                     v-else-if="
                                                         thought.body?.kind ===
                                                         'results'
                                                     "
+                                                    class="flex-wrap gap-y-1.5"
                                                 >
                                                     <ChainOfThoughtSearchResult
                                                         v-for="item in thought
@@ -719,10 +774,7 @@ function handleSubmit(message: PromptInputMessage) {
 
                             <!-- Sent, nothing back yet: no assistant message
                                  exists to hang a chain of thought on. -->
-                            <ThinkingIndicator
-                                v-if="status === 'submitted'"
-                                class="px-1"
-                            />
+                            <ThinkingIndicator v-if="status === 'submitted'" />
                         </ConversationContent>
 
                         <ConversationScrollButton :status="status" />
@@ -748,7 +800,7 @@ function handleSubmit(message: PromptInputMessage) {
                                         data-testid="chat-mic"
                                     />
                                     <PromptInputSubmit
-                                        :status="status"
+                                        :status="composerStatus"
                                         data-testid="chat-submit"
                                     />
                                 </PromptInputTools>

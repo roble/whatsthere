@@ -5,18 +5,18 @@ conversations, exposed to external AI agents over WebMCP.
 
 ## Key Files
 
-| Layer      | Files                                                                              |
-| ---------- | ---------------------------------------------------------------------------------- |
-| Controller | `ChatController` (index, show, messages, stream, place)                            |
-| Agents     | `ChatAgent` (the assistant), `ConversationTitleAgent` (names conversations)        |
-| Tools      | `Ai/Tools/ShowOnMap` (geocodes a place), `Ai/Tools/EircodeToGeoLocation` (fake)    |
-| Jobs       | `GenerateConversationTitle`                                                        |
-| Provider   | `ChatServiceProvider` — shares `chat.sessions` via `shareInertiaData()`            |
-| Pages      | `Index` (the whole UI; blank or an existing conversation)                          |
-| Thoughts   | `resources/js/thoughts/` — `kinds.ts` (the registry), `index.ts` (`thoughtsFor()`) |
-| Components | `ChatSessions` (sidebar), `ContextMap`, `ThinkingIndicator`, `TypewriterText`      |
-| Frontend   | `resources/js/map.ts` — `MapView`, `MAP_TOOLS`, `toMapView()`, `viewKey()`         |
-| WebMCP     | `resources/js/webmcp/chatTools.ts`                                                 |
+| Layer      | Files                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
+| Controller | `ChatController` (index, show, messages, stream, place)                                                |
+| Agents     | `ChatAgent` (the assistant), `ConversationTitleAgent` (names conversations)                            |
+| Tools      | `Ai/Tools/` — `ShowOnMap` (geocodes one place), `EircodeToGeoLocation` (fake), `FindPlaces` (Overpass) |
+| Jobs       | `GenerateConversationTitle`                                                                            |
+| Provider   | `ChatServiceProvider` — shares `chat.sessions` via `shareInertiaData()`                                |
+| Pages      | `Index` (the whole UI; blank or an existing conversation)                                              |
+| Thoughts   | `resources/js/thoughts/` — `kinds.ts` (the registry), `index.ts` (`thoughtsFor()`)                     |
+| Components | `ChatSessions` (sidebar), `ContextMap`, `ThinkingIndicator`, `TypewriterText`                          |
+| Frontend   | `resources/js/map.ts` — `MapView`, `MAP_TOOLS`, `toMapView()`, `viewKey()`                             |
+| WebMCP     | `resources/js/webmcp/chatTools.ts`                                                                     |
 
 **No models or migrations** — conversations live in `laravel/ai`'s
 `agent_conversations` / `agent_conversation_messages` tables.
@@ -166,6 +166,36 @@ wherever the visitor dragged the map is still the honest answer.
 The cache key is `geocode:ie:` so entries stored before the restriction are not
 served.
 
+### Finding many places at once
+
+`FindPlaces` answers "what is around here" where `ShowOnMap` answers "where is
+this". It geocodes the area through `ShowOnMap` first, which is also what keeps
+it inside Ireland for free: that lookup is pinned to `countrycodes=ie`, so an
+area outside it never resolves to a box to search.
+
+**The model does not write the query.** `FindPlaces::CATEGORIES` is an
+allow-list of OpenStreetMap tag filters, and the schema exposes its keys as an
+enum. Nothing model-authored reaches Overpass QL, and the only other values
+interpolated are bounding-box floats. A `filter` parameter the model composed
+itself would be an injection surface aimed at somebody else's donated server.
+Adding a category is one line in that array.
+
+Overpass is asked for `LIMIT + 1` results and told to `out center`, both
+load-bearing:
+
+- The extra row is how a full house is told from a coincidence. Without it the
+  cap gets reported as a total, and the assistant says "40 pubs" when it means
+  "at least 40". The overflow surfaces as `capped` in the result.
+- Ways and relations carry no top-level `lat`/`lon`; `out center` gives them a
+  point, and reading only the top-level pair silently drops every castle, hotel
+  and supermarket, which are mapped as buildings.
+
+**The search area is a rectangle, not the place.** A box around Kerry reaches
+into Clare, so results can sit outside the county named. Fixing it means
+resolving the area to an OpenStreetMap boundary and filtering on that, which is
+exact but only works for places mapped as boundaries -- free-text areas like
+"Douglas, Cork" would stop working.
+
 ### Map tools are listed twice
 
 `ChatController::MAP_TOOLS` and `MAP_TOOLS` in `resources/js/map.ts` must agree.
@@ -184,6 +214,30 @@ Every `execute` reads live state when called rather than closing over it. That
 keeps the tool array constant, which matters because Chrome cannot update a
 registered tool: changing the exposed set means aborting every registration and
 redeclaring.
+
+## Test mode
+
+`CHAT_TEST_MODE=true` answers with canned replies from
+`Testing/CannedReplies` instead of calling the model, so the front end can be
+worked on for nothing — and so the states that are awkward to reach on purpose
+(a tool finding nothing, a tool erroring, no reply at all) are one refresh
+away. `?scenario=places` on the chat page pins which one comes back; without it
+they are picked at random. `X-Chat-Test-Scenario` on the response says which
+one you got.
+
+Refused in production whatever the flag says, and pinned **off** in
+`phpunit.xml` so a local `.env` cannot change what the suite tests — a test
+that wants canned replies sets `config(['chat.test_mode' => true])` itself.
+
+Nothing is persisted: the conversation row exists but reopening it is empty,
+because none of it came from the model and none of it belongs in the history
+the model later reads back.
+
+The frames are copies of the shapes in `Laravel\Ai\Streaming\Events\*`, which
+will go stale silently if the package changes its protocol. `CannedRepliesTest`
+holds every frame against the types actually found in those classes, so that
+shows up as a failure rather than as mocks that quietly describe a protocol
+nobody speaks.
 
 ## Testing
 
@@ -218,6 +272,10 @@ php artisan test --compact modules/chat/tests/Feature/
   answer without its steps. `lastMapView()` exists purely to recover the map
   position from that flattening. Persisting the steps means pairing
   `ToolCallMessage` with `ToolResultMessage` on replay.
+- A `MapView` carries `marker` (one located place) or `markers` (a whole
+  search). `viewKey()` includes the marker count, because two searches of one
+  town share a bounding box and a key without it would leave the first set of
+  pins on the map.
 - `EircodeToGeoLocation` returns **fabricated** coordinates: a routing-key table
   plus a deterministic `crc32` offset, so the same Eircode always lands on the
   same point. Real resolution needs the licensed Eircode Address Database.
@@ -225,6 +283,28 @@ php artisan test --compact modules/chat/tests/Feature/
 - Eircodes exclude vowels and `B G I J L M O Q S U Z`, and `D6W` is the one
   routing key with a letter in third position. A pattern of "letter, two digits"
   rejects a real Eircode.
+- **A failed reply still creates an assistant message.** The stream opens with a
+  `start` part before the model has produced anything, so a generation that
+  fails leaves an empty assistant message _after_ the question. Two things fall
+  out of that, and both were live bugs: "Not delivered" must anchor to the last
+  **user** message (`lastUserMessageId`), not the last message, or it looks for
+  the failure on the stub and never renders; and the stub itself must not be
+  drawn (`isEmptyReply`), or it is an empty bubble where the answer should be —
+  which is what "the route of thought just disappears" actually was.
+- A server-side failure arrives _inside_ the stream as an `error` part, so the
+  request itself succeeds. The SDK still sets `status` to `'error'` from it, so
+  the status check is enough and no separate flag is needed. What it does not
+  do is unwind the assistant message the `start` part already created.
+- **The map popup has to be dressed by us.** MapLibre paints it white and sets
+  no text colour, so it inherits the app's foreground — near-white on white in
+  dark mode. The close button has the same problem and the CSS reset takes away
+  the padding it sizes itself with, leaving a 7px sliver. `ContextMap` styles
+  both from the popover tokens in a deliberately **unscoped** block: the popup
+  is built outside Vue, so it carries no scope attribute. The tip is a CSS
+  triangle made of borders, so its colour has to follow too, per anchor.
+- Popups are opened with `focusAfterOpen: false`. MapLibre otherwise moves
+  focus to the close button as the popup opens, so every pin clicked comes up
+  with a focus ring already on it.
 - `MessageResponse` renders reasoning prose with `mode="static"`. The streaming
   mode wraps every unit in an `inline-block` span, and `animation-split="char"`
   means hundreds of boxes relaid out per token — that is what produced the

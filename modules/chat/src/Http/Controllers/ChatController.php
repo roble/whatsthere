@@ -2,6 +2,7 @@
 
 namespace Modules\Chat\Http\Controllers;
 
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,8 +15,10 @@ use Laravel\Ai\Responses\Data\ToolResult;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
+use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Jobs\GenerateConversationTitle;
+use Modules\Chat\Testing\CannedReplies;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -32,6 +35,7 @@ class ChatController
     public const array MAP_TOOLS = [
         ShowOnMap::NAME,
         EircodeToGeoLocation::NAME,
+        FindPlaces::NAME,
     ];
 
     /**
@@ -170,6 +174,10 @@ class ChatController
             ? $this->ownedConversation($request, $validated['conversation_id'])
             : $this->startConversation($request, $validated['message']);
 
+        if ($this->inTestMode()) {
+            return $this->cannedStream($request, $conversation->id);
+        }
+
         $stream = (new ChatAgent($validated['map'] ?? null))
             ->continue($conversation->id, $request->user())
             ->stream($validated['message'])
@@ -200,6 +208,55 @@ class ChatController
     }
 
     /**
+     * Should replies be invented rather than generated?
+     *
+     * Two conditions, not one. The flag is what a developer turns on, and the
+     * environment check is what stops it ever mattering if that flag reaches
+     * production in a `.env` -- serving made-up answers to real visitors would
+     * be a worse failure than the outage it looks like.
+     */
+    protected function inTestMode(): bool
+    {
+        return config('chat.test_mode') === true && ! app()->isProduction();
+    }
+
+    /**
+     * Stream a canned reply, picked at random unless one was named.
+     *
+     * `?scenario=` is honoured so a particular state can be returned to while
+     * it is being worked on, rather than refreshing until it comes up. Nothing
+     * is persisted: the conversation row exists, but reopening it shows an
+     * empty transcript, because none of this came from the model and none of
+     * it belongs in the history the model later reads back.
+     */
+    protected function cannedStream(Request $request, string $conversationId): SymfonyResponse
+    {
+        $scenario = CannedReplies::pick($request->query('scenario'));
+        $replies = new CannedReplies($conversationId);
+
+        $response = new StreamedResponse(function () use ($replies, $scenario): void {
+            foreach ($replies->frames($scenario) as $frame) {
+                $this->writeFrame($frame);
+
+                // Slow enough to watch the reply build, which is the point of
+                // looking at it at all.
+                usleep(40_000);
+            }
+
+            $this->writeFrame('[DONE]');
+        }, headers: [
+            'Cache-Control' => 'no-cache, no-transform',
+            'Content-Type' => 'text/event-stream',
+            'x-vercel-ai-ui-message-stream' => 'v1',
+            'X-Conversation-Id' => $conversationId,
+            // So it is obvious in the network tab that none of this is real.
+            'X-Chat-Test-Scenario' => $scenario,
+        ]);
+
+        return $this->keepFailuresInTheStream($response);
+    }
+
+    /**
      * Report a mid-stream failure as a protocol frame rather than an exception.
      *
      * The Vercel encoder iterates the provider with no try/catch, so anything
@@ -222,18 +279,95 @@ class ChatController
         }
 
         return $response->setCallback(function () use ($stream): void {
+            $stopHiding = $this->hideProviderErrors();
+
             try {
                 $stream();
             } catch (Throwable $e) {
                 // Still an error worth paging over; it just must not escape.
                 report($e);
 
-                // The provider's own message can name keys and account state, so
-                // the visitor gets a fixed one. The retry lives in the UI.
-                $this->writeFrame(['type' => 'error', 'errorText' => __('The assistant could not be reached. Please try again.')]);
+                $this->writeFrame(['type' => 'error', 'errorText' => $this->failureMessage()]);
                 $this->writeFrame('[DONE]');
+            } finally {
+                $stopHiding();
             }
         });
+    }
+
+    /**
+     * Replace the text of any error frame on its way to the browser.
+     *
+     * A provider that fails mid-stream reports it *as an event* before the
+     * exception is raised, and the encoder writes that event's message out
+     * verbatim -- which for OpenAI means the organisation id, the account's
+     * limits and how long until they reset. Catching the exception above is
+     * therefore too late: the raw text has already gone out ahead of it.
+     *
+     * The frame itself is kept rather than dropped, because the browser needs
+     * it to know the reply failed at all; only the wording is ours. Errors
+     * still reach the log intact through `report()`.
+     *
+     * @return Closure(): void Stops the rewriting and releases anything held back.
+     */
+    protected function hideProviderErrors(): Closure
+    {
+        $partial = '';
+
+        // Frames are written one at a time and separated by a blank line, so a
+        // chunk size of 1 hands this whole frames. It carries the remainder
+        // anyway: a frame split down the middle would otherwise slip through
+        // unread, which is the one case that must not leak.
+        ob_start(function (string $chunk) use (&$partial): string {
+            $partial .= $chunk;
+            $complete = '';
+
+            while (($end = strpos($partial, "\n\n")) !== false) {
+                $complete .= $this->withoutProviderDetail(substr($partial, 0, $end + 2));
+                $partial = substr($partial, $end + 2);
+            }
+
+            return $complete;
+        }, 1);
+
+        return function () use (&$partial): void {
+            ob_end_flush();
+
+            // Anything still held back was never a whole frame. It goes out as
+            // it is, now that nothing is buffering, rather than vanishing.
+            if ($partial !== '') {
+                echo $partial;
+                flush();
+            }
+        };
+    }
+
+    /**
+     * Swap the provider's wording out of one server-sent event.
+     */
+    protected function withoutProviderDetail(string $frame): string
+    {
+        if (! str_starts_with($frame, 'data: ')) {
+            return $frame;
+        }
+
+        $payload = json_decode(substr($frame, 6, -2), true);
+
+        if (! is_array($payload) || ($payload['type'] ?? null) !== 'error') {
+            return $frame;
+        }
+
+        $payload['errorText'] = $this->failureMessage();
+
+        return 'data: '.json_encode($payload, JSON_THROW_ON_ERROR)."\n\n";
+    }
+
+    /**
+     * What the visitor is told when a reply does not arrive.
+     */
+    protected function failureMessage(): string
+    {
+        return __('The assistant could not be reached. Please try again.');
     }
 
     /**

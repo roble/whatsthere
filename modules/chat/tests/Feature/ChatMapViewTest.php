@@ -8,6 +8,7 @@ use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
+use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Tests\TestCase;
 
@@ -52,6 +53,41 @@ class ChatMapViewTest extends TestCase
             fn ($page) => $page->component('Chat::Index', false)
                 ->where('initialMapView.label', 'Kinsale, County Cork, Ireland')
                 ->where('initialMapView.bbox', ['-8.5424283', '51.6927609', '-8.4897026', '51.7157766'])
+        );
+    }
+
+    public function test_a_search_restores_every_pin_it_put_on_the_map(): void
+    {
+        $user = $this->createUser();
+        $conversation = $this->conversationFor($user);
+
+        $this->storeMessage($conversation, '0001', 'user', 'Where can I get a pint in Galway?');
+        $this->storeMessage($conversation, '0002', 'assistant', 'There are a few good ones.', [
+            [
+                'id' => 'call-1',
+                'name' => FindPlaces::NAME,
+                'arguments' => ['category' => 'pub', 'area' => 'Galway'],
+                'result' => json_encode([
+                    'label' => 'Pubs in Galway, Ireland',
+                    'bbox' => ['-9.1000', '53.2500', '-9.0000', '53.3000'],
+                    'markers' => [
+                        ['lat' => 53.2741, 'lon' => -9.0476, 'name' => "Darcy's Bar"],
+                        ['lat' => 53.2745, 'lon' => -9.048, 'name' => 'The Skeff'],
+                    ],
+                ]),
+                'result_id' => null,
+            ],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('chat.show', $conversation->id));
+
+        $response->assertOk();
+        $response->assertInertia(
+            fn ($page) => $page->component('Chat::Index', false)
+                ->where('initialMapView.label', 'Pubs in Galway, Ireland')
+                // The pins, not just the camera: a search that reopened on an
+                // empty map would be showing the wrong answer entirely.
+                ->count('initialMapView.markers', 2)
         );
     }
 
