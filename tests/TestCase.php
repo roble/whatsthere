@@ -35,11 +35,20 @@ abstract class TestCase extends BaseTestCase
         // passes locally only because the Vite dev server is up.
         $this->withoutVite();
 
-        // Inertia server-renders the landing page, which with a hot dev server
-        // means a real POST to Vite on :5173 -- so the suite behaves one way
-        // with `npm run dev` running and another without it, and CI exercises
-        // the path not at all. Answering it here makes it the same everywhere.
-        Http::fake(['*__inertia_ssr*' => Http::response(['head' => [], 'body' => ''])]);
+        // Inertia server-renders the landing page, and it does so through two
+        // different addresses: the Vite dev server while `npm run dev` is up,
+        // and the standalone SSR bundle at inertia.ssr.url otherwise. Both are
+        // faked because faking only the first is green exactly where a dev
+        // server happens to be running -- it passes here and fails in CI, on a
+        // URL that never appears locally.
+        $rendered = fn () => Http::response(['head' => [], 'body' => '']);
+
+        Http::fake([
+            '*__inertia_ssr*' => $rendered,
+            // From config rather than written out, so moving the SSR server
+            // does not quietly stop the fake matching it.
+            rtrim((string) config('inertia.ssr.url'), '/').'/*' => $rendered,
+        ]);
 
         // Nothing else may leave the process. Laravel\Ai, Nominatim and
         // Overpass all go through this client, so a test that forgets its
