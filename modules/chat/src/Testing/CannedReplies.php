@@ -3,8 +3,9 @@
 namespace Modules\Chat\Testing;
 
 use Generator;
-use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\FindPlaces;
+use Modules\Chat\Ai\Tools\InterviewVisitor;
+use Modules\Chat\Ai\Tools\SavePropertyPreferences;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 
 /**
@@ -28,13 +29,11 @@ class CannedReplies
      */
     public const array SCENARIOS = [
         'place' => 'a named place, found and mapped',
-        'eircode' => 'an Eircode resolved to a point',
         'places' => 'a search with many pins',
-        'places_capped' => 'a search with more results than it will show',
         'places_empty' => 'a search that found nothing',
         'not_found' => 'a place the geocoder cannot place',
-        'refused' => 'a question outside Ireland, declined',
         'tool_error' => 'a tool that failed rather than came up empty',
+        'property_workflow' => 'the guided Cork property-search journey',
         'failure' => 'no reply at all',
     ];
 
@@ -61,13 +60,14 @@ class CannedReplies
 
         yield from match ($scenario) {
             'place' => $this->place(),
-            'eircode' => $this->eircode(),
             'places' => $this->places(),
-            'places_capped' => $this->placesCapped(),
             'places_empty' => $this->placesEmpty(),
             'not_found' => $this->notFound(),
-            'refused' => $this->refused(),
             'tool_error' => $this->toolError(),
+            'property_workflow' => $this->propertyIntent(),
+            'property_intent' => $this->propertyIntent(),
+            'property_budget' => $this->propertyBudget(),
+            'property_review' => $this->propertyReview(),
             'failure' => $this->failure(),
             default => $this->place(),
         };
@@ -81,72 +81,41 @@ class CannedReplies
 
     protected function place(): Generator
     {
-        yield from $this->thinking('**Locating Kinsale** — a town in County Cork, so show_on_map can place it.');
+        yield from $this->thinking('**Locating Shibuya** — a district in Tokyo, so show_on_map can place it.');
 
-        yield from $this->tool(ShowOnMap::NAME, ['place' => 'Kinsale, Cork'], json_encode([
-            'label' => 'Kinsale, County Cork, Munster, Éire / Ireland',
-            'bbox' => ['-8.5424283', '51.6927609', '-8.4897026', '51.7157766'],
-            'marker' => ['51.7057370', '-8.5229823'],
+        yield from $this->tool(ShowOnMap::NAME, ['place' => 'Shibuya, Tokyo, Japan'], json_encode([
+            'label' => 'Shibuya, Tokyo, Japan',
+            'bbox' => ['139.6613', '35.6281', '139.7239', '35.6924'],
+            'marker' => ['35.6595', '139.7005'],
         ]));
 
-        yield from $this->prose('Kinsale sits at the mouth of the Bandon, about 25km south of Cork city. It is known for its harbour, the star-shaped Charles Fort, and a run of restaurants along the waterfront.');
-    }
-
-    protected function eircode(): Generator
-    {
-        yield from $this->thinking('**Resolving D02 X285** — a Dublin 2 routing key, so the Eircode tool can place it.');
-
-        yield from $this->tool(EircodeToGeoLocation::NAME, ['eircode' => 'D02 X285'], json_encode([
-            'label' => 'D02 X285',
-            'bbox' => ['-6.2515', '53.3325', '-6.2435', '53.3375'],
-            'marker' => ['53.335', '-6.2475'],
-        ]));
-
-        yield from $this->prose('That Eircode is in Dublin 2, just south of the Liffey near Merrion Square.');
+        yield from $this->prose('Shibuya is a major commercial district in Tokyo, known for its scramble crossing, nightlife, fashion, and dense rail connections.');
     }
 
     protected function places(): Generator
     {
         yield from $this->thinking('**Preparing to use find_places tool** — the question is about what is in an area rather than where one place is.');
 
-        yield from $this->tool(FindPlaces::NAME, ['category' => 'pub', 'area' => 'Galway'], json_encode([
-            'label' => 'Pubs in Cathair na Gaillimhe, County Galway, Connacht, Éire / Ireland',
-            'category' => 'pubs',
-            'bbox' => ['-9.1426901', '53.2485189', '-8.9548381', '53.3197423'],
+        yield from $this->tool(FindPlaces::NAME, ['category' => 'cafe', 'area' => 'Shibuya, Tokyo'], json_encode([
+            'label' => 'Cafes in Shibuya, Tokyo, Japan',
+            'categoryKey' => 'cafe',
+            'category' => 'cafes',
+            'bbox' => ['139.6613', '35.6281', '139.7239', '35.6924'],
             'markers' => [
-                ['lat' => 53.2741952, 'lon' => -9.0476288, 'name' => 'Darcy’s Bar'],
-                ['lat' => 53.2745932, 'lon' => -9.0483, 'name' => 'O’Connell’s'],
-                ['lat' => 53.2738, 'lon' => -9.0483, 'name' => 'MacNeill’s'],
-                ['lat' => 53.2719, 'lon' => -9.0543, 'name' => 'The Dew Drop Inn'],
-                ['lat' => 53.2726, 'lon' => -9.0521, 'name' => 'Tigh Neachtain'],
-                ['lat' => 53.2733, 'lon' => -9.0509, 'name' => 'The Quays'],
-                ['lat' => 53.2751, 'lon' => -9.0498, 'name' => 'Garavan’s'],
+                ['lat' => 35.6583, 'lon' => 139.7015, 'name' => 'Streamer Coffee Company'],
+                ['lat' => 35.6558, 'lon' => 139.7032, 'name' => 'White Glass Coffee'],
+                ['lat' => 35.6590, 'lon' => 139.6994, 'name' => 'About Life Coffee Brewers'],
+                ['lat' => 35.6588, 'lon' => 139.6942, 'name' => 'FabCafe Tokyo'],
+                ['lat' => 35.6621, 'lon' => 139.6968, 'name' => 'Roasted Coffee Laboratory'],
+                ['lat' => 35.6628, 'lon' => 139.7041, 'name' => 'Coffee Supreme Tokyo'],
+                ['lat' => 35.6650, 'lon' => 139.7060, 'name' => 'The Local Coffee Stand'],
+                ['lat' => 35.6604, 'lon' => 139.7037, 'name' => 'Blue Bottle Coffee Shibuya'],
+                ['lat' => 35.6574, 'lon' => 139.7024, 'name' => 'Sarutahiko Coffee'],
+                ['lat' => 35.6641, 'lon' => 139.7010, 'name' => 'Verve Coffee Roasters'],
             ],
         ]));
 
-        yield from $this->prose('There are seven pubs on the map around the centre of Galway. Tigh Neachtain is the pick for a quiet pint, and The Quays is the one everyone is sent to.');
-    }
-
-    protected function placesCapped(): Generator
-    {
-        yield from $this->thinking('**Searching Dublin for hospitals** — a big area, so this may well hit the cap.');
-
-        yield from $this->tool(FindPlaces::NAME, ['category' => 'hospital', 'area' => 'Dublin'], json_encode([
-            'label' => 'Hospitals in Dublin, Leinster, Éire / Ireland',
-            'category' => 'hospitals',
-            'bbox' => ['-6.3870', '53.2986', '-6.1147', '53.4106'],
-            'markers' => [
-                ['lat' => 53.3092, 'lon' => -6.2632, 'name' => 'Mount Carmel Community Hospital'],
-                ['lat' => 53.3396, 'lon' => -6.2967, 'name' => 'St James’s Hospital'],
-                ['lat' => 53.3591, 'lon' => -6.2921, 'name' => 'Mater Misericordiae University Hospital'],
-                ['lat' => 53.3181, 'lon' => -6.3062, 'name' => 'Our Lady’s Children’s Hospital'],
-                ['lat' => 53.3013, 'lon' => -6.1774, 'name' => 'St Columcille’s Hospital'],
-                ['lat' => 53.3878, 'lon' => -6.2453, 'name' => 'Beaumont Hospital'],
-            ],
-            'capped' => true,
-        ]));
-
-        yield from $this->prose('There are at least six hospitals across Dublin — the map is showing as many as it will draw at once, so treat that as a sample rather than the full list.');
+        yield from $this->prose('Here are ten cafes around Shibuya. Streamer is known for latte art, while About Life is a good compact stop near the station.');
     }
 
     protected function placesEmpty(): Generator
@@ -178,13 +147,6 @@ class CannedReplies
         yield from $this->prose('I could not place that one. If you can give me a town or a county, I will find it.');
     }
 
-    protected function refused(): Generator
-    {
-        yield from $this->thinking('**Out of scope** — Tokyo is not in Ireland, so decline and offer something else.');
-
-        yield from $this->prose('I only cover places in Ireland, so Tokyo is outside what I can help with. If there is somewhere here you are curious about, I am happy to show you.');
-    }
-
     protected function toolError(): Generator
     {
         yield from $this->thinking('**Searching Cork for playgrounds** — this one is going to fail outright.');
@@ -203,6 +165,57 @@ class CannedReplies
         // sanitiser in ChatController is exercised too: what reaches the
         // browser should never be this text.
         yield ['type' => 'error', 'errorText' => 'Rate limit reached for gpt-5.4-mini in organization org-EXAMPLE0000 on requests per day (RPD): Limit 50, Used 50.'];
+    }
+
+    protected function propertyIntent(): Generator
+    {
+        yield from $this->thinking('**Starting a Cork property search** — first confirm the area to search.');
+        yield from $this->tool(InterviewVisitor::NAME, [
+            'question' => 'Which part of Cork would you like to search?',
+            'options' => ['Cork city', 'County Cork', 'Midleton'],
+            'multiple' => false,
+        ], json_encode([
+            'question' => 'Which part of Cork would you like to search?',
+            'options' => ['Cork city', 'County Cork', 'Midleton'],
+            'multiple' => false,
+            'count' => 1,
+        ]));
+    }
+
+    protected function propertyBudget(): Generator
+    {
+        yield from $this->thinking('**Narrowing the Cork search** — next confirm the maximum asking price.');
+        yield from $this->tool(InterviewVisitor::NAME, [
+            'question' => 'What is your maximum asking price?',
+            'options' => ['€600,000', '€400,000', '€300,000'],
+            'multiple' => false,
+        ], json_encode([
+            'question' => 'What is your maximum asking price?',
+            'options' => ['€600,000', '€400,000', '€300,000'],
+            'multiple' => false,
+            'count' => 2,
+        ]));
+    }
+
+    protected function propertyReview(): Generator
+    {
+        yield from $this->thinking('**Preparing your Cork search** — the preferences are ready for review.');
+        yield from $this->tool(SavePropertyPreferences::NAME, [
+            'location' => 'Cork',
+            'location_type' => 'town',
+            'county' => 'Cork',
+            'max_price' => 60000000,
+            'min_bedrooms' => null,
+            'property_type' => null,
+        ], json_encode([
+            'goal' => 'Buy a property',
+            'location' => 'Cork, Cork',
+            'details' => [
+                'Maximum asking price' => '€600,000',
+                'Minimum bedrooms' => 'Any',
+                'Property type' => 'Any',
+            ],
+        ]));
     }
 
     /**

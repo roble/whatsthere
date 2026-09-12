@@ -5,21 +5,26 @@ conversations, exposed to external AI agents over WebMCP.
 
 ## Key Files
 
-| Layer      | Files                                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------------------------ |
-| Controller | `ChatController` (index, show, messages, stream, place)                                                |
-| Agents     | `ChatAgent` (the assistant), `ConversationTitleAgent` (names conversations)                            |
-| Tools      | `Ai/Tools/` — `ShowOnMap` (geocodes one place), `EircodeToGeoLocation` (fake), `FindPlaces` (Overpass) |
-| Jobs       | `GenerateConversationTitle`                                                                            |
-| Provider   | `ChatServiceProvider` — shares `chat.sessions` via `shareInertiaData()`                                |
-| Pages      | `Index` (the whole UI; blank or an existing conversation)                                              |
-| Thoughts   | `resources/js/thoughts/` — `kinds.ts` (the registry), `index.ts` (`thoughtsFor()`)                     |
-| Components | `ChatSessions` (sidebar), `ContextMap`, `ThinkingIndicator`, `TypewriterText`                          |
-| Frontend   | `resources/js/map.ts` — `MapView`, `MAP_TOOLS`, `toMapView()`, `viewKey()`                             |
-| WebMCP     | `resources/js/webmcp/chatTools.ts`                                                                     |
+| Layer      | Files                                                                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controller | `ChatController` (index, show, messages, stream, place)                                                                                             |
+| Agents     | `ChatAgent` (the assistant), `ConversationTitleAgent` (names conversations)                                                                         |
+| Tools      | `Ai/Tools/` — `ShowOnMap` (geocodes one place), `FindPlaces` (up to 40 ranked Overpass results), `SaveItinerary` (the day, in order)                |
+| Jobs       | `GenerateConversationTitle`                                                                                                                         |
+| Provider   | `ChatServiceProvider` — shares `chat.sessions` via `shareInertiaData()`                                                                             |
+| Pages      | `Index` (the whole UI; blank or an existing conversation)                                                                                           |
+| Thoughts   | `resources/js/thoughts/` — `kinds.ts` (the registry), `index.ts` (`thoughtsFor()`)                                                                  |
+| Components | `ChatSessions` (sidebar), `ContextMap`, `PlanSummary` (plan card rows), `ItineraryPanel` (the day, in order), `ThinkingIndicator`, `TypewriterText` |
+| Frontend   | `resources/js/map.ts` — `MapView`, `MAP_TOOLS`, `toMapView()`, `viewKey()`                                                                          |
+| WebMCP     | `resources/js/webmcp/chatTools.ts`                                                                                                                  |
 
-**No models or migrations** — conversations live in `laravel/ai`'s
-`agent_conversations` / `agent_conversation_messages` tables.
+Conversations live in `laravel/ai`'s `agent_conversations` /
+`agent_conversation_messages` tables. The only module-owned table is
+`onboarding_states`, one row per conversation holding the onboarding phase
+(`interviewing` → `reviewing` → `mapping`), the open question, recorded answers,
+and the map-ready plan. `InterviewVisitor`, `SaveMapReadyPlan` and `SaveItinerary` write it; the
+`chat.onboarding` route moves it to `mapping` deterministically for "Skip" and
+"Show my map", so neither depends on the model doing the right thing.
 
 ## Routes
 
@@ -31,6 +36,7 @@ POST  chat/messages                 → chat.stream    send + stream a reply
 POST  chat/place                    → chat.place     geocode for WebMCP
 GET   chat/{conversation}           → chat.show      open a conversation
 GET   chat/{conversation}/messages  → chat.messages  read one as JSON
+PATCH chat/{conversation}/onboarding → chat.onboarding  open the map (skip / show)
 ```
 
 `chat/place` is declared **before** `chat/{conversation}` or the router reads
@@ -129,19 +135,18 @@ A new **body** shape is the one change costing two edits: a variant on
 
 `Laravel\Ai\Streaming\Events\ProviderToolEvent` does not override
 `toVercelProtocolArray()`, and the encoder skips events returning null. So
-`WebSearch` and the hosted `tool_search` produce **no stream parts at all** — the
-route of thought can never show a search step, and the OpenAI streaming path
+`WebSearch` produces **no stream parts at all** — the route of thought can never
+show a search step, and the OpenAI streaming path
 emits no `Citation` events either, so `source-url` parts never arrive.
 
 Only local tools implementing `Laravel\Ai\Contracts\Tool` are visible. If
 search activity ever needs to appear in the UI, it has to become a local tool.
 
-### The model is pinned, and both reasoning options are load-bearing
+### The model and both reasoning options are pinned
 
-`ChatAgent` uses `#[Model('gpt-5.4-mini')]`, not `#[UseCheapestModel]`. OpenAI
-rejects the hosted `tool_search` tool on `gpt-5.4-nano` outright (_"Tool
-'tool_search' is not supported"_), so deferred tool loading costs that bump;
-mini is the cheapest tier that accepts it.
+`ChatAgent` uses `#[Model('gpt-5.4-mini')]`, not `#[UseCheapestModel]`, so an SDK
+update cannot silently change the quality, latency, or cost of the application's
+central experience.
 
 `providerOptions()` sends `['reasoning' => ['effort' => 'low', 'summary' =>
 'auto']]`. **Both halves are required.** Without `summary` OpenAI reasons
@@ -149,29 +154,26 @@ silently; without `effort` it does not reason at all, so `summary` has nothing t
 report and the Thinking step never renders. Verified: `low` yields a few hundred
 `reasoning_summary_text.delta` frames, `medium` several times that.
 
-`ToolSearch` also throws on providers that do not support it (Gemini among
-them), and needs `store` left at its default on the OpenAI provider. If
-`config/ai.php` moves off `openai`, this feature moves with it.
+### Geographic scope is global
 
-### Ireland is the scope, in two halves
-
-The soft half is `ChatAgent::instructions()`, which tells the model to decline
-anything that is not an Irish location. The hard half is `countrycodes=ie` on
-Nominatim's `/search` in `ShowOnMap::lookup()` — a model can talk its way around
-a prompt, not around a geocoder that returns nothing.
-
-Reverse geocoding (`placeAt()`) is deliberately **not** restricted: naming
-wherever the visitor dragged the map is still the honest answer.
-
-The cache key is `geocode:ie:` so entries stored before the restriction are not
-served.
+`ChatAgent`, `ShowOnMap`, `FindPlaces`, the WebMCP place tool, and the default
+map view all cover the world. Nominatim searches carry no country filter. The
+cache key is `geocode:global:` so responses created under the former restricted
+contract are never reused accidentally.
 
 ### Finding many places at once
 
 `FindPlaces` answers "what is around here" where `ShowOnMap` answers "where is
-this". It geocodes the area through `ShowOnMap` first, which is also what keeps
-it inside Ireland for free: that lookup is pinned to `countrycodes=ie`, so an
-area outside it never resolves to a box to search.
+this". It geocodes the area through `ShowOnMap` first so there remains one place
+where a free-text name becomes a bounding box.
+
+**Unnamed places are named apart, not all alike.** OpenStreetMap is full of
+unnamed viewpoints and parks, and calling every one of them "Viewpoint" left
+seventeen pins nobody could tell apart -- and left the model with no string
+identifying one rather than another, so asked for an itinerary from them it
+reached for the name of the search itself and every stop geocoded to the same
+point. `nameFor()` uses the street where there is one ("Pub at 17 Quay Street")
+and numbers them where there is not ("Pub 1").
 
 **The model does not write the query.** `FindPlaces::CATEGORIES` is an
 allow-list of OpenStreetMap tag filters, and the schema exposes its keys as an
@@ -180,12 +182,19 @@ interpolated are bounding-box floats. A `filter` parameter the model composed
 itself would be an injection surface aimed at somebody else's donated server.
 Adding a category is one line in that array.
 
-Overpass is asked for `LIMIT + 1` results and told to `out center`, both
-load-bearing:
+Overpass is asked for forty results and told to `out center`; everything it
+sends back is returned, **ranked rather than truncated** -- named places first,
+then the ones carrying the most `DETAIL_TAGS`, which is the best proxy
+available for somewhere worth going. A reply that searches twice pools both
+sets, so the map can carry more than forty pins. Each marker may carry `details`
+(address, hours, website, phone, cuisine, wheelchair, outdoor seating, Wi-Fi,
+description) from an allow-list of OpenStreetMap tags. `ContextMap` renders
+them into the popup with DOM nodes, never `setHTML`, and only links to
+`http(s)` websites. The English name is preferred when the map has one.
 
-- The extra row is how a full house is told from a coincidence. Without it the
-  cap gets reported as a total, and the assistant says "40 pubs" when it means
-  "at least 40". The overflow surfaces as `capped` in the result.
+Overpass results are cached under a versioned key (`overpass:v4:`), so bump
+the version whenever the marker shape changes.
+
 - Ways and relations carry no top-level `lat`/`lon`; `out center` gives them a
   point, and reading only the top-level pair silently drops every castle, hotel
   and supermarket, which are mapped as buildings.
@@ -195,6 +204,41 @@ into Clare, so results can sit outside the county named. Fixing it means
 resolving the area to an OpenStreetMap boundary and filtering on that, which is
 exact but only works for places mapped as boundaries -- free-text areas like
 "Douglas, Cork" would stop working.
+
+### The itinerary lives inside the plan
+
+`SaveItinerary` writes an ordered `stops` array into `onboarding_states.plan`
+rather than into a table of its own: the plan is the source of truth for the
+trip and everything already reads it. There is no migration, because `plan` is
+a JSON column.
+
+Two consequences worth knowing:
+
+- **It merges, it does not replace.** `SaveMapReadyPlan` always writes a
+  complete plan, so an itinerary written as a whole-plan update would drop the
+  goal — and a plan refresh that did not preserve `stops` would drop the day.
+- **The coordinates come from the geocoder, never the model**, through
+  `ShowOnMap` so there stays one place where a name becomes a point. A stop
+  that will not geocode is dropped and named back to the model in `unplaced`.
+- **A stop outside the plan's own location is dropped too.** Restaurant and
+  cafe names match somewhere of the same name in another town often enough to
+  matter, and because the box has to frame every stop, one outlier stretches it
+  over the whole region and zooms the map out to nothing. The plan's location
+  is geocoded once and padded by half its own width (minimum ~5km) so the edge
+  of town still counts. A plan with no location skips the check: a stop shown
+  in the wrong place beats one silently dropped.
+
+`save_itinerary` returns a **`MapView`** (`label`, `bbox`, `stops`), not a
+plan. That is what makes it a map tool: the pins, the dashed route and the
+camera all arrive through the same pipeline as a search, and the browser needs
+no second path. `Index.vue` therefore tracks its stops separately from the plan
+in `transcriptState` and folds them together in `activePlan`. Anything appended
+after the encoded JSON would make the result unparseable and silently leave the
+map where it was, which is why `unplaced` is a key rather than a sentence.
+
+In `mergeViews` (both copies) an itinerary **wins outright** over the searches
+in the same reply: it is the deliberate answer of the turn, not one lookup
+among several.
 
 ### Map tools are listed twice
 
@@ -210,10 +254,20 @@ Both failures are silent.
 Tools run in the page inside the visitor's existing session — no tokens, no
 CORS, no second auth surface.
 
-Every `execute` reads live state when called rather than closing over it. That
-keeps the tool array constant, which matters because Chrome cannot update a
-registered tool: changing the exposed set means aborting every registration and
-redeclaring.
+**The tool set follows the onboarding phase.** Each tool may carry `phases`;
+the page passes a computed list filtered by the current phase, and the
+composable re-registers with the browser whenever that list changes. An agent
+inspecting the page mid-interview sees `answer_question` and `skip_interview`;
+after "Show my map" it sees `open_map` give way to `read_map_location`,
+`show_place_on_map`, `show_trip_plan`, `update_trip_plan`, `read_itinerary`,
+`show_itinerary` and `update_itinerary`. `read_trip_plan`, `start_trip`,
+`ask_this_assistant`, `read_current_chat`, `list_chat_sessions` and
+`open_chat_session` are always offered.
+
+Every `execute` reads live state when called rather than closing over it, so
+nothing but a phase change rebuilds the list. Tools that send a message await
+`chat.sendMessage()`, which resolves when the reply has finished streaming, so
+an agent can chain `answer_question` calls and read the plan at the end.
 
 ## Test mode
 
@@ -252,8 +306,7 @@ php artisan test --compact modules/chat/tests/Feature/
   job class existed can never autoload it — the payload deserialises to an
   `__PHP_Incomplete_Class` and the job lands in `failed_jobs` with "tried to
   access a property on an incomplete object". Run `php artisan queue:restart`
-  (and restart the container in Docker). This is not a code bug and no test
-  catches it.
+  from the repository root. This is not a code bug and no test catches it.
 - Titles need a **running worker**; `QUEUE_CONNECTION=database` here.
 - `read_current_chat` returns the whole transcript, which can flood an agent's
   context on a long conversation. It wants a `limit` parameter.
@@ -276,13 +329,6 @@ php artisan test --compact modules/chat/tests/Feature/
   search). `viewKey()` includes the marker count, because two searches of one
   town share a bounding box and a key without it would leave the first set of
   pins on the map.
-- `EircodeToGeoLocation` returns **fabricated** coordinates: a routing-key table
-  plus a deterministic `crc32` offset, so the same Eircode always lands on the
-  same point. Real resolution needs the licensed Eircode Address Database.
-  Replacing `pointFor()` is the whole job.
-- Eircodes exclude vowels and `B G I J L M O Q S U Z`, and `D6W` is the one
-  routing key with a letter in third position. A pattern of "letter, two digits"
-  rejects a real Eircode.
 - **A failed reply still creates an assistant message.** The stream opens with a
   `start` part before the model has produced anything, so a generation that
   fails leaves an empty assistant message _after_ the question. Two things fall
@@ -305,10 +351,14 @@ php artisan test --compact modules/chat/tests/Feature/
 - Popups are opened with `focusAfterOpen: false`. MapLibre otherwise moves
   focus to the close button as the popup opens, so every pin clicked comes up
   with a focus ring already on it.
-- `MessageResponse` renders reasoning prose with `mode="static"`. The streaming
-  mode wraps every unit in an `inline-block` span, and `animation-split="char"`
-  means hundreds of boxes relaid out per token — that is what produced the
-  forced-reflow warnings. Leave the main reply on `"auto"`.
+- **The streaming reply runs with `:enable-animate="false"`.** With animation
+  on, `vue-stream-markdown` wraps every word in a Vue `TransitionGroup`, and on
+  each streamed token Vue calls `getBoundingClientRect` on every word and
+  `getComputedStyle` on each entering one. Cost grows with the reply: profiled
+  at 8.8 s in `getTransitionInfo` plus 3.4 s in rect reads for one long answer,
+  with single main-thread freezes over 10 s, and the animation never visibly
+  ran. Reasoning prose stays on `mode="static"`. `followAnchor` is coalesced to
+  one run per animation frame for the same reason: it reads layout.
 - Tests must not depend on built assets. `tests/TestCase::setUp()` calls
   `withoutVite()` because the `phpunit-raw` CI job runs with `skip-build`, and
   `public/build` is gitignored — a Blade layout calling `@vite` (Filament's admin

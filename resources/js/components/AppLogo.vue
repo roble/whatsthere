@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { useSettings } from '@/composables/useSettings';
-import { useColorMode } from '@vueuse/core';
 import { computed } from 'vue';
 
-const colorMode = useColorMode({ storageKey: 'appearance' });
+/**
+ * The mark that ships with the application.
+ *
+ * Two files rather than one tinted at runtime: the shape is identical and only
+ * the fill differs, and an <img> cannot be recoloured from here. `light` is for
+ * the branded panels that put it on a dark background.
+ */
+const SHIPPED_MARK = '/images/logo.svg';
+const SHIPPED_MARK_LIGHT = '/images/logo-white.svg';
 
 /**
  * The application's identity, and the only thing this component reads.
@@ -14,17 +21,6 @@ const colorMode = useColorMode({ storageKey: 'appearance' });
  */
 const settings = useSettings();
 const brand = computed(() => settings.value.general);
-
-const primaryFill = computed(() =>
-    colorMode.value === 'dark'
-        ? 'url(#logo-dark-bottom-grad)'
-        : 'url(#logo-primary-grad)',
-);
-const secondaryFill = computed(() =>
-    colorMode.value === 'dark'
-        ? 'url(#logo-dark-top-grad)'
-        : 'url(#logo-secondary-grad)',
-);
 
 const sizeClasses = {
     sm: 'h-8 w-8',
@@ -72,7 +68,22 @@ const useWordmark = computed(
  * there is, and otherwise the mark that ships with the application.
  */
 const markSrc = computed(
-    () => brand.value.site_icon ?? brand.value.site_logo ?? null,
+    () =>
+        brand.value.site_icon ??
+        brand.value.site_logo ??
+        (props.variant === 'light' ? SHIPPED_MARK_LIGHT : SHIPPED_MARK),
+);
+
+/**
+ * Is the square slot showing our own mark rather than a configured one?
+ *
+ * It is drawn tight to its own edges, so at the same box size it reads bigger
+ * than the icon it replaced. The nudge belongs to our file alone -- an install
+ * that uploaded its own icon has already chosen how much room it should fill.
+ */
+const isShippedMark = computed(
+    () =>
+        markSrc.value === SHIPPED_MARK || markSrc.value === SHIPPED_MARK_LIGHT,
 );
 
 /**
@@ -135,183 +146,13 @@ const logoAlt = computed(() => `${brand.value.site_name} logo`);
         />
 
         <!-- The square slot: the configured icon, or the mark that ships. -->
-        <div
-            v-else-if="markSrc"
-            class="relative"
-            :class="sizeClasses[size || 'md']"
-        >
+        <div v-else class="relative" :class="sizeClasses[size || 'md']">
             <img
                 :src="markSrc"
                 :alt="logoAlt"
                 class="h-full w-full object-contain"
+                :class="isShippedMark ? 'scale-85' : undefined"
             />
-        </div>
-
-        <!-- SVG Logo -->
-        <div v-else class="relative" :class="sizeClasses[size || 'md']">
-            <svg
-                class="h-full w-full"
-                viewBox="0 0 568 568"
-                xmlns="http://www.w3.org/2000/svg"
-                :aria-label="logoAlt"
-                role="img"
-                style="fill-rule: evenodd; clip-rule: evenodd"
-            >
-                <defs>
-                    <linearGradient
-                        id="logo-secondary-grad"
-                        x1="0"
-                        y1="0"
-                        x2="1"
-                        y2="0"
-                        gradientUnits="userSpaceOnUse"
-                        gradientTransform="matrix(376.07,135.39,-135.39,376.07,231.46,875.253)"
-                    >
-                        <stop
-                            offset="0"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--secondary) 96%,
-                                    black
-                                );
-                            "
-                        />
-                        <stop
-                            offset="1"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--secondary) 98%,
-                                    white
-                                );
-                            "
-                        />
-                    </linearGradient>
-                    <linearGradient
-                        id="logo-primary-grad"
-                        x1="0"
-                        y1="0"
-                        x2="1"
-                        y2="0"
-                        gradientUnits="userSpaceOnUse"
-                        gradientTransform="matrix(-481.156,-26.6311,26.6311,-481.156,753.144,1025.92)"
-                    >
-                        <stop
-                            offset="0"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 96%,
-                                    black
-                                );
-                            "
-                        />
-                        <stop
-                            offset="1"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 98%,
-                                    white
-                                );
-                            "
-                        />
-                    </linearGradient>
-                    <!-- Dark mode: lighter top semi-circle (light → slightly less light) -->
-                    <linearGradient
-                        id="logo-dark-top-grad"
-                        gradientUnits="objectBoundingBox"
-                        x1="0.5"
-                        y1="0"
-                        x2="0.5"
-                        y2="1"
-                    >
-                        <stop
-                            offset="0"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 45%,
-                                    white
-                                );
-                            "
-                        />
-                        <stop
-                            offset="1"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 65%,
-                                    white
-                                );
-                            "
-                        />
-                    </linearGradient>
-                    <!-- Dark mode: darker bottom semi-circle (primary → darkened primary) -->
-                    <linearGradient
-                        id="logo-dark-bottom-grad"
-                        gradientUnits="objectBoundingBox"
-                        x1="0.5"
-                        y1="0"
-                        x2="0.5"
-                        y2="1"
-                    >
-                        <stop
-                            offset="0"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 88%,
-                                    white
-                                );
-                            "
-                        />
-                        <stop
-                            offset="1"
-                            style="
-                                stop-color: color-mix(
-                                    in oklch,
-                                    var(--primary) 75%,
-                                    black
-                                );
-                            "
-                        />
-                    </linearGradient>
-                </defs>
-                <g transform="matrix(1,0,0,1,-923,-1301)">
-                    <g
-                        transform="matrix(0.373135,0,0,0.373135,759.596,1101.55)"
-                    >
-                        <g transform="matrix(1,0,0,1,26.7094,46.0787)">
-                            <g
-                                transform="matrix(-1.01323,-1.01323,1.01323,-1.01323,789.359,3040.11)"
-                            >
-                                <path
-                                    d="M796.834,683.998L796.834,1297.69C796.834,1340.02 762.461,1374.4 720.123,1374.4L683.357,1374.4C471.667,1374.4 299.801,1202.53 299.801,990.842C299.801,779.152 471.667,607.287 683.357,607.287L720.123,607.287C762.461,607.287 796.834,641.66 796.834,683.998Z"
-                                    :fill="
-                                        variant === 'light'
-                                            ? 'rgba(255,255,255,0.7)'
-                                            : primaryFill
-                                    "
-                                />
-                            </g>
-                            <g
-                                transform="matrix(1.01323,1.01323,-1.01323,1.01323,1557.32,-541.47)"
-                            >
-                                <path
-                                    d="M796.834,683.998L796.834,1297.69C796.834,1340.02 762.461,1374.4 720.123,1374.4L683.357,1374.4C471.667,1374.4 299.801,1202.53 299.801,990.842C299.801,779.152 471.667,607.287 683.357,607.287L720.123,607.287C762.461,607.287 796.834,641.66 796.834,683.998Z"
-                                    :fill="
-                                        variant === 'light'
-                                            ? 'white'
-                                            : secondaryFill
-                                    "
-                                />
-                            </g>
-                        </g>
-                    </g>
-                </g>
-            </svg>
         </div>
 
         <!-- Text Logo. Skipped when a wordmark is already showing the name. -->

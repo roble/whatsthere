@@ -25,9 +25,30 @@ export const webMcpSupported =
 /** Set by the app shell so gated tools can be withheld while signed out. */
 export const webMcpAuthenticated = ref(false);
 
-/** Everything the page declares, available or not. The badge lists this. */
+/** Everything the current page declares before authentication filtering. */
 export const webMcpTools = computed<WebMcpTool[]>(() =>
     providers.value.flatMap((provider) => provider()),
+);
+
+/**
+ * Everything that applies to this visitor, whether or not it is live yet.
+ *
+ * Sign-in decides which tools are *ever* theirs to call, so a guest entry point
+ * is no part of a member's set and vice versa. Anything beyond that is a matter
+ * of timing, and the panel says so rather than hiding it.
+ */
+export const webMcpVisitorTools = computed<WebMcpTool[]>(() =>
+    webMcpTools.value.filter((tool) => {
+        if (tool.requiresAuth) {
+            return webMcpAuthenticated.value;
+        }
+
+        if (tool.requiresGuest) {
+            return !webMcpAuthenticated.value;
+        }
+
+        return true;
+    }),
 );
 
 /**
@@ -39,11 +60,24 @@ export const webMcpTools = computed<WebMcpTool[]>(() =>
  */
 export const webMcpActiveTools = computed<WebMcpTool[]>(() =>
     webMcpSupported
-        ? webMcpTools.value.filter(
-              (tool) => !tool.requiresAuth || webMcpAuthenticated.value,
-          )
+        ? webMcpVisitorTools.value.filter((tool) => tool.available !== false)
         : [],
 );
+
+/** Register tools that live for the lifetime of the application shell. */
+export function registerWebMcpTools(
+    provider: MaybeRefOrGetter<WebMcpTool[]>,
+): () => void {
+    const get: Provider = () => toValue(provider);
+
+    providers.value = [...providers.value, get];
+
+    return () => {
+        providers.value = providers.value.filter(
+            (candidate) => candidate !== get,
+        );
+    };
+}
 
 /**
  * Offer tools for as long as the calling component is alive.
@@ -53,15 +87,9 @@ export const webMcpActiveTools = computed<WebMcpTool[]>(() =>
  * means one more entry in the returned array and nothing else.
  */
 export function useWebMcpTools(provider: MaybeRefOrGetter<WebMcpTool[]>): void {
-    const get: Provider = () => toValue(provider);
+    const unregister = registerWebMcpTools(provider);
 
-    providers.value = [...providers.value, get];
-
-    onScopeDispose(() => {
-        providers.value = providers.value.filter(
-            (candidate) => candidate !== get,
-        );
-    });
+    onScopeDispose(unregister);
 }
 
 /**

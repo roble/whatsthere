@@ -7,7 +7,7 @@ import SiteLayout from '@/layouts/SiteLayout.vue';
         :title="$t('Privacy Policy')"
         :description="
             $t(
-                'Learn how Saucebase collects, uses, and protects your personal information.',
+                'Learn how Whatsthere collects, uses, and protects your personal information.',
             )
         "
     >
@@ -16,7 +16,7 @@ import SiteLayout from '@/layouts/SiteLayout.vue';
                 {{ $t('Privacy Policy') }}
             </h1>
             <p class="mb-10 text-sm text-gray-500 dark:text-gray-400">
-                {{ $t('Last updated: January 1, 2026') }}
+                {{ $t('Last updated: September 3, 2026') }}
             </p>
 
             <div class="space-y-10 text-gray-700 dark:text-gray-300">

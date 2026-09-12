@@ -1,0 +1,54 @@
+[
+  {
+    "id": "daft-mock-1001",
+    "url": "https://example.test/daft/daft-mock-1001",
+    "title": "17 Maple Grove, Douglas, Cork",
+    "status": "active",
+    "listed_on": "2026-09-01",
+    "address": "17 Maple Grove",
+    "town": "Douglas",
+    "county": "Cork",
+    "country": "IE",
+    "eircode": "T12 A3F8",
+    "latitude": 51.8754,
+    "longitude": -8.4362,
+    "property_type": "house",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "floor_area_sqm": 146.5,
+    "ber_rating": "B3",
+    "description": "A fictional four-bedroom family home close to Douglas village.",
+    "media": [
+      {"url": "/modules/properties/images/cork-home-exterior.png", "alt_text": "Exterior of 17 Maple Grove"},
+      {"url": "/modules/properties/images/cork-home-living-room.png", "alt_text": "Living room at 17 Maple Grove"},
+      {"url": "/modules/properties/images/cork-home-kitchen.png", "alt_text": "Kitchen at 17 Maple Grove"}
+    ],
+    "prices": [
+      {"record_type": "asking_price", "amount": 49500000, "currency": "EUR", "effective_date": "2026-09-01"}
+    ]
+  },
+  {
+    "id": "daft-mock-1002",
+    "url": "https://example.test/daft/daft-mock-1002",
+    "title": "8 Harbour View, Blackrock, Cork",
+    "status": "active",
+    "listed_on": "2026-09-03",
+    "address": "8 Harbour View",
+    "town": "Blackrock",
+    "county": "Cork",
+    "country": "IE",
+    "eircode": "T12 C9H2",
+    "latitude": 51.8941,
+    "longitude": -8.3948,
+    "property_type": "apartment",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "floor_area_sqm": 78,
+    "ber_rating": "A2",
+    "description": "A fictional two-bedroom apartment near Blackrock Castle.",
+    "media": [],
+    "prices": [
+      {"record_type": "asking_price", "amount": 36500000, "currency": "EUR", "effective_date": "2026-09-03"}
+    ]
+  }
+]

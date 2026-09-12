@@ -22,16 +22,16 @@ const settings = useSettings();
                         {{ settings.general.site_name }}
                     </span>
                     <a
-                        href="https://github.com/saucebase-dev/saucebase"
+                        href="https://github.com/saucebase-dev/wayfinder"
                         class="hover:text-foreground"
                     >
                         {{ $t('GitHub') }}
                     </a>
                     <a
-                        href="https://saucebase-dev.github.io/docs/"
+                        href="https://webmcp.devpost.com/"
                         class="hover:text-foreground"
                     >
-                        {{ $t('Documentation') }}
+                        {{ $t('WebMCP Challenge') }}
                     </a>
                     <Link
                         :href="route('privacy')"

@@ -3,6 +3,7 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Chat\Models\OnboardingState;
 use Modules\Chat\Testing\CannedReplies;
 use Tests\TestCase;
 
@@ -79,7 +80,7 @@ class CannedRepliesTest extends TestCase
 
     public function test_the_map_scenarios_hand_back_views_the_map_can_read(): void
     {
-        foreach (['place' => 'marker', 'eircode' => 'marker', 'places' => 'markers'] as $scenario => $pins) {
+        foreach (['place' => 'marker', 'places' => 'markers'] as $scenario => $pins) {
             $output = collect($this->framesFor($scenario))
                 ->firstWhere('type', 'tool-output-available')['output'];
 
@@ -126,6 +127,40 @@ class CannedRepliesTest extends TestCase
         $body = $response->streamedContent();
         $this->assertStringContainsString('data: {"type":"start"', $body);
         $this->assertStringContainsString("data: [DONE]\n\n", $body);
+    }
+
+    public function test_property_workflow_persists_cork_preferences_before_using_the_real_search(): void
+    {
+        config(['chat.test_mode' => true]);
+        $user = $this->createUser();
+
+        $first = $this->actingAs($user)
+            ->post(route('chat.stream').'?scenario=property_workflow', [
+                'message' => 'I want to buy a home in Cork.',
+            ]);
+
+        $conversationId = (string) $first->headers->get('X-Conversation-Id');
+        $this->assertSame('Which part of Cork would you like to search?', OnboardingState::find($conversationId)?->current_question['question']);
+
+        $this->actingAs($user)
+            ->post(route('chat.stream').'?scenario=property_workflow', [
+                'conversation_id' => $conversationId,
+                'message' => 'Cork city',
+            ]);
+
+        $this->assertSame('What is your maximum asking price?', OnboardingState::find($conversationId)?->current_question['question']);
+
+        $this->actingAs($user)
+            ->post(route('chat.stream').'?scenario=property_workflow', [
+                'conversation_id' => $conversationId,
+                'message' => '€600,000',
+            ]);
+
+        $state = OnboardingState::find($conversationId);
+
+        $this->assertSame('reviewing', $state?->phase);
+        $this->assertSame('Cork', $state?->plan['preferences']['location']);
+        $this->assertSame(60000000, $state?->plan['preferences']['max_price']);
     }
 
     public function test_the_failure_scenario_never_leaks_the_provider_wording(): void

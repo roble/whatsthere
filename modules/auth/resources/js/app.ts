@@ -1,21 +1,28 @@
 import { useDialog } from '@/composables/useDialog';
 import { registerGlobalComponent } from '@/lib/globalComponents';
 import { registerAction, registerIcon } from '@/lib/navigation';
-import { router } from '@inertiajs/vue3';
+import { registerWebMcpTools } from '@/webmcp';
+import { router, usePage } from '@inertiajs/vue3';
 import { LogOut } from '@lucide/vue';
 import '@modules/auth/resources/css/style.css';
 import { trans } from 'laravel-vue-i18n';
 import IconLogOut from '~icons/lucide/log-out';
 import ImpersonationAlert from './components/ImpersonationAlert.vue';
+import { guestAuthTools } from './webmcp/authTools';
 
 /**
  * Auth module setup
  * Called during app initialization before mounting
  */
 export function setup() {
+    const page = usePage();
+
     registerIcon('logout', IconLogOut);
     registerAuthActions();
     registerGlobalComponent('top', ImpersonationAlert);
+    registerWebMcpTools(() =>
+        guestAuthTools(page.props?.auth?.registration_enabled === true),
+    );
 }
 
 /**

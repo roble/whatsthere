@@ -1,0 +1,24 @@
+{
+	"name": "modules/properties",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Modules\\Properties\\": "src/",
+			"Modules\\Properties\\Tests\\": "tests/",
+			"Modules\\Properties\\Database\\Factories\\": "database/factories/",
+			"Modules\\Properties\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Modules\\Properties\\Providers\\PropertiesServiceProvider"
+			]
+		}
+	}
+}

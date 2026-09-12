@@ -1,0 +1,7 @@
+export { default as Plan } from './Plan.vue';
+export { default as PlanContent } from './PlanContent.vue';
+export { default as PlanDescription } from './PlanDescription.vue';
+export { default as PlanFooter } from './PlanFooter.vue';
+export { default as PlanHeader } from './PlanHeader.vue';
+export { default as PlanTitle } from './PlanTitle.vue';
+export { default as PlanTrigger } from './PlanTrigger.vue';

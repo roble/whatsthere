@@ -265,9 +265,9 @@ class ChatInsights
     /**
      * What people asked for that the tools could not place.
      *
-     * The most directly actionable thing on the page: a repeated miss is either
-     * a place Nominatim spells differently, a routing key missing from the
-     * Eircode table, or somewhere outside Ireland that people keep asking for.
+     * The most directly actionable thing on the page: a repeated miss usually
+     * means Nominatim spells a place differently or the requested category is
+     * not represented in OpenStreetMap for that area.
      *
      * @return Collection<int, array{tool: string, input: string, attempts: int, last_seen: Carbon, reason: string}>
      */
@@ -372,6 +372,6 @@ class ChatInsights
             return $arguments;
         }
 
-        return (string) ($arguments['place'] ?? $arguments['eircode'] ?? json_encode($arguments) ?: '');
+        return (string) ($arguments['place'] ?? json_encode($arguments) ?: '');
     }
 }

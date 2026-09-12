@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Modules\Chat\Ai\ChatAgent;
-use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Tests\TestCase;
@@ -91,33 +90,79 @@ class ChatMapViewTest extends TestCase
         );
     }
 
-    public function test_an_eircode_lookup_also_restores_the_map(): void
+    public function test_searches_in_one_reply_are_pooled_on_reopen(): void
     {
         $user = $this->createUser();
         $conversation = $this->conversationFor($user);
 
-        $this->storeMessage($conversation, '0001', 'user', 'Where is D02 X285?');
-        $this->storeMessage($conversation, '0002', 'assistant', 'That is in Dublin 2.', [
+        $search = fn (string $category, string $label, array $bbox, string $name): array => [
+            'id' => 'call-'.$category,
+            'name' => FindPlaces::NAME,
+            'arguments' => ['category' => $category, 'area' => 'Lisbon'],
+            'result' => json_encode([
+                'label' => $label,
+                'category' => $category.'s',
+                'categoryKey' => $category,
+                'bbox' => $bbox,
+                'markers' => [['lat' => 38.7, 'lon' => -9.1, 'name' => $name]],
+            ]),
+            'result_id' => null,
+        ];
+
+        $this->storeMessage($conversation, '0001', 'user', 'Show me places for my plan.');
+        $this->storeMessage($conversation, '0002', 'assistant', 'Here you go.', [
+            $search('restaurant', 'Restaurants in Lisbon, Portugal', ['-9.2', '38.6', '-9.1', '38.7'], 'Saraiva'),
+            $search('museum', 'Museums in Lisbon, Portugal', ['-9.1', '38.7', '-9.0', '38.8'], 'MAAT'),
             [
-                'id' => 'call-1',
-                'name' => EircodeToGeoLocation::NAME,
-                'arguments' => ['eircode' => 'D02 X285'],
-                'result' => json_encode([
-                    'label' => 'D02 X285',
-                    'bbox' => ['-6.2515', '53.3325', '-6.2435', '53.3375'],
-                    'marker' => ['53.335', '-6.2475'],
-                ]),
+                'id' => 'call-place',
+                'name' => ShowOnMap::NAME,
+                'arguments' => ['place' => 'Lisbon'],
+                'result' => json_encode(['label' => 'Lisbon, Portugal', 'bbox' => ['-9.2', '38.6', '-9.0', '38.8'], 'marker' => ['38.7', '-9.1']]),
                 'result_id' => null,
             ],
         ]);
 
-        // Every map-moving tool has to be listed, or reopening the
-        // conversation snaps the map back to its default while the messages
-        // beside it still discuss somewhere else.
-        $this->actingAs($user)->get(route('chat.show', $conversation->id))
+        $this->actingAs($user)
+            ->get(route('chat.show', $conversation->id))
             ->assertInertia(
                 fn ($page) => $page->component('Chat::Index', false)
-                    ->where('initialMapView.label', 'D02 X285')
+                    ->where('initialMapView.label', 'restaurants and museums in Lisbon, Portugal')
+                    ->where('initialMapView.bbox', ['-9.2', '38.6', '-9', '38.8'])
+                    ->where('initialMapView.markers.1.categoryKey', 'museum')
+                    ->count('initialMapView.markers', 2)
+            );
+    }
+
+    public function test_only_the_latest_reply_decides_the_reopened_map(): void
+    {
+        $user = $this->createUser();
+        $conversation = $this->conversationFor($user);
+
+        $search = fn (string $id, string $name): array => [
+            'id' => $id,
+            'name' => FindPlaces::NAME,
+            'arguments' => ['category' => 'cafe', 'area' => 'Shibuya'],
+            'result' => json_encode([
+                'label' => 'Cafes in Shibuya, Tokyo',
+                'category' => 'cafes',
+                'categoryKey' => 'cafe',
+                'bbox' => ['139.69', '35.65', '139.71', '35.67'],
+                'markers' => [['lat' => 35.66, 'lon' => 139.70, 'name' => $name]],
+            ]),
+            'result_id' => null,
+        ];
+
+        $this->storeMessage($conversation, '0001', 'user', 'Cafes in Shibuya?');
+        $this->storeMessage($conversation, '0002', 'assistant', 'Here.', [$search('call-1', 'First Cafe')]);
+        $this->storeMessage($conversation, '0003', 'user', 'Search again.');
+        $this->storeMessage($conversation, '0004', 'assistant', 'Again.', [$search('call-2', 'Second Cafe')]);
+
+        $this->actingAs($user)
+            ->get(route('chat.show', $conversation->id))
+            ->assertInertia(
+                fn ($page) => $page->component('Chat::Index', false)
+                    ->count('initialMapView.markers', 1)
+                    ->where('initialMapView.markers.0.name', 'Second Cafe')
             );
     }
 

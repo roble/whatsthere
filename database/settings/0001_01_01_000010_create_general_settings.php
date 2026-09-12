@@ -7,7 +7,7 @@ return new class extends SettingsMigration
     public function up(): void
     {
         if (! $this->migrator->exists('general.site_name')) {
-            $this->migrator->add('general.site_name', config('app.name', 'Saucebase'));
+            $this->migrator->add('general.site_name', config('app.name', 'Whatsthere'));
         }
 
         if (! $this->migrator->exists('general.site_tagline')) {
