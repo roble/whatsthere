@@ -34,19 +34,28 @@ class SavePropertyPreferences implements Tool
             return json_encode(['errors' => $exception->errors()], JSON_THROW_ON_ERROR);
         }
 
-        $plan = [
+        $plan = self::plan($preferences);
+        $this->state->update(['plan' => $plan, 'phase' => 'reviewing', 'current_question' => null, 'property_result_ids' => null]);
+
+        return json_encode($plan, JSON_THROW_ON_ERROR);
+    }
+
+    /** @param array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string} $preferences
+     * @return array<string, mixed>
+     */
+    public static function plan(array $preferences): array
+    {
+        return [
             'goal' => 'Buy a property',
             'location' => $preferences['location'].($preferences['location_type'] === 'county' ? ' county' : '').($preferences['county'] ? ', '.$preferences['county'] : ''),
             'details' => [
                 'Maximum asking price' => '€'.number_format($preferences['max_price'] / 100, 0),
                 'Minimum bedrooms' => $preferences['min_bedrooms'] === null ? 'Any' : (string) $preferences['min_bedrooms'],
                 'Property type' => ucfirst($preferences['property_type'] ?? 'any'),
+                'Minimum BER' => $preferences['minimum_ber_rating'] === null ? 'Any' : $preferences['minimum_ber_rating'].' or better',
             ],
             'preferences' => $preferences,
         ];
-        $this->state->update(['plan' => $plan, 'phase' => 'reviewing', 'current_question' => null, 'property_result_ids' => null]);
-
-        return json_encode($plan, JSON_THROW_ON_ERROR);
     }
 
     public function schema(JsonSchema $schema): array
@@ -58,6 +67,7 @@ class SavePropertyPreferences implements Tool
             'max_price' => $schema->integer()->min(1)->required(),
             'min_bedrooms' => $schema->integer()->min(0)->nullable()->required(),
             'property_type' => $schema->string()->enum(['house', 'apartment', 'bungalow'])->nullable()->required(),
+            'minimum_ber_rating' => $schema->string()->enum(PropertyPreferences::BER_RATINGS)->nullable()->required(),
         ];
     }
 }

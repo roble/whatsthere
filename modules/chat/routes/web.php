@@ -9,6 +9,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     // Declared before chat/{conversation} so "place" is not read as an id.
     Route::post('chat/place', [ChatController::class, 'place'])->name('chat.place');
     Route::patch('chat/{conversation}/onboarding', [ChatController::class, 'onboarding'])->name('chat.onboarding');
+    Route::patch('chat/{conversation}/property-preferences', [ChatController::class, 'updatePropertyPreferences'])->name('chat.property-preferences.update');
     Route::get('chat/{conversation}/messages', [ChatController::class, 'messages'])->name('chat.messages');
     Route::get('chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
 });

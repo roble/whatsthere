@@ -57,6 +57,7 @@ import IconPlayground from '~icons/maki/playground';
 import IconTrainStation from '~icons/maki/rail';
 import IconRestaurant from '~icons/maki/restaurant';
 import IconLibrary from '~icons/maki/library';
+import IconSchool from '~icons/lucide/graduation-cap';
 import IconToilets from '~icons/maki/toilet';
 import IconViewpoint from '~icons/maki/viewpoint';
 import {
@@ -106,6 +107,7 @@ const props = defineProps<{ view: MapView }>();
 const emit = defineEmits<{
     viewport: [MapViewport];
     selectProperty: [MapMarker];
+    openProperty: [MapMarker];
 }>();
 
 /**
@@ -173,7 +175,11 @@ const mapOptions = computed(
 // deeply would be pure overhead.
 const map = shallowRef<MapLibreMap | null>(null);
 const markers = shallowRef<Marker[]>([]);
+const propertyPins = new Map<number, { marker: Marker; popup: Popup }>();
+const selectedPropertyId = ref<number | null>(null);
+const highlightedPropertyId = ref<number | null>(null);
 const canReturnToSearch = ref(false);
+const hasUserNavigated = ref(false);
 
 type PlaceMarkerStyle = { icon: Component; color: string };
 
@@ -197,6 +203,7 @@ const PLACE_MARKER_STYLES: Record<string, PlaceMarkerStyle> = {
     camp_site: { icon: IconCampSite, color: '#3f6212' },
     church: { icon: IconChurch, color: '#6d28d9' },
     library: { icon: IconLibrary, color: '#3730a3' },
+    school: { icon: IconSchool, color: '#1d4ed8' },
     cinema: { icon: IconCinema, color: '#9f1239' },
     pharmacy: { icon: IconPharmacy, color: '#be123c' },
     hospital: { icon: IconHospital, color: '#991b1b' },
@@ -288,6 +295,8 @@ function fitView(view: MapView, animate: boolean): void {
 function placeMarkerElement(
     categoryKey: string | undefined,
     name: string,
+    askingPrice?: number,
+    currency?: string,
 ): HTMLElement {
     const element = document.createElement('div');
     const markerStyle =
@@ -296,16 +305,28 @@ function placeMarkerElement(
     element.setAttribute('role', 'button');
     element.setAttribute('aria-label', name);
     element.style.setProperty('--marker-color', markerStyle.color);
-    element.className =
-        "relative grid size-9 cursor-pointer place-items-center rounded-full border-2 border-white text-white shadow-lg ring-1 ring-black/20 transition-[filter] [background-color:var(--marker-color)] after:absolute after:-bottom-1 after:left-1/2 after:size-2 after:-translate-x-1/2 after:rotate-45 after:border-r-2 after:border-b-2 after:border-white after:[background-color:var(--marker-color)] after:content-[''] hover:brightness-110";
+    element.dataset.markerColor = markerStyle.color;
+    const isProperty = categoryKey === 'property' && askingPrice !== undefined;
+    element.className = isProperty
+        ? "relative grid min-w-14 cursor-pointer place-items-center rounded-full border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-black/20 transition-[filter] [background-color:var(--marker-color)] after:absolute after:-bottom-1 after:left-1/2 after:size-2 after:-translate-x-1/2 after:rotate-45 after:border-r-2 after:border-b-2 after:border-white after:[background-color:var(--marker-color)] after:content-[''] hover:brightness-110"
+        : "relative grid size-9 cursor-pointer place-items-center rounded-full border-2 border-white text-white shadow-lg ring-1 ring-black/20 transition-[filter] [background-color:var(--marker-color)] after:absolute after:-bottom-1 after:left-1/2 after:size-2 after:-translate-x-1/2 after:rotate-45 after:border-r-2 after:border-b-2 after:border-white after:[background-color:var(--marker-color)] after:content-[''] hover:brightness-110";
 
-    render(
-        h(markerStyle.icon, {
-            class: 'relative z-10 size-4.5',
-            'aria-hidden': 'true',
-        }),
-        element,
-    );
+    if (isProperty) {
+        element.textContent = new Intl.NumberFormat('en-IE', {
+            style: 'currency',
+            currency: currency ?? 'EUR',
+            notation: 'compact',
+            maximumFractionDigits: 0,
+        }).format(askingPrice / 100);
+    } else {
+        render(
+            h(markerStyle.icon, {
+                class: 'relative z-10 size-4.5',
+                'aria-hidden': 'true',
+            }),
+            element,
+        );
+    }
 
     return element;
 }
@@ -358,6 +379,66 @@ function stopPopupContent(stop: ItineraryStop): HTMLElement {
     return root;
 }
 
+function formatAskingPrice(place: MapMarker): string {
+    return new Intl.NumberFormat('en-IE', {
+        style: 'currency',
+        currency: place.currency ?? 'EUR',
+        maximumFractionDigits: 0,
+    }).format((place.asking_price ?? 0) / 100);
+}
+
+/** A compact, Daft-style preview. Activating it opens the fuller gallery. */
+function propertyPopupContent(place: MapMarker): HTMLElement {
+    const root = document.createElement('button');
+    root.type = 'button';
+    root.dataset.testid = `property-preview-${place.id}`;
+    root.className =
+        'flex w-80 items-center gap-4 bg-white p-4 text-left text-neutral-900';
+    root.addEventListener('click', () => emit('openProperty', place));
+
+    if (place.images?.[0]) {
+        const image = document.createElement('img');
+        image.src = place.images[0];
+        image.alt = '';
+        image.className = 'size-28 shrink-0 object-cover';
+        root.append(image);
+    }
+
+    const details = document.createElement('span');
+    details.className = 'min-w-0 space-y-1';
+
+    const price = document.createElement('span');
+    price.className = 'block text-xl font-semibold';
+    price.textContent = formatAskingPrice(place);
+
+    const address = document.createElement('span');
+    address.className = 'block text-base leading-snug';
+    address.textContent = place.details?.address ?? place.name;
+
+    const facts = document.createElement('span');
+    facts.className = 'block text-sm text-neutral-500';
+    facts.textContent = `${place.bedrooms ?? '?'} Bed · ${place.property_type ?? ''}`;
+
+    details.append(price, address, facts);
+    root.append(details);
+
+    return root;
+}
+
+function refreshPropertyPinStyles(): void {
+    propertyPins.forEach(({ marker }, propertyId) => {
+        const element = marker.getElement();
+        const active =
+            propertyId === selectedPropertyId.value ||
+            propertyId === highlightedPropertyId.value;
+
+        element.style.setProperty(
+            '--marker-color',
+            active ? ROUTE_COLOR : (element.dataset.markerColor ?? ROUTE_COLOR),
+        );
+    });
+}
+
 /** Move the map to a view, animating only once the first view has landed. */
 function showView(view: MapView, animate: boolean): void {
     const instance = map.value;
@@ -367,6 +448,7 @@ function showView(view: MapView, animate: boolean): void {
     }
 
     canReturnToSearch.value = false;
+    hasUserNavigated.value = false;
     fitView(view, animate);
 
     dropMarkers();
@@ -383,6 +465,8 @@ function showView(view: MapView, animate: boolean): void {
         const element = placeMarkerElement(
             place.categoryKey ?? view.categoryKey,
             place.name,
+            place.asking_price,
+            place.currency,
         );
         if (place.id !== undefined) {
             element.dataset.testid = `property-pin-${place.id}`;
@@ -391,26 +475,37 @@ function showView(view: MapView, animate: boolean): void {
             );
         }
 
-        placed.push(
-            new Marker({ element, anchor: 'bottom', offset: [0, -4] })
-                .setLngLat([place.lon, place.lat])
-                // Built from DOM nodes, never setHTML: every string comes from
-                // OpenStreetMap, which anyone can edit, so it is somebody
-                // else's input.
-                .setPopup(
-                    // focusAfterOpen: MapLibre moves focus to the close button
-                    // as the popup opens, so every pin you click comes up with
-                    // a focus ring already drawn on its X. Keyboard users
-                    // still reach it by tabbing, which is when the ring is
-                    // actually telling them something.
-                    new Popup({
-                        offset: PLACE_POPUP_OFFSET,
-                        focusAfterOpen: false,
-                        maxWidth: '280px',
-                    }).setDOMContent(popupContent(place)),
-                )
-                .addTo(instance),
-        );
+        const marker = new Marker({
+            element,
+            anchor: 'bottom',
+            offset: [0, -4],
+        }).setLngLat([place.lon, place.lat]);
+        const isProperty =
+            place.id !== undefined &&
+            (place.categoryKey ?? view.categoryKey) === 'property';
+
+        if (isProperty && place.id !== undefined) {
+            const popup = new Popup({
+                offset: PLACE_POPUP_OFFSET,
+                focusAfterOpen: false,
+                maxWidth: '320px',
+                closeButton: false,
+            }).setDOMContent(propertyPopupContent(place));
+
+            propertyPins.set(place.id, { marker, popup });
+        } else {
+            // Built from DOM nodes, never setHTML: every string comes from
+            // OpenStreetMap, which anyone can edit, so it is somebody else's input.
+            marker.setPopup(
+                new Popup({
+                    offset: PLACE_POPUP_OFFSET,
+                    focusAfterOpen: false,
+                    maxWidth: '280px',
+                }).setDOMContent(popupContent(place)),
+            );
+        }
+
+        placed.push(marker.addTo(instance));
     }
 
     for (const [index, stop] of (view.stops ?? []).entries()) {
@@ -530,6 +625,10 @@ function drawRoute(instance: MapLibreMap): void {
  * there is one removal path rather than a second one to forget.
  */
 function dropMarkers(): void {
+    propertyPins.forEach(({ popup }) => popup.remove());
+    propertyPins.clear();
+    selectedPropertyId.value = null;
+    highlightedPropertyId.value = null;
     markers.value.forEach((pin) => {
         render(null, pin.getElement());
         pin.remove();
@@ -637,6 +736,27 @@ function focusMarker(place: MapMarker): void {
         return;
     }
 
+    if (place.id !== undefined) {
+        const propertyPin = propertyPins.get(place.id);
+
+        if (propertyPin) {
+            selectedPropertyId.value = place.id;
+            refreshPropertyPinStyles();
+            canReturnToSearch.value = Boolean(props.view.markers?.length);
+            propertyPins.forEach(({ popup }) => popup.remove());
+
+            instance.easeTo({
+                center: [place.lon, place.lat],
+                zoom: Math.max(instance.getZoom(), 15),
+                duration: 600,
+                essential: true,
+            });
+            propertyPin.popup.addTo(instance);
+
+            return;
+        }
+    }
+
     const selected = markers.value.find((pin) => {
         const position = pin.getLngLat();
 
@@ -657,7 +777,12 @@ function focusMarker(place: MapMarker): void {
         essential: true,
     });
 
-    selected.togglePopup();
+    selected.getPopup()?.addTo(instance);
+}
+
+function highlightMarker(place: MapMarker | null): void {
+    highlightedPropertyId.value = place?.id ?? null;
+    refreshPropertyPinStyles();
 }
 
 function returnToSearch(): void {
@@ -665,12 +790,13 @@ function returnToSearch(): void {
         return;
     }
 
+    propertyPins.forEach(({ popup }) => popup.remove());
     markers.value.forEach((pin) => pin.getPopup()?.remove());
     canReturnToSearch.value = false;
     fitView(props.view, true);
 }
 
-defineExpose({ focusMarker });
+defineExpose({ focusMarker, highlightMarker });
 
 /**
  * Report where the map ended up, so the assistant can answer "what about
@@ -689,11 +815,19 @@ function reportViewport(): void {
 
     const center = instance.getCenter();
     const [west, south, east, north] = props.view.bbox.map(Number);
+    const bounds = instance.getBounds();
 
     emit('viewport', {
         label: props.view.label,
         center: [center.lat, center.lng],
+        bounds: [
+            bounds.getWest(),
+            bounds.getSouth(),
+            bounds.getEast(),
+            bounds.getNorth(),
+        ],
         zoom: Math.round(instance.getZoom() * 10) / 10,
+        interacted: hasUserNavigated.value,
         moved:
             center.lng < west ||
             center.lng > east ||
@@ -711,8 +845,12 @@ function initializeMap(instance: unknown): void {
     // dragging it, so one listener keeps the reported viewport honest.
     loadedMap.on('moveend', reportViewport);
     loadedMap.on('movestart', (event) => {
-        if (event.originalEvent && props.view.markers?.length) {
-            canReturnToSearch.value = true;
+        if (event.originalEvent) {
+            hasUserNavigated.value = true;
+
+            if (props.view.markers?.length) {
+                canReturnToSearch.value = true;
+            }
         }
     });
     loadedMap.on('style.load', () => {

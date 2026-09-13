@@ -29,6 +29,9 @@ export type MapMarker = {
     asking_price?: number;
     currency?: string;
     bedrooms?: number | null;
+    bathrooms?: number | null;
+    floor_area_sqm?: number | null;
+    ber_rating?: string | null;
     property_type?: string;
     images?: string[];
     lat: number;
@@ -103,8 +106,10 @@ export type MapView = {
 export type MapViewport = {
     label: string;
     center: [number, number];
+    bounds: [number, number, number, number];
     zoom: number;
     moved: boolean;
+    interacted: boolean;
 };
 
 /**
@@ -146,6 +151,7 @@ export function viewKey(view: MapView): string {
  */
 export const MAP_TOOLS = [
     'search_properties',
+    'update_property_search_preferences',
     'show_on_map',
     'find_places',
     'save_itinerary',

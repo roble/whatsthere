@@ -57,6 +57,7 @@ class FindPlaces implements Tool
         'camp_site' => '["tourism"="camp_site"]',
         'church' => '["amenity"="place_of_worship"]',
         'library' => '["amenity"="library"]',
+        'school' => '["amenity"="school"]',
         'cinema' => '["amenity"="cinema"]',
         'pharmacy' => '["amenity"="pharmacy"]',
         'hospital' => '["amenity"="hospital"]',

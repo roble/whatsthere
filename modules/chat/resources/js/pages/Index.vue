@@ -60,6 +60,11 @@ import ContextMap from '@modules/chat/resources/js/components/ContextMap.vue';
 import ItineraryPanel from '@modules/chat/resources/js/components/ItineraryPanel.vue';
 import PlaceLink from '@modules/chat/resources/js/components/PlaceLink.vue';
 import PlanSummary from '@modules/chat/resources/js/components/PlanSummary.vue';
+import PropertyDetailsDialog from '@modules/chat/resources/js/components/PropertyDetailsDialog.vue';
+import PropertyFiltersDialog, {
+    type PropertyPreferences,
+} from '@modules/chat/resources/js/components/PropertyFiltersDialog.vue';
+import PropertyFilterBar from '@modules/chat/resources/js/components/PropertyFilterBar.vue';
 import PropertyResults from '@modules/chat/resources/js/components/PropertyResults.vue';
 import ThinkingIndicator from '@modules/chat/resources/js/components/ThinkingIndicator.vue';
 import {
@@ -86,6 +91,7 @@ import {
     ClipboardListIcon,
     RefreshCwIcon,
     RouteIcon,
+    SlidersHorizontalIcon,
 } from '@lucide/vue';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
@@ -113,6 +119,7 @@ type Onboarding = {
         location: string;
         details: Record<string, string>;
         stops?: ItineraryStop[];
+        preferences?: PropertyPreferences;
     } | null;
 };
 
@@ -190,6 +197,7 @@ watch(
 const searchError = ref('');
 const searchingProperties = ref(false);
 const selectedPropertyId = ref<number | null>(null);
+const propertyFiltersOpen = ref(false);
 const selectedAnswers = ref<string[]>([]);
 const otherAnswer = ref('');
 
@@ -269,6 +277,7 @@ const chat = new Chat({
                     .join('\n'),
                 conversation_id: conversationId.value,
                 map: viewport.value,
+                selected_property: selectedProperty.value,
             },
             headers: { 'X-XSRF-TOKEN': csrfToken() },
         }),
@@ -390,6 +399,16 @@ const isPreparingOnboarding = computed(
     () => isMapStaging.value && !activeQuestion.value && !activePlan.value,
 );
 
+watch(
+    [propertyFlow, onboardingPhase],
+    ([isPropertyFlow, phase]) => {
+        if (isPropertyFlow && phase === 'reviewing') {
+            propertyFiltersOpen.value = true;
+        }
+    },
+    { immediate: true },
+);
+
 /**
  * "Show my map" is answered by a whole turn, not by the click.
  *
@@ -465,7 +484,13 @@ const conversationView = computed<MapView>(() => {
  * It outranks the conversation until the assistant moves the map itself, at
  * which point the newer instruction wins and this is dropped.
  */
+const viewport = ref<MapViewport | null>(null);
 const overrideView = ref<MapView | null>(null);
+const propertyView = ref<MapView | null>(
+    props.initialMapView?.categoryKey === 'property'
+        ? props.initialMapView
+        : null,
+);
 
 // Keyed, not by reference: the view is rebuilt from the transcript on every
 // token, so watching the object would clear the override immediately.
@@ -476,19 +501,137 @@ watch(
     },
 );
 
-const mapView = computed<MapView>(
-    () => overrideView.value ?? conversationView.value,
-);
+const mapView = computed<MapView>(() => {
+    const current = overrideView.value ?? conversationView.value;
+
+    if (
+        propertyFlow.value &&
+        selectedPropertyId.value !== null &&
+        current.categoryKey !== 'property' &&
+        propertyView.value
+    ) {
+        return {
+            ...propertyView.value,
+            markers: [
+                ...(propertyView.value.markers ?? []),
+                ...(current.markers ?? []).map((marker) => ({
+                    ...marker,
+                    categoryKey: marker.categoryKey ?? current.categoryKey,
+                })),
+            ],
+        };
+    }
+
+    return current;
+});
+
+const propertyListingView = computed<MapView | null>(() => {
+    if (!propertyView.value) {
+        return null;
+    }
+
+    const bounds = viewport.value?.interacted ? viewport.value.bounds : null;
+    const markers = bounds
+        ? (propertyView.value.markers ?? []).filter(
+              (marker) =>
+                  marker.lon >= bounds[0] &&
+                  marker.lon <= bounds[2] &&
+                  marker.lat >= bounds[1] &&
+                  marker.lat <= bounds[3],
+          )
+        : (propertyView.value.markers ?? []);
+
+    return { ...propertyView.value, markers };
+});
 watch(
     () => viewKey(mapView.value),
     () => {
-        selectedPropertyId.value = null;
+        if (
+            (overrideView.value ?? conversationView.value).categoryKey ===
+            'property'
+        ) {
+            selectedPropertyId.value = null;
+        }
+    },
+);
+
+watch(
+    () => viewKey(conversationView.value),
+    () => {
+        if (conversationView.value.categoryKey === 'property') {
+            propertyView.value = conversationView.value;
+        }
     },
 );
 
 function selectProperty(marker: MapMarker): void {
     selectedPropertyId.value = marker.id ?? null;
     contextMap.value?.focusMarker(marker);
+    propertyDetails.value = marker;
+}
+
+const selectedProperty = computed(
+    () =>
+        propertyView.value?.markers?.find(
+            (marker) => marker.id === selectedPropertyId.value,
+        ) ?? null,
+);
+
+const propertyPreferences = computed<PropertyPreferences | null>(() => {
+    const preferences = onboarding.value?.plan?.preferences;
+
+    return preferences ? (preferences as PropertyPreferences) : null;
+});
+
+async function applyPropertyFilters(
+    preferences: PropertyPreferences,
+): Promise<void> {
+    if (!conversationId.value || searchingProperties.value) {
+        return;
+    }
+
+    searchingProperties.value = true;
+    searchError.value = '';
+
+    try {
+        const response = await guardedFetch(
+            route('chat.property-preferences.update', conversationId.value),
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-XSRF-TOKEN': csrfToken(),
+                },
+                body: JSON.stringify(preferences),
+            },
+        );
+
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+
+        const result = await response.json();
+        onboarding.value = result;
+        overrideView.value = result.map_view as MapView;
+        propertyView.value = result.map_view as MapView;
+        selectedPropertyId.value = null;
+        propertyFiltersOpen.value = false;
+    } catch {
+        searchError.value =
+            'Could not update the property search. Please try again.';
+    } finally {
+        searchingProperties.value = false;
+    }
+}
+
+function highlightProperty(marker: MapMarker | null): void {
+    contextMap.value?.highlightMarker(marker);
+}
+
+function openPropertyDetails(marker: MapMarker): void {
+    selectProperty(marker);
+    propertyDetails.value = marker;
 }
 
 // Cleared by the map filling up, or by the turn ending either way -- never left
@@ -512,13 +655,21 @@ watch([() => viewKey(mapView.value), status], () => {
  * conversation put it there: the visitor can see the map, so "where am I?" on a
  * fresh chat is a question the assistant should be able to answer.
  */
-const viewport = ref<MapViewport | null>(null);
-
 type ContextMapHandle = {
     focusMarker: (marker: MapMarker) => void;
+    highlightMarker: (marker: MapMarker | null) => void;
 };
 
 const contextMap = ref<ContextMapHandle | null>(null);
+const propertyDetails = ref<MapMarker | null>(null);
+const propertyDetailsOpen = computed({
+    get: () => propertyDetails.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            propertyDetails.value = null;
+        }
+    },
+});
 
 function focusMapMarker(marker: MapMarker): void {
     contextMap.value?.focusMarker(marker);
@@ -995,7 +1146,12 @@ async function send(text: string): Promise<void> {
     // The first stream cannot provide an interview question until the model has
     // started responding. Switch the map into its staged state before sending,
     // so the blank world map never flashes between the landing and the plan.
-    if (!conversationId.value && onboarding.value === null) {
+    // The property flow has nothing to stage: it is already showing results.
+    if (
+        !conversationId.value &&
+        onboarding.value === null &&
+        !propertyFlow.value
+    ) {
         onboarding.value = {
             phase: 'interviewing',
             question_count: 0,
@@ -1016,14 +1172,35 @@ async function send(text: string): Promise<void> {
         followAnchor();
     });
 
-    await finished;
+    // Whatever the tools wrote is on the server whether or not the reply
+    // itself made it back, so a failed turn still has to be picked up: a
+    // search that succeeded before the provider gave out would otherwise leave
+    // the filters on screen describing a search the results no longer match.
+    try {
+        await finished;
+    } finally {
+        await refreshOnboarding();
+    }
+}
 
-    // The server recorded the answer and whatever the tools wrote before the
-    // reply ended. Only now is it safe to move a new conversation onto its
-    // durable URL; doing so earlier aborts the stream and loses that state.
+/**
+ * Adopt whatever the server now holds for this conversation.
+ *
+ * Only safe once the stream has ended either way: moving a new conversation
+ * onto its durable URL any earlier aborts the stream and loses that state.
+ */
+async function refreshOnboarding(): Promise<void> {
+    // Always read back from the conversation itself once there is one. A plain
+    // reload would re-request whatever URL the page is still sitting on, and a
+    // first message leaves that as the index -- which answers with the default
+    // preferences and would overwrite the search that just ran.
+    const target = conversationId.value
+        ? route('chat.show', conversationId.value)
+        : null;
+
     await new Promise<void>((resolve) =>
-        pendingConversationUrl.value
-            ? router.visit(pendingConversationUrl.value, {
+        target
+            ? router.visit(target, {
                   replace: true,
                   preserveState: true,
                   preserveScroll: true,
@@ -1151,6 +1328,7 @@ async function showMap(): Promise<void> {
             const result = await response.json();
             onboarding.value = result;
             overrideView.value = result.map_view;
+            propertyView.value = result.map_view;
         } catch {
             searchError.value =
                 'Could not search properties. Please try again.';
@@ -1297,83 +1475,7 @@ watch(tripPhase, () => {
         <!-- Full viewport height: the header now sits inside the left column
              rather than above both, so nothing is stacked on top of this. -->
         <div class="flex h-svh flex-col" data-testid="chat-page">
-            <main
-                v-if="!conversationId && !messages.length"
-                class="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-6"
-                data-testid="chat-landing"
-            >
-                <div class="w-full space-y-6">
-                    <h1
-                        class="text-center text-3xl font-semibold tracking-tight sm:text-4xl"
-                    >
-                        {{ $t('Where would you like to buy a home?') }}
-                    </h1>
-                    <PromptInput
-                        @submit="handleSubmit"
-                        data-testid="landing-form"
-                    >
-                        <PromptInputBody>
-                            <PromptInputTextarea
-                                :placeholder="
-                                    $t(
-                                        'Tell me where you want to buy and your budget…',
-                                    )
-                                "
-                                rows="1"
-                                class="min-h-0"
-                                data-testid="landing-input"
-                            />
-                        </PromptInputBody>
-                        <PromptInputFooter align="inline-end">
-                            <PromptInputTools>
-                                <PromptInputSpeechButton
-                                    :aria-label="$t('Dictate a message')"
-                                    data-testid="landing-mic"
-                                />
-                                <PromptInputSubmit
-                                    :status="composerStatus"
-                                    data-testid="landing-submit"
-                                />
-                            </PromptInputTools>
-                        </PromptInputFooter>
-                    </PromptInput>
-                    <div class="space-y-1" data-testid="landing-examples">
-                        <div
-                            class="flex items-center justify-between gap-3 px-3"
-                        >
-                            <p class="text-muted-foreground font-medium">
-                                {{ $t('Try an idea') }}
-                            </p>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                class="text-muted-foreground"
-                                data-testid="refresh-examples"
-                                @click="refreshExamplePrompts"
-                            >
-                                <RefreshCwIcon aria-hidden="true" />
-                                {{ $t('More ideas') }}
-                            </Button>
-                        </div>
-                        <Button
-                            v-for="example in examplePrompts"
-                            :key="example.text"
-                            variant="ghost"
-                            class="text-muted-foreground hover:bg-muted hover:text-foreground h-auto w-full cursor-pointer justify-start gap-3 px-3 py-1 text-left whitespace-normal"
-                            @click="startExample(example.text)"
-                        >
-                            <span class="text-base" aria-hidden="true">
-                                {{ example.emoji }}
-                            </span>
-                            {{ $t(example.text) }}
-                        </Button>
-                    </div>
-                </div>
-            </main>
-
             <ResizablePanelGroup
-                v-else
                 direction="horizontal"
                 auto-save-id="chat-split"
             >
@@ -1396,16 +1498,44 @@ watch(tripPhase, () => {
                         ]"
                     />
 
-                    <PropertyResults
+                    <!-- The landing page shows the home area's properties
+                         before any conversation exists, but a filter edit has
+                         nowhere to be saved until one does, so the chips wait
+                         for the first message rather than silently doing
+                         nothing. -->
+                    <PropertyFilterBar
                         v-if="
                             propertyFlow &&
                             !isMapStaging &&
-                            mapView.categoryKey === 'property'
+                            conversationId &&
+                            propertyPreferences
                         "
-                        :view="mapView"
+                        :preferences="propertyPreferences"
+                        :saving="searchingProperties"
+                        @update="applyPropertyFilters"
+                        @preferences="propertyFiltersOpen = true"
+                    />
+
+                    <PropertyResults
+                        v-if="
+                            propertyFlow && !isMapStaging && propertyListingView
+                        "
+                        :view="propertyListingView"
                         :selected-id="selectedPropertyId"
                         @select="selectProperty"
-                        @revise="backToPlanning"
+                        @highlight="highlightProperty"
+                    />
+
+                    <PropertyFiltersDialog
+                        v-model:open="propertyFiltersOpen"
+                        :preferences="propertyPreferences"
+                        :saving="searchingProperties"
+                        @save="applyPropertyFilters"
+                    />
+
+                    <PropertyDetailsDialog
+                        v-model:open="propertyDetailsOpen"
+                        :property="propertyDetails"
                     />
 
                     <Conversation ref="conversation">
@@ -1413,8 +1543,74 @@ watch(tripPhase, () => {
                             data-testid="chat-messages"
                             @click="onTranscriptClick"
                         >
+                            <!-- The opening screen sits beside the map rather
+                                 than in place of it. Every property we hold is
+                                 already pinned, so the first message narrows a
+                                 search the visitor can see, instead of starting
+                                 one they cannot. -->
+                            <div
+                                v-if="!messages.length && propertyFlow"
+                                class="flex flex-col gap-6 px-2 py-8"
+                                data-testid="chat-landing"
+                            >
+                                <div class="space-y-2">
+                                    <h1
+                                        class="text-2xl font-semibold tracking-tight"
+                                    >
+                                        {{ $t('What are you looking for?') }}
+                                    </h1>
+                                    <p class="text-muted-foreground text-sm">
+                                        {{
+                                            $t(
+                                                'Everything we have is on the map. Tell me what matters and I will narrow it down.',
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="space-y-1"
+                                    data-testid="landing-examples"
+                                >
+                                    <div
+                                        class="flex items-center justify-between gap-3 px-3"
+                                    >
+                                        <p
+                                            class="text-muted-foreground text-sm font-medium"
+                                        >
+                                            {{ $t('Try an idea') }}
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="text-muted-foreground"
+                                            data-testid="refresh-examples"
+                                            @click="refreshExamplePrompts"
+                                        >
+                                            <RefreshCwIcon aria-hidden="true" />
+                                            {{ $t('More ideas') }}
+                                        </Button>
+                                    </div>
+                                    <Button
+                                        v-for="example in examplePrompts"
+                                        :key="example.text"
+                                        variant="ghost"
+                                        class="text-muted-foreground hover:bg-muted hover:text-foreground h-auto w-full cursor-pointer justify-start gap-3 px-3 py-1 text-left whitespace-normal"
+                                        @click="startExample(example.text)"
+                                    >
+                                        <span
+                                            class="text-base"
+                                            aria-hidden="true"
+                                        >
+                                            {{ example.emoji }}
+                                        </span>
+                                        {{ $t(example.text) }}
+                                    </Button>
+                                </div>
+                            </div>
+
                             <ConversationEmptyState
-                                v-if="!messages.length"
+                                v-else-if="!messages.length"
                                 :title="$t('Ask me anything')"
                                 :description="
                                     $t('Your conversation is saved as you go.')
@@ -1452,8 +1648,15 @@ watch(tripPhase, () => {
                                          names so they still diff against the
                                          registry, only the visible string is
                                          ours. -->
+                                    <!-- Keyed on whether the turn is still
+                                         writing: `default-open` is only read
+                                         once, so without a remount every
+                                         finished turn stays expanded and the
+                                         transcript becomes three copies of
+                                         itself. -->
                                     <ChainOfThought
                                         v-if="thoughts(message).length"
+                                        :key="`thoughts-${message.id}-${isWriting(message)}`"
                                         :default-open="isWriting(message)"
                                         :data-testid="`thoughts-${message.id}`"
                                     >
@@ -1656,9 +1859,7 @@ watch(tripPhase, () => {
                                 }}
                             </p>
                             <button
-                                v-for="(
-                                    option, index
-                                ) in activeQuestion.options"
+                                v-for="option in activeQuestion.options"
                                 :key="option"
                                 type="button"
                                 :aria-pressed="selectedAnswers.includes(option)"
@@ -1689,12 +1890,6 @@ watch(tripPhase, () => {
                                     <span class="font-medium">{{
                                         option
                                     }}</span>
-                                    <span
-                                        v-if="index === 0"
-                                        class="text-muted-foreground ml-2 text-xs"
-                                    >
-                                        {{ $t('Recommended') }}
-                                    </span>
                                 </span>
                             </button>
                             <input
@@ -1777,7 +1972,13 @@ watch(tripPhase, () => {
                         >
                             <PromptInputBody>
                                 <PromptInputTextarea
-                                    :placeholder="$t('Send a message...')"
+                                    :placeholder="
+                                        $t(
+                                            selectedProperty
+                                                ? 'Ask about this property or its area…'
+                                                : 'Send a message...',
+                                        )
+                                    "
                                     rows="1"
                                     class="min-h-0"
                                     data-testid="chat-input"
@@ -1785,6 +1986,21 @@ watch(tripPhase, () => {
                             </PromptInputBody>
                             <PromptInputFooter align="inline-end">
                                 <PromptInputTools>
+                                    <Button
+                                        v-if="
+                                            propertyFlow &&
+                                            !isMapStaging &&
+                                            conversationId
+                                        "
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        :aria-label="$t('Search filters')"
+                                        data-testid="open-property-filters"
+                                        @click="propertyFiltersOpen = true"
+                                    >
+                                        <SlidersHorizontalIcon class="size-4" />
+                                    </Button>
                                     <PromptInputSpeechButton
                                         :aria-label="$t('Dictate a message')"
                                         data-testid="chat-mic"
@@ -1816,9 +2032,8 @@ watch(tripPhase, () => {
                             "
                             :view="mapView"
                             @viewport="viewport = $event"
-                            @select-property="
-                                selectedPropertyId = $event.id ?? null
-                            "
+                            @select-property="selectProperty"
+                            @open-property="openPropertyDetails"
                         />
                         <div
                             v-if="searchError"
@@ -1860,6 +2075,20 @@ watch(tripPhase, () => {
                                 >
                                     {{ $t('Skip for now') }}
                                 </Button>
+                            </div>
+
+                            <div
+                                v-else-if="
+                                    propertyFlow &&
+                                    onboardingPhase === 'reviewing'
+                                "
+                                class="flex flex-col items-center gap-3"
+                            >
+                                <Button
+                                    variant="outline"
+                                    @click="propertyFiltersOpen = true"
+                                    >{{ $t('Open buying preferences') }}</Button
+                                >
                             </div>
 
                             <Plan
@@ -1923,7 +2152,7 @@ watch(tripPhase, () => {
                                             status === 'submitted'
                                         "
                                         data-testid="edit-property-preferences"
-                                        @click="backToPlanning"
+                                        @click="propertyFiltersOpen = true"
                                         >{{ $t('Change preferences') }}</Button
                                     >
                                     <Button
@@ -1964,7 +2193,9 @@ watch(tripPhase, () => {
                             class="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2"
                         >
                             <Button
-                                v-if="activePlan && !isMapStaging"
+                                v-if="
+                                    activePlan && !isMapStaging && !propertyFlow
+                                "
                                 variant="secondary"
                                 size="sm"
                                 class="h-7.25 gap-1.5 rounded px-2 shadow-[0_0_0_2px_rgba(0,0,0,0.1)]"
@@ -2006,7 +2237,12 @@ watch(tripPhase, () => {
                              growing past the bottom, which took the footer
                              buttons off screen with it. -->
                         <div
-                            v-if="activePlan && !isMapStaging && planOpen"
+                            v-if="
+                                activePlan &&
+                                !isMapStaging &&
+                                !propertyFlow &&
+                                planOpen
+                            "
                             class="absolute inset-0 grid place-items-center p-6"
                             @click.self="planOpen = false"
                         >

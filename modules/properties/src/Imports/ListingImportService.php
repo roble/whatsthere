@@ -66,6 +66,13 @@ class ListingImportService
     /** @param array<string, mixed> $record */
     private function importRecord(ListingProvider $provider, array $record): void
     {
+        // The provider could not turn this listing into a record at all. It is
+        // counted and reported here so a bad listing costs one row, not the
+        // rest of the file.
+        if (isset($record['unmappable'])) {
+            throw new \InvalidArgumentException((string) $record['unmappable']);
+        }
+
         foreach (['id', 'address', 'town', 'county', 'status'] as $field) {
             if (! filled($record[$field] ?? null)) {
                 throw new \InvalidArgumentException("Missing required field [{$field}].");

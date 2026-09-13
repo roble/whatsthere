@@ -4,9 +4,8 @@ namespace Modules\Chat\Testing;
 
 use Generator;
 use Modules\Chat\Ai\Tools\FindPlaces;
-use Modules\Chat\Ai\Tools\InterviewVisitor;
-use Modules\Chat\Ai\Tools\SavePropertyPreferences;
 use Modules\Chat\Ai\Tools\ShowOnMap;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 
 /**
  * Replies the assistant never gave, for working on the front end.
@@ -33,11 +32,19 @@ class CannedReplies
         'places_empty' => 'a search that found nothing',
         'not_found' => 'a place the geocoder cannot place',
         'tool_error' => 'a tool that failed rather than came up empty',
-        'property_workflow' => 'the guided Cork property-search journey',
+        'property_workflow' => 'a property search narrowed and mapped',
         'failure' => 'no reply at all',
     ];
 
-    public function __construct(protected string $messageId) {}
+    /**
+     * @param  array<string, mixed>  $propertySearchInput  The filters the search applied.
+     * @param  string  $propertySearchOutput  That search's real JSON result.
+     */
+    public function __construct(
+        protected string $messageId,
+        protected array $propertySearchInput = [],
+        protected string $propertySearchOutput = '{"label":"Properties for sale","categoryKey":"property","total":0,"markers":[],"bbox":["-10.7","51.3","-5.4","55.5"]}',
+    ) {}
 
     /**
      * Pick a scenario at random, or return the one that was asked for.
@@ -64,10 +71,7 @@ class CannedReplies
             'places_empty' => $this->placesEmpty(),
             'not_found' => $this->notFound(),
             'tool_error' => $this->toolError(),
-            'property_workflow' => $this->propertyIntent(),
-            'property_intent' => $this->propertyIntent(),
-            'property_budget' => $this->propertyBudget(),
-            'property_review' => $this->propertyReview(),
+            'property_workflow' => $this->propertySearch(),
             'failure' => $this->failure(),
             default => $this->place(),
         };
@@ -167,55 +171,23 @@ class CannedReplies
         yield ['type' => 'error', 'errorText' => 'Rate limit reached for gpt-5.4-mini in organization org-EXAMPLE0000 on requests per day (RPD): Limit 50, Used 50.'];
     }
 
-    protected function propertyIntent(): Generator
+    /**
+     * The search the assistant runs on an ordinary message.
+     *
+     * The result is the real one: `ChatController` runs the actual tool against
+     * the actual database and hands the output in, so test mode exercises the
+     * same search, the same pins, and the same results list as a live visitor.
+     * Only the words around it are invented.
+     */
+    protected function propertySearch(): Generator
     {
-        yield from $this->thinking('**Starting a Cork property search** — first confirm the area to search.');
-        yield from $this->tool(InterviewVisitor::NAME, [
-            'question' => 'Which part of Cork would you like to search?',
-            'options' => ['Cork city', 'County Cork', 'Midleton'],
-            'multiple' => false,
-        ], json_encode([
-            'question' => 'Which part of Cork would you like to search?',
-            'options' => ['Cork city', 'County Cork', 'Midleton'],
-            'multiple' => false,
-            'count' => 1,
-        ]));
-    }
-
-    protected function propertyBudget(): Generator
-    {
-        yield from $this->thinking('**Narrowing the Cork search** — next confirm the maximum asking price.');
-        yield from $this->tool(InterviewVisitor::NAME, [
-            'question' => 'What is your maximum asking price?',
-            'options' => ['€600,000', '€400,000', '€300,000'],
-            'multiple' => false,
-        ], json_encode([
-            'question' => 'What is your maximum asking price?',
-            'options' => ['€600,000', '€400,000', '€300,000'],
-            'multiple' => false,
-            'count' => 2,
-        ]));
-    }
-
-    protected function propertyReview(): Generator
-    {
-        yield from $this->thinking('**Preparing your Cork search** — the preferences are ready for review.');
-        yield from $this->tool(SavePropertyPreferences::NAME, [
-            'location' => 'Cork',
-            'location_type' => 'town',
-            'county' => 'Cork',
-            'max_price' => 60000000,
-            'min_bedrooms' => null,
-            'property_type' => null,
-        ], json_encode([
-            'goal' => 'Buy a property',
-            'location' => 'Cork, Cork',
-            'details' => [
-                'Maximum asking price' => '€600,000',
-                'Minimum bedrooms' => 'Any',
-                'Property type' => 'Any',
-            ],
-        ]));
+        yield from $this->thinking('**Narrowing the search** — applying only the filters that were named.');
+        yield from $this->tool(
+            UpdatePropertySearchPreferences::NAME,
+            $this->propertySearchInput,
+            $this->propertySearchOutput,
+        );
+        yield from $this->prose('Here is what matches. Tell me what to change and I will narrow it further.');
     }
 
     /**

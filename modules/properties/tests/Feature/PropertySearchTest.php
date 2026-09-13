@@ -3,7 +3,7 @@
 namespace Modules\Properties\Tests\Feature;
 
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Modules\Properties\Database\Seeders\PropertySeeder;
+use Modules\Properties\Imports\ListingImportService;
 use Modules\Properties\Models\Property;
 use Modules\Properties\Models\PropertyPriceRecord;
 use Modules\Properties\PropertySearch;
@@ -79,15 +79,24 @@ class PropertySearchTest extends TestCase
         $this->assertSame(20000020, $result['markers'][19]['asking_price']);
     }
 
-    public function test_its_demo_seeder_does_not_duplicate_properties_or_price_records(): void
+    public function test_importing_a_fixture_twice_does_not_duplicate_properties_or_price_records(): void
     {
-        $this->seed(PropertySeeder::class);
-        $this->seed(PropertySeeder::class);
+        // One fixture rather than the seeder's whole folder: the seeder is a
+        // loop over this, and importing four hundred listings twice would cost
+        // the suite far more than the guarantee is worth.
+        $importer = app(ListingImportService::class);
+        $fixture = base_path('modules/properties/database/fixtures/buy-0002-daft.json');
 
-        $this->assertSame(20, Property::count());
-        $this->assertSame(22, PropertyPriceRecord::count());
-        $this->assertSame(10, Property::where('town', 'Cork')->where('status', 'for_sale')->count());
-        $this->assertSame(15, Property::where('county', 'Cork')->where('status', 'for_sale')->count());
+        $first = $importer->import('daft', $fixture);
+        $properties = Property::count();
+        $prices = PropertyPriceRecord::count();
+
+        $importer->import('daft', $fixture);
+
+        $this->assertSame(20, $first->total_records);
+        $this->assertGreaterThan(0, $properties);
+        $this->assertSame($properties, Property::count());
+        $this->assertSame($prices, PropertyPriceRecord::count());
     }
 
     public function test_it_rechecks_a_saved_result_against_the_current_price_and_status(): void
@@ -103,6 +112,31 @@ class PropertySearchTest extends TestCase
         $refreshed = $search->search($preferences, array_column($initial['markers'], 'id'));
 
         $this->assertSame([], $refreshed['markers']);
+    }
+
+    public function test_a_minimum_rating_that_admits_every_grade_does_not_exclude_unrated_homes(): void
+    {
+        $unrated = $this->property('unrated', 'Cork', 'Cork', 'for_sale', 3, 'house');
+        $this->price($unrated, 'asking_price', 30000000, '2026-09-01');
+
+        $rated = $this->property('rated', 'Cork', 'Cork', 'for_sale', 3, 'house');
+        $rated->update(['ber_rating' => 'C2']);
+        $this->price($rated, 'asking_price', 30000000, '2026-09-01');
+
+        // "G or better" is every rating there is, so it is not a filter. Most
+        // homes publish no rating at all, and treating it as one silently
+        // emptied the results for anyone answering "any BER rating".
+        $any = (new PropertySearch)->search(
+            $this->preferences('Cork', 30000000, 3, 'house') + ['minimum_ber_rating' => 'G']
+        );
+
+        $this->assertSame(2, $any['total']);
+
+        $strict = (new PropertySearch)->search(
+            $this->preferences('Cork', 30000000, 3, 'house') + ['minimum_ber_rating' => 'B1']
+        );
+
+        $this->assertSame(0, $strict['total']);
     }
 
     /** @return array<string, mixed> */

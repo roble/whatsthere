@@ -9,7 +9,10 @@ import IconMinimize2 from '~icons/lucide/minimize-2';
 import { ref } from 'vue';
 
 defineProps<{ view: MapView; selectedId: number | null }>();
-defineEmits<{ select: [MapMarker]; revise: [] }>();
+defineEmits<{
+    select: [MapMarker];
+    highlight: [MapMarker | null];
+}>();
 
 const expanded = ref(false);
 
@@ -39,7 +42,7 @@ function price(marker: MapMarker): string {
             <p
                 class="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap"
             >
-                {{ view.markers?.length ?? 0 }} {{ $t('shown of') }}
+                {{ view.markers?.length ?? 0 }} {{ $t('visible of') }}
                 {{ view.total ?? 0 }} {{ $t('matches') }}
             </p>
             <Button
@@ -78,9 +81,17 @@ function price(marker: MapMarker): string {
                 type="button"
                 :data-testid="`select-property-${property.id}`"
                 :aria-pressed="selectedId === property.id"
-                class="hover:bg-muted flex w-full items-center gap-2 py-1.5 text-left"
-                :class="selectedId === property.id ? 'bg-muted' : ''"
+                class="hover:bg-primary/5 focus-visible:bg-primary/5 flex w-full items-center gap-2 py-1.5 text-left transition-colors outline-none"
+                :class="
+                    selectedId === property.id
+                        ? 'bg-primary/10 hover:bg-primary/10 focus-visible:bg-primary/10'
+                        : ''
+                "
                 @click="$emit('select', property)"
+                @mouseenter="$emit('highlight', property)"
+                @mouseleave="$emit('highlight', null)"
+                @focus="$emit('highlight', property)"
+                @blur="$emit('highlight', null)"
             >
                 <span
                     class="bg-muted relative flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded"
@@ -128,15 +139,5 @@ function price(marker: MapMarker): string {
                 </span>
             </button>
         </div>
-        <footer class="border-t px-4 py-3">
-            <Button
-                variant="outline"
-                size="sm"
-                class="w-full"
-                data-testid="revise-property-preferences"
-                @click="$emit('revise')"
-                >{{ $t('Change preferences') }}</Button
-            >
-        </footer>
     </section>
 </template>

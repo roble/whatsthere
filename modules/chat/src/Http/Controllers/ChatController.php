@@ -17,8 +17,10 @@ use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\SaveItinerary;
+use Modules\Chat\Ai\Tools\SavePropertyPreferences;
 use Modules\Chat\Ai\Tools\SearchProperties;
 use Modules\Chat\Ai\Tools\ShowOnMap;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 use Modules\Chat\Jobs\GenerateConversationTitle;
 use Modules\Chat\Models\OnboardingState;
 use Modules\Chat\Testing\CannedReplies;
@@ -42,18 +44,33 @@ class ChatController
         FindPlaces::NAME,
         SaveItinerary::NAME,
         SearchProperties::NAME,
+        UpdatePropertySearchPreferences::NAME,
     ];
 
     /**
-     * Show a blank chat. No row exists until the first message is sent.
+     * Show a blank chat, already looking at the home area's properties.
+     *
+     * No conversation row exists until the first message is sent, but the map
+     * is never allowed to open empty: a visitor who lands here sees what is for
+     * sale before they have typed anything, and the opening message narrows it
+     * rather than starting it.
      */
     public function index(): Response
     {
+        $preferences = PropertyPreferences::defaults();
+
         return Inertia::render('Chat::Index', [
             'conversationId' => null,
             'initialMessages' => [],
-            'initialMapView' => null,
-            'onboarding' => null,
+            'initialMapView' => (new PropertySearch)->search($preferences),
+            'onboarding' => [
+                'phase' => 'mapping',
+                'question_count' => 0,
+                'current_question' => null,
+                'answers' => [],
+                'plan' => SavePropertyPreferences::plan($preferences),
+                'flow' => 'property',
+            ],
             'flow' => 'property',
         ]);
     }
@@ -140,6 +157,32 @@ class ChatController
         ]);
 
         return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan']));
+    }
+
+    /**
+     * Save an explicit filter edit from the property-results interface and
+     * return its new, already-searched map view. Chat uses the matching tool,
+     * so both entry points persist the same preference shape.
+     */
+    public function updatePropertyPreferences(Request $request, string $conversation): JsonResponse
+    {
+        $owned = $this->ownedConversation($request, $conversation);
+        $state = OnboardingState::findOrFail($owned->id);
+
+        abort_unless($state->flow === 'property', 404);
+
+        $changes = $request->validate(PropertyPreferences::partialRules());
+        $preferences = PropertyPreferences::merge($state->plan['preferences'] ?? [], $changes);
+        $view = (new PropertySearch)->search($preferences);
+
+        $state->update([
+            'plan' => SavePropertyPreferences::plan($preferences),
+            'phase' => 'mapping',
+            'current_question' => null,
+            'property_result_ids' => array_column($view['markers'], 'id'),
+        ]);
+
+        return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']) + ['map_view' => $view]);
     }
 
     /**
@@ -315,6 +358,19 @@ class ChatController
             'map.center.1' => ['required_with:map', 'numeric', 'between:-180,180'],
             'map.zoom' => ['required_with:map', 'numeric', 'between:0,24'],
             'map.moved' => ['required_with:map', 'boolean'],
+            'selected_property' => ['nullable', 'array'],
+            'selected_property.id' => ['nullable', 'integer'],
+            'selected_property.name' => ['required_with:selected_property', 'string', 'max:255'],
+            'selected_property.asking_price' => ['nullable', 'integer', 'min:0'],
+            'selected_property.currency' => ['nullable', 'string', 'size:3'],
+            'selected_property.bedrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'selected_property.bathrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'selected_property.floor_area_sqm' => ['nullable', 'numeric', 'min:0'],
+            'selected_property.ber_rating' => ['nullable', 'string', 'max:3'],
+            'selected_property.property_type' => ['nullable', 'string', 'max:50'],
+            'selected_property.details' => ['nullable', 'array'],
+            'selected_property.details.address' => ['nullable', 'string', 'max:500'],
+            'selected_property.details.description' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $conversation = isset($validated['conversation_id'])
@@ -336,7 +392,7 @@ class ChatController
             return $this->cannedStream($request, $conversation->id, $onboarding);
         }
 
-        $stream = (new ChatAgent($validated['map'] ?? null, $onboarding))
+        $stream = (new ChatAgent($validated['map'] ?? null, $onboarding, $validated['selected_property'] ?? null))
             ->continue($conversation->id, $request->user())
             ->stream($validated['message'])
             ->then(function () use ($conversation): void {
@@ -391,10 +447,18 @@ class ChatController
     {
         $scenario = $request->query('scenario')
             ?? ($onboarding->flow === 'property' ? 'property_workflow' : CannedReplies::pick());
-        $replies = new CannedReplies($conversationId);
-        $frameScenario = $scenario === 'property_workflow'
-            ? $this->preparePropertyTestWorkflow($onboarding)
-            : $scenario;
+        $frameScenario = $scenario;
+
+        // The property scenario is the exception to the otherwise stateless
+        // canned replies: the search it streams is real, run against the real
+        // database, so test mode puts the same pins on the map as a live turn.
+        [$input, $output] = $scenario === 'property_workflow'
+            ? $this->realPropertySearch($onboarding)
+            : [[], '{}'];
+
+        $replies = $scenario === 'property_workflow'
+            ? new CannedReplies($conversationId, $input, $output)
+            : new CannedReplies($conversationId);
 
         $response = new StreamedResponse(function () use ($replies, $frameScenario): void {
             foreach ($replies->frames($frameScenario) as $frame) {
@@ -419,57 +483,24 @@ class ChatController
     }
 
     /**
-     * Persist the local-only Cork demo state so test mode follows the same
-     * interview, review, and real database-search steps as a live visitor.
+     * Run the real search tool so test mode is only pretending about the prose.
+     *
+     * Nothing is narrowed here: with no model to read the message, the widest
+     * saved preferences are searched again, which is exactly what an unchanged
+     * filter set should do.
+     *
+     * @return array{array<string, mixed>, string}
      */
-    protected function preparePropertyTestWorkflow(OnboardingState $onboarding): string
+    protected function realPropertySearch(OnboardingState $onboarding): array
     {
-        if ($onboarding->question_count === 0) {
-            $onboarding->update(['current_question' => [
-                'question' => 'Which part of Cork would you like to search?',
-                'options' => ['Cork city', 'County Cork', 'Midleton'],
-                'multiple' => false,
-                'count' => 1,
-            ], 'question_count' => 1]);
+        $preferences = PropertyPreferences::validate(
+            $onboarding->plan['preferences'] ?? PropertyPreferences::defaults()
+        );
 
-            return 'property_intent';
-        }
+        $output = (string) (new UpdatePropertySearchPreferences($onboarding))
+            ->handle(new ToolRequest($preferences));
 
-        if ($onboarding->question_count === 1) {
-            $onboarding->update(['current_question' => [
-                'question' => 'What is your maximum asking price?',
-                'options' => ['€600,000', '€400,000', '€300,000'],
-                'multiple' => false,
-                'count' => 2,
-            ], 'question_count' => 2]);
-
-            return 'property_budget';
-        }
-
-        $onboarding->update([
-            'phase' => 'reviewing',
-            'current_question' => null,
-            'plan' => [
-                'goal' => 'Buy a property',
-                'location' => 'Cork, Cork',
-                'details' => [
-                    'Maximum asking price' => '€600,000',
-                    'Minimum bedrooms' => 'Any',
-                    'Property type' => 'Any',
-                ],
-                'preferences' => [
-                    'location' => 'Cork',
-                    'location_type' => 'town',
-                    'county' => 'Cork',
-                    'max_price' => 60000000,
-                    'min_bedrooms' => null,
-                    'property_type' => null,
-                ],
-            ],
-            'property_result_ids' => null,
-        ]);
-
-        return 'property_review';
+        return [$preferences, $output];
     }
 
     /**
@@ -617,7 +648,15 @@ class ChatController
             'participant_id' => Conversation::participantKey($request->user()),
             'title' => Str::limit(trim($message), 50, preserveWords: true) ?: __('New chat'),
         ]);
-        OnboardingState::create(['conversation_id' => $conversation->id, 'flow' => 'property']);
+        // Straight into mapping with the widest search already saved. There is
+        // no interview to pass through: the opening message narrows this, and
+        // anything it does not mention simply stays wide open.
+        OnboardingState::create([
+            'conversation_id' => $conversation->id,
+            'flow' => 'property',
+            'phase' => 'mapping',
+            'plan' => SavePropertyPreferences::plan(PropertyPreferences::defaults()),
+        ]);
 
         return $conversation;
     }

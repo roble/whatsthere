@@ -3,6 +3,7 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 use Modules\Chat\Models\OnboardingState;
 use Modules\Chat\Testing\CannedReplies;
 use Tests\TestCase;
@@ -129,38 +130,27 @@ class CannedRepliesTest extends TestCase
         $this->assertStringContainsString("data: [DONE]\n\n", $body);
     }
 
-    public function test_property_workflow_persists_cork_preferences_before_using_the_real_search(): void
+    public function test_the_property_scenario_streams_a_real_search_of_the_home_area(): void
     {
         config(['chat.test_mode' => true]);
-        $user = $this->createUser();
 
-        $first = $this->actingAs($user)
+        $response = $this->actingAs($this->createUser())
             ->post(route('chat.stream').'?scenario=property_workflow', [
                 'message' => 'I want to buy a home in Cork.',
             ]);
 
-        $conversationId = (string) $first->headers->get('X-Conversation-Id');
-        $this->assertSame('Which part of Cork would you like to search?', OnboardingState::find($conversationId)?->current_question['question']);
-
-        $this->actingAs($user)
-            ->post(route('chat.stream').'?scenario=property_workflow', [
-                'conversation_id' => $conversationId,
-                'message' => 'Cork city',
-            ]);
-
-        $this->assertSame('What is your maximum asking price?', OnboardingState::find($conversationId)?->current_question['question']);
-
-        $this->actingAs($user)
-            ->post(route('chat.stream').'?scenario=property_workflow', [
-                'conversation_id' => $conversationId,
-                'message' => '€600,000',
-            ]);
-
+        $conversationId = (string) $response->headers->get('X-Conversation-Id');
         $state = OnboardingState::find($conversationId);
 
-        $this->assertSame('reviewing', $state?->phase);
-        $this->assertSame('Cork', $state?->plan['preferences']['location']);
-        $this->assertSame(60000000, $state?->plan['preferences']['max_price']);
+        // No interview to walk through: one message lands straight on results.
+        $this->assertSame('mapping', $state?->phase);
+        $this->assertSame(0, $state?->question_count);
+        $this->assertNull($state?->current_question);
+        $this->assertSame(config('properties.home.location'), $state?->plan['preferences']['location']);
+
+        // The search itself is real, so the frames carry a genuine map view.
+        $this->assertStringContainsString(UpdatePropertySearchPreferences::NAME, $response->streamedContent());
+        $this->assertNotNull($state?->property_result_ids);
     }
 
     public function test_the_failure_scenario_never_leaks_the_provider_wording(): void

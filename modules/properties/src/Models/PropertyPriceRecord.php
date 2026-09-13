@@ -11,7 +11,11 @@ class PropertyPriceRecord extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'integer', 'effective_date' => 'date'];
+        // Pinned to the date format rather than left as a bare `date` cast.
+        // Without the format Eloquent writes a full timestamp on drivers with
+        // no native date type, so the import's own `updateOrCreate` lookup by
+        // effective_date misses and every re-import duplicates the history.
+        return ['amount' => 'integer', 'effective_date' => 'date:Y-m-d'];
     }
 
     public function property(): BelongsTo

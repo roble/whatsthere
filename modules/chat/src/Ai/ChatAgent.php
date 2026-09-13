@@ -18,9 +18,8 @@ use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\InterviewVisitor;
 use Modules\Chat\Ai\Tools\SaveItinerary;
 use Modules\Chat\Ai\Tools\SaveMapReadyPlan;
-use Modules\Chat\Ai\Tools\SavePropertyPreferences;
-use Modules\Chat\Ai\Tools\SearchProperties;
 use Modules\Chat\Ai\Tools\ShowOnMap;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 use Modules\Chat\Models\OnboardingState;
 use Stringable;
 
@@ -44,6 +43,15 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
     public const string MODEL = 'gpt-5.4-mini';
 
     /**
+     * Whether the pinned model reasons.
+     *
+     * Kept beside the model constant so the two move together: changing one
+     * without the other either loses the route of thought or breaks every
+     * request.
+     */
+    public const bool REASONS = true;
+
+    /**
      * Questions the interview always asks before a plan can be saved.
      */
     public const int MIN_QUESTIONS = 2;
@@ -52,7 +60,8 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      * @param  array{label: string, center: array{float, float}, zoom: float, moved: bool}|null  $mapViewport
      *                                                                                                         Where the visitor's map is pointing as this message is sent.
      */
-    public function __construct(protected ?array $mapViewport = null, protected ?OnboardingState $onboarding = null) {}
+    /** @param array<string, mixed>|null $selectedProperty */
+    public function __construct(protected ?array $mapViewport = null, protected ?OnboardingState $onboarding = null, protected ?array $selectedProperty = null) {}
 
     /**
      * Get the instructions that the agent should follow.
@@ -64,21 +73,21 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
     {
         if ($this->onboarding?->flow === 'property') {
             $plan = json_encode($this->onboarding->plan ?? [], JSON_THROW_ON_ERROR);
-            $answers = json_encode($this->onboarding->answers ?? [], JSON_THROW_ON_ERROR);
-            $phase = $this->onboarding->phase;
+            $selectedProperty = $this->selectedProperty === null
+                ? 'none'
+                : json_encode($this->selectedProperty, JSON_THROW_ON_ERROR);
 
             return <<<TEXT
-            You help visitors buy a home through a guided interview and a database property search.
-            Phase: {$phase}. Saved preferences: {$plan}. Interview answers: {$answers}.
-            Collect location (town or county), maximum asking price in euros, minimum bedrooms (or any), and property type (house, apartment, bungalow, or any).
-            Reuse all information already provided. Ask only for missing information using interview_visitor, one question per turn, then wait. Never insist on extra questions when all preferences are known.
-            Clarify ambiguous locations, especially city versus county (Cork, Galway, Limerick). Use the bare town/county name in location and specify location_type; use county to disambiguate a town when known.
-            Do not infer location from the map or assume a budget, bedrooms, or type. If the user says any bedrooms/type, store null.
-            When preferences are complete, call save_property_preferences (max_price in integer euro cents), then stop. The visitor must confirm the review card. Do not search during interviewing or reviewing.
-            In mapping phase, use search_properties with exactly the saved preferences to find homes. If the user changes preferences, save the complete updated preferences for review, or ask for clarification; never silently relax filters.
-            Only describe property facts returned by search_properties. Do not invent addresses, prices, features, photos, or availability. No results means no matches in our database; offer to revise preferences.
+            You help visitors buy a home. A map of matching properties sits beside the conversation and is already showing results.
+            Saved preferences: {$plan}. Selected property: {$selectedProperty}.
+            Never interview the visitor. Never ask for a budget, bedroom count, property type or BER rating they have not mentioned: anything unstated stays as it is and the search simply stays wide on that filter.
+            On every message that expresses or changes what they are looking for, call update_property_search_preferences with only the filters they actually stated, and nothing else. It preserves every other filter and searches immediately.
+            max_price is the maximum asking price in integer euro cents (350000 euros is 35000000). "B3 or better" sets minimum_ber_rating to B3. "Any" or "no preference" for a filter means pass null for it.
+            Ask a question only when a stated filter is genuinely ambiguous and you cannot search without resolving it, above all city versus county for Cork, Galway and Limerick. Ask it as one short sentence in your reply. Search with your best reading first whenever you can; do not hold results back waiting for an answer.
+            When a visitor has selected a property, answer questions about that property from the selected-property facts only. For questions about schools, parks, transport or amenities around it, use find_places with the property's full address as area.
+            Only describe property facts returned by the search. Do not invent addresses, prices, features, photos, or availability. No results means no matches in our database; say so plainly and offer to widen a filter.
             No renovation, itinerary, financial advice, valuation, comparisons, or external research in this version. Do not claim to search every listing in an area.
-            After asking a question or saving preferences, do not repeat the card in prose. One short sentence at most.
+            Do not repeat the filters or the results list back in prose: the visitor can see both. One or two short sentences at most.
             TEXT;
         }
 
@@ -203,11 +212,14 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      */
     public function tools(): iterable
     {
+        // One search tool, not three. It merges a partial change into the saved
+        // filters and searches in the same call, so there is no way to reach a
+        // state where preferences and results disagree, and no confirmation
+        // step between the visitor asking and the map answering.
         if ($this->onboarding?->flow === 'property') {
             return [
-                new InterviewVisitor($this->onboarding),
-                new SavePropertyPreferences($this->onboarding),
-                ...($this->onboarding->phase === 'mapping' ? [new SearchProperties($this->onboarding)] : []),
+                new UpdatePropertySearchPreferences($this->onboarding),
+                new FindPlaces((string) $this->onboarding->getKey()),
             ];
         }
 
@@ -240,7 +252,9 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      */
     public function toolChoice(): ?string
     {
-        return $this->onboarding !== null && $this->onboarding->phase !== 'mapping'
+        return $this->onboarding !== null
+            && $this->onboarding->flow !== 'property'
+            && $this->onboarding->phase !== 'mapping'
             ? ToolChoice::required
             : null;
     }
@@ -254,12 +268,16 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      */
     public function providerOptions(Lab|string $provider): array
     {
-        return match ($provider) {
+        return match (true) {
             // Both halves are load-bearing. Without `summary` OpenAI reasons
             // silently and streams nothing to summarise; without `effort` the
             // model does not reason at all, so `summary` has nothing to say.
             // Keep the visible route useful without letting it compete with the reply.
-            Lab::OpenAI => ['reasoning' => ['effort' => 'low', 'summary' => 'concise']],
+            //
+            // Only the reasoning models accept them at all: sent to any other
+            // OpenAI model the request is rejected outright with a 400, so the
+            // whole chat fails rather than merely losing its route of thought.
+            $provider === Lab::OpenAI && self::REASONS => ['reasoning' => ['effort' => 'low', 'summary' => 'concise']],
             default => [],
         };
     }

@@ -15,13 +15,15 @@ class ChatMapViewTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_blank_chat_has_no_map_view(): void
+    public function test_a_blank_chat_opens_on_the_home_areas_properties(): void
     {
         $response = $this->actingAs($this->createUser())->get(route('chat.index'));
 
         $response->assertInertia(
             fn ($page) => $page->component('Chat::Index', false)
-                ->where('initialMapView', null)
+                ->where('initialMapView.categoryKey', 'property')
+                ->where('onboarding.phase', 'mapping')
+                ->where('onboarding.plan.preferences.location', config('properties.home.location'))
         );
     }
 

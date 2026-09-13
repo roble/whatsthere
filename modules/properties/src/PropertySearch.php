@@ -35,6 +35,16 @@ class PropertySearch
         if ($filters['property_type'] !== null) {
             $query->where('property_type', $filters['property_type']);
         }
+        if ($filters['minimum_ber_rating'] !== null) {
+            $ratings = PropertyPreferences::ratingsAtOrAbove($filters['minimum_ber_rating']);
+
+            // A minimum that admits every rating is not a filter at all. Left
+            // as a whereIn it would still drop every property whose rating is
+            // unpublished, so "any BER" would quietly return nothing.
+            if (count($ratings) < count(PropertyPreferences::BER_RATINGS)) {
+                $query->whereIn('ber_rating', $ratings);
+            }
+        }
 
         $total = (clone $query)->count();
         if ($savedIds !== null) {
@@ -54,6 +64,9 @@ class PropertySearch
                 'currency' => $property->askingPrice->currency,
                 'bedrooms' => $property->bedrooms,
                 'property_type' => $property->property_type,
+                'ber_rating' => $property->ber_rating,
+                'bathrooms' => $property->bathrooms,
+                'floor_area_sqm' => $property->floor_area_sqm,
                 'description' => $property->description,
                 'images' => $property->activeListing?->media->pluck('url')->all() ?: [
                     '/modules/properties/images/cork-home-exterior.png',
