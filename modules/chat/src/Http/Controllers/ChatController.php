@@ -2,8 +2,11 @@
 
 namespace Modules\Chat\Http\Controllers;
 
+use App\Ai\AiProviderSwitch;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,6 +20,7 @@ use Laravel\Ai\Messages\ToolResultMessage;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
+use Modules\Chat\Ai\Tools\CompareListingAmenities;
 use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\SaveItinerary;
 use Modules\Chat\Ai\Tools\SavePropertyPreferences;
@@ -47,6 +51,7 @@ class ChatController
         SaveItinerary::NAME,
         SearchProperties::NAME,
         UpdatePropertySearchPreferences::NAME,
+        CompareListingAmenities::NAME,
     ];
 
     /**
@@ -64,7 +69,7 @@ class ChatController
         return Inertia::render('Chat::Index', [
             'conversationId' => null,
             'initialMessages' => [],
-            'initialMapView' => (new PropertySearch)->search($preferences),
+            'initialMapView' => $this->propertyMapView($preferences),
             'onboarding' => [
                 'phase' => 'mapping',
                 'question_count' => 0,
@@ -105,10 +110,11 @@ class ChatController
                     ],
                 ])
                 ->all(),
+            // Always search from the saved preferences, not the frozen id list.
+            // The id list caps how many pins a reopen can ever show; the map
+            // should reflect every current match up to the configured limit.
             'initialMapView' => $onboarding?->flow === 'property'
-                ? ($onboarding->property_result_ids !== null && isset($onboarding->plan['preferences'])
-                    ? (new PropertySearch)->search($onboarding->plan['preferences'], $onboarding->property_result_ids)
-                    : null)
+                ? $this->propertyMapView($onboarding->plan['preferences'] ?? null)
                 : $this->lastMapView($messages),
             'onboarding' => $onboarding?->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']),
             'flow' => $onboarding?->flow ?? 'trip',
@@ -134,7 +140,7 @@ class ChatController
         if ($state->flow === 'property') {
             if ($phase === 'mapping') {
                 abort_unless(in_array($state->phase, ['reviewing', 'mapping'], true), 422, 'Review your preferences before searching.');
-                $preferences = PropertyPreferences::validate($state->plan['preferences'] ?? []);
+                $preferences = $this->validatedPreferences($state->plan['preferences'] ?? null);
                 $view = DB::transaction(function () use ($state, $preferences): array {
                     $state->update(['phase' => 'mapping', 'current_question' => null]);
 
@@ -158,7 +164,7 @@ class ChatController
                 : $state->plan,
         ]);
 
-        return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan']));
+        return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']));
     }
 
     /**
@@ -174,7 +180,10 @@ class ChatController
         abort_unless($state->flow === 'property', 404);
 
         $changes = $request->validate(PropertyPreferences::partialRules());
-        $preferences = PropertyPreferences::merge($state->plan['preferences'] ?? [], $changes);
+        $preferences = PropertyPreferences::merge(
+            $this->validatedPreferences($state->plan['preferences'] ?? null),
+            $changes,
+        );
         $view = (new PropertySearch)->search($preferences);
 
         $state->update([
@@ -221,13 +230,15 @@ class ChatController
             'label' => ['nullable', 'string', 'max:200'],
             // Bounded so one click cannot fan out into a dozen calls to a
             // donated service.
-            'categories' => ['required', 'array', 'min:1', 'max:8'],
+            'categories' => ['required', 'array', 'min:1', 'max:12'],
             'categories.*' => ['string', Rule::in(array_keys(FindPlaces::CATEGORIES))],
         ]);
 
-        $markers = (new FindPlaces)->aroundMany(
-            (float) $validated['lat'],
-            (float) $validated['lon'],
+        $finder = new FindPlaces;
+        $latitude = (float) $validated['lat'];
+        $longitude = (float) $validated['lon'];
+        $markers = $finder->aroundPoints(
+            [['lat' => $latitude, 'lon' => $longitude]],
             array_values($validated['categories']),
         );
 
@@ -235,13 +246,41 @@ class ChatController
             return response()->json(['message' => __('The map data service could not be reached.')], 503);
         }
 
+        $markers = array_map(function (array $marker) use ($finder, $latitude, $longitude): array {
+            $marker['distance_m'] = $finder->distanceMetres(
+                $latitude,
+                $longitude,
+                (float) $marker['lat'],
+                (float) $marker['lon'],
+            );
+
+            return $marker;
+        }, $markers);
+
+        usort(
+            $markers,
+            fn (array $left, array $right): int => ($left['distance_m'] ?? PHP_INT_MAX) <=> ($right['distance_m'] ?? PHP_INT_MAX),
+        );
+
+        $kept = [];
+        $perCategory = [];
+
+        foreach ($markers as $marker) {
+            $category = (string) ($marker['categoryKey'] ?? '');
+            $perCategory[$category] = ($perCategory[$category] ?? 0) + 1;
+
+            if ($perCategory[$category] <= 5) {
+                $kept[] = $marker;
+            }
+        }
+
         $around = $validated['label'] ?? __('this property');
 
         return response()->json([
             'label' => __('Around :place', ['place' => $around]),
             'category' => __('nearby places'),
-            'total' => count($markers),
-            'markers' => $markers,
+            'total' => count($kept),
+            'markers' => $kept,
             'bbox' => $this->boxAround((float) $validated['lat'], (float) $validated['lon'], $markers),
         ]);
     }
@@ -265,6 +304,75 @@ class ChatController
             (string) (min($latitudes) - 0.002),
             (string) (max($longitudes) + 0.002),
             (string) (max($latitudes) + 0.002),
+        ];
+    }
+
+    /**
+     * Search from stored preferences, or the home-area defaults if they are gone.
+     *
+     * Reopening a conversation must not 500 because an older plan is missing a
+     * field the current rules require.
+     *
+     * @param  array<string, mixed>|null  $preferences
+     * @return array<string, mixed>
+     */
+    protected function propertyMapView(?array $preferences): array
+    {
+        return (new PropertySearch)->search($this->validatedPreferences($preferences));
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $preferences
+     * @return array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string, sort: string}
+     */
+    protected function validatedPreferences(?array $preferences): array
+    {
+        try {
+            return PropertyPreferences::validate($preferences ?? []);
+        } catch (ValidationException) {
+            return PropertyPreferences::defaults();
+        }
+    }
+
+    /**
+     * Listing facts the model may treat as selected, loaded from the database.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function selectedListingForAgent(mixed $id): ?array
+    {
+        if (! is_numeric($id) || (int) $id < 1) {
+            return null;
+        }
+
+        $marker = (new PropertySearch)->listing((int) $id);
+
+        if ($marker === null) {
+            return null;
+        }
+
+        $description = $marker['details']['description'] ?? $marker['description'] ?? '';
+
+        return [
+            'id' => $marker['id'],
+            'name' => $marker['name'],
+            'town' => $marker['town'] ?? null,
+            'lat' => $marker['lat'],
+            'lon' => $marker['lon'],
+            'price' => PropertySearch::euroLabel($marker['asking_price'] ?? null),
+            'currency' => $marker['currency'] ?? null,
+            'bedrooms' => $marker['bedrooms'] ?? null,
+            'bathrooms' => $marker['bathrooms'] ?? null,
+            'floor_area_sqm' => $marker['floor_area_sqm'] ?? null,
+            'plot_area_sqm' => $marker['plot_area_sqm'] ?? null,
+            'rate' => PropertySearch::rateLabel($marker['price_per_sqm'] ?? null),
+            'size_label' => $marker['size_label'] ?? null,
+            'ber_rating' => $marker['ber_rating'] ?? null,
+            'property_type' => $marker['property_type'] ?? null,
+            'details' => [
+                'address' => $marker['details']['address'] ?? $marker['address'] ?? null,
+                'description' => is_string($description) ? Str::limit($description, 400) : null,
+            ],
         ];
     }
 
@@ -443,20 +551,25 @@ class ChatController
             'map.moved' => ['required_with:map', 'boolean'],
             // What the landing page's filters were set to, for a first
             // message. Ignored once the conversation owns its own.
-            'preferences' => ['nullable', 'array'],
+            'preferences' => [
+                'nullable',
+                'array',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_array($value)) {
+                        return;
+                    }
+
+                    try {
+                        PropertyPreferences::validate($value);
+                    } catch (ValidationException $exception) {
+                        $fail($exception->validator->errors()->first() ?? 'Invalid preferences.');
+                    }
+                },
+            ],
+            // Only the id is trusted. Listing facts are loaded from the
+            // database so a rewritten payload cannot invent a price or address.
             'selected_property' => ['nullable', 'array'],
-            'selected_property.id' => ['nullable', 'integer'],
-            'selected_property.name' => ['required_with:selected_property', 'string', 'max:255'],
-            'selected_property.asking_price' => ['nullable', 'integer', 'min:0'],
-            'selected_property.currency' => ['nullable', 'string', 'size:3'],
-            'selected_property.bedrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'selected_property.bathrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'selected_property.floor_area_sqm' => ['nullable', 'numeric', 'min:0'],
-            'selected_property.ber_rating' => ['nullable', 'string', 'max:3'],
-            'selected_property.property_type' => ['nullable', 'string', 'max:50'],
-            'selected_property.details' => ['nullable', 'array'],
-            'selected_property.details.address' => ['nullable', 'string', 'max:500'],
-            'selected_property.details.description' => ['nullable', 'string', 'max:5000'],
+            'selected_property.id' => ['required_with:selected_property', 'integer', 'min:1'],
         ]);
 
         $conversation = isset($validated['conversation_id'])
@@ -478,9 +591,15 @@ class ChatController
             return $this->cannedStream($request, $conversation->id, $onboarding);
         }
 
-        $stream = (new ChatAgent($validated['map'] ?? null, $onboarding, $validated['selected_property'] ?? null))
+        $ai = AiProviderSwitch::chatStreamOptions();
+
+        $stream = (new ChatAgent(
+            $validated['map'] ?? null,
+            $onboarding,
+            $this->selectedListingForAgent(data_get($validated, 'selected_property.id')),
+        ))
             ->continue($conversation->id, $request->user())
-            ->stream($validated['message'])
+            ->stream($validated['message'], provider: $ai['provider'], model: $ai['model'])
             ->then(function () use ($conversation): void {
                 $userMessageCount = $conversation->messages()
                     ->where('role', 'user')
@@ -612,7 +731,7 @@ class ChatController
         }
 
         return $response->setCallback(function () use ($stream): void {
-            $stopHiding = $this->hideProviderErrors();
+            $buffer = $this->hideProviderErrors();
 
             try {
                 $stream();
@@ -620,10 +739,11 @@ class ChatController
                 // Still an error worth paging over; it just must not escape.
                 report($e);
 
+                $buffer['discard']();
                 $this->writeFrame(['type' => 'error', 'errorText' => $this->failureMessage()]);
                 $this->writeFrame('[DONE]');
             } finally {
-                $stopHiding();
+                $buffer['stop']();
             }
         });
     }
@@ -641,9 +761,9 @@ class ChatController
      * it to know the reply failed at all; only the wording is ours. Errors
      * still reach the log intact through `report()`.
      *
-     * @return Closure(): void Stops the rewriting and releases anything held back.
+     * @return array{discard: Closure(): void, stop: Closure(): void}
      */
-    protected function hideProviderErrors(): Closure
+    protected function hideProviderErrors(): array
     {
         $partial = '';
 
@@ -663,16 +783,18 @@ class ChatController
             return $complete;
         }, 1);
 
-        return function () use (&$partial): void {
-            ob_end_flush();
+        return [
+            'discard' => function () use (&$partial): void {
+                $partial = '';
+            },
+            'stop' => function () use (&$partial): void {
+                // An incomplete frame is either a split error (must not leak)
+                // or a truncated token. Drop it rather than flushing raw text.
+                $partial = '';
 
-            // Anything still held back was never a whole frame. It goes out as
-            // it is, now that nothing is buffering, rather than vanishing.
-            if ($partial !== '') {
-                echo $partial;
-                flush();
-            }
-        };
+                ob_end_flush();
+            },
+        ];
     }
 
     /**
@@ -686,7 +808,14 @@ class ChatController
 
         $payload = json_decode(substr($frame, 6, -2), true);
 
-        if (! is_array($payload) || ($payload['type'] ?? null) !== 'error') {
+        if (! is_array($payload)) {
+            // A split error glued to the next write is not valid JSON. Passing
+            // it through would leak the provider wording the rewriter exists
+            // to hide.
+            return str_contains($frame, 'error') ? '' : $frame;
+        }
+
+        if (($payload['type'] ?? null) !== 'error') {
             return $frame;
         }
 
@@ -758,7 +887,7 @@ class ChatController
      * failing the message.
      *
      * @param  array<string, mixed>|null  $preferences
-     * @return array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string}
+     * @return array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string, sort: string}
      */
     protected function openingPreferences(?array $preferences): array
     {
@@ -774,6 +903,39 @@ class ChatController
     }
 
     /**
+     * Delete one conversation and everything the chat module stored for it.
+     */
+    public function destroy(Request $request, string $conversation): RedirectResponse
+    {
+        $owned = $this->ownedConversation($request, $conversation);
+        $this->deleteOwnedConversation($owned);
+
+        $path = parse_url((string) url()->previous(), PHP_URL_PATH) ?? '';
+
+        if ($path === '/chat/'.$owned->id) {
+            return redirect()->route('chat.index');
+        }
+
+        return back();
+    }
+
+    /**
+     * Delete every conversation belonging to the authenticated user.
+     */
+    public function destroyAll(Request $request): RedirectResponse
+    {
+        $conversations = $this->userConversations($request)->get();
+
+        DB::transaction(function () use ($conversations): void {
+            foreach ($conversations as $conversation) {
+                $this->deleteOwnedConversation($conversation);
+            }
+        });
+
+        return back();
+    }
+
+    /**
      * Resolve a conversation the authenticated user owns.
      *
      * Laravel\Ai's continue() performs no ownership check of its own, so every
@@ -781,10 +943,25 @@ class ChatController
      */
     protected function ownedConversation(Request $request, string $id): Conversation
     {
-        return Conversation::query()
+        return $this->userConversations($request)
             ->where('id', $id)
-            ->where('participant_type', Conversation::participantType($request->user()))
-            ->where('participant_id', Conversation::participantKey($request->user()))
             ->firstOrFail();
+    }
+
+    /** @return Builder<Conversation> */
+    protected function userConversations(Request $request)
+    {
+        return Conversation::query()
+            ->where('participant_type', Conversation::participantType($request->user()))
+            ->where('participant_id', Conversation::participantKey($request->user()));
+    }
+
+    protected function deleteOwnedConversation(Conversation $conversation): void
+    {
+        DB::transaction(function () use ($conversation): void {
+            $conversation->messages()->delete();
+            OnboardingState::where('conversation_id', $conversation->id)->delete();
+            $conversation->delete();
+        });
     }
 }

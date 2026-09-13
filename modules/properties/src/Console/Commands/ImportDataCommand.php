@@ -9,10 +9,10 @@ use Modules\Properties\Imports\ListingProviderRegistry;
 class ImportDataCommand extends Command
 {
     protected $signature = 'data:import
-                            {--provider= : Listing provider: daft}
+                            {--provider= : Listing provider: myhome}
                             {--file= : Optional JSON source. Defaults to the provider fixture.}';
 
-    protected $description = 'Import property listings and price records from a Daft response or fixture.';
+    protected $description = 'Import property listings and price records from a MyHome Cork export or fixture.';
 
     public function handle(ListingImportService $importer, ListingProviderRegistry $providers): int
     {

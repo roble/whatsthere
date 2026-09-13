@@ -40,7 +40,7 @@ class SavePropertyPreferences implements Tool
         return json_encode($plan, JSON_THROW_ON_ERROR);
     }
 
-    /** @param array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string} $preferences
+    /** @param array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string, sort: string} $preferences
      * @return array<string, mixed>
      */
     public static function plan(array $preferences): array
@@ -53,6 +53,7 @@ class SavePropertyPreferences implements Tool
                 'Minimum bedrooms' => $preferences['min_bedrooms'] === null ? 'Any' : (string) $preferences['min_bedrooms'],
                 'Property type' => ucfirst($preferences['property_type'] ?? 'any'),
                 'Minimum BER' => $preferences['minimum_ber_rating'] === null ? 'Any' : $preferences['minimum_ber_rating'].' or better',
+                'Sort' => ($preferences['sort'] ?? 'price') === 'price_per_sqm' ? 'Price per m²' : 'Asking price',
             ],
             'preferences' => $preferences,
         ];
@@ -66,8 +67,9 @@ class SavePropertyPreferences implements Tool
             'county' => $schema->string()->nullable()->required(),
             'max_price' => $schema->integer()->min(1)->required(),
             'min_bedrooms' => $schema->integer()->min(0)->nullable()->required(),
-            'property_type' => $schema->string()->enum(['house', 'apartment', 'bungalow'])->nullable()->required(),
+            'property_type' => $schema->string()->enum(['house', 'apartment', 'bungalow', 'land'])->nullable()->required(),
             'minimum_ber_rating' => $schema->string()->enum(PropertyPreferences::BER_RATINGS)->nullable()->required(),
+            'sort' => $schema->string()->enum(['price', 'price_per_sqm'])->nullable()->required(),
         ];
     }
 }

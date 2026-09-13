@@ -31,9 +31,16 @@ export type MapMarker = {
     bedrooms?: number | null;
     bathrooms?: number | null;
     floor_area_sqm?: number | null;
+    plot_area_sqm?: number | null;
+    size_label?: string | null;
+    price_per_sqm?: number | null;
+    distance_m?: number;
     ber_rating?: string | null;
     property_type?: string;
+    url?: string | null;
+    agent?: string | null;
     images?: string[];
+    highlight?: 'value' | 'match' | 'typical' | 'premium';
     lat: number;
     lon: number;
     name: string;
@@ -152,6 +159,7 @@ export function viewKey(view: MapView): string {
 export const MAP_TOOLS = [
     'search_properties',
     'update_property_search_preferences',
+    'compare_listing_amenities',
     'show_on_map',
     'find_places',
     'save_itinerary',

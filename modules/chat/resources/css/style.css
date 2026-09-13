@@ -1,5 +1,315 @@
 /*
-* Note: This file contains CSS modifications for the module.
-* Used to apply specific styling changes and customizations
-* to enhance the module's appearance and layout.
-*/
+ * Chat panel — ambient surface, landing prompts, composer dock, transcript.
+ */
+
+[data-testid='chat-page'] {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+}
+
+[data-testid='chat-page'] [data-slot='resizable-panel-group'] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.chat-pane {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    background:
+        radial-gradient(
+            120% 80% at 0% 0%,
+            color-mix(in oklch, var(--primary) 14%, transparent),
+            transparent 55%
+        ),
+        radial-gradient(
+            90% 60% at 100% 100%,
+            color-mix(in oklch, var(--secondary) 10%, transparent),
+            transparent 50%
+        ),
+        var(--background);
+}
+
+.chat-pane::before {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+    background-image: radial-gradient(
+        circle at 1px 1px,
+        color-mix(in oklch, var(--foreground) 8%, transparent) 1px,
+        transparent 0
+    );
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.dark .chat-pane::before {
+    opacity: 0.2;
+}
+
+.chat-transcript {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.chat-transcript [class*='overflow-y-auto'] {
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+.chat-transcript__content {
+    gap: 1.25rem;
+    padding-inline: 0.75rem;
+    padding-block: 0.75rem 1rem;
+}
+
+.chat-transcript__content--active {
+    gap: 1rem;
+}
+
+/* Landing card */
+
+.chat-landing__card {
+    border-radius: 1.25rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 18%, var(--border));
+    background: color-mix(in oklch, var(--card) 72%, transparent);
+    box-shadow:
+        0 1px 0 color-mix(in oklch, white 8%, transparent) inset,
+        0 18px 40px -24px color-mix(in oklch, var(--primary) 45%, transparent);
+    backdrop-filter: blur(20px);
+}
+
+.chat-landing__mesh {
+    background:
+        radial-gradient(
+            60% 50% at 100% 0%,
+            color-mix(in oklch, var(--primary) 22%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            50% 40% at 0% 100%,
+            color-mix(in oklch, var(--secondary) 16%, transparent),
+            transparent 65%
+        );
+}
+
+.chat-landing__prompt {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    text-align: left;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+    background: color-mix(in oklch, var(--background) 55%, transparent);
+    color: var(--foreground);
+    transition:
+        transform 200ms ease-out,
+        box-shadow 200ms ease-out,
+        border-color 200ms ease-out,
+        background-color 200ms ease-out;
+}
+
+.chat-landing__prompt:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+    background: color-mix(in oklch, var(--primary) 8%, var(--background));
+    box-shadow: 0 10px 28px -18px color-mix(in oklch, var(--primary) 50%, transparent);
+}
+
+.chat-landing__prompt:active {
+    transform: scale(0.99);
+}
+
+.chat-landing__prompt:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Composer dock */
+
+.chat-composer {
+    position: relative;
+    z-index: 2;
+    border-top: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    background: linear-gradient(
+        to top,
+        color-mix(in oklch, var(--background) 96%, transparent),
+        color-mix(in oklch, var(--background) 78%, transparent) 55%,
+        transparent
+    );
+    backdrop-filter: blur(16px);
+}
+
+.chat-composer__glow {
+    background: radial-gradient(
+        70% 100% at 50% 100%,
+        color-mix(in oklch, var(--primary) 18%, transparent),
+        transparent 70%
+    );
+}
+
+.chat-composer__input {
+    border-radius: 1.25rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 22%, var(--border));
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+    box-shadow:
+        0 1px 0 color-mix(in oklch, white 6%, transparent) inset,
+        0 16px 40px -28px color-mix(in oklch, var(--primary) 55%, transparent);
+    backdrop-filter: blur(18px);
+    transition:
+        box-shadow 200ms ease-out,
+        border-color 200ms ease-out;
+}
+
+.chat-composer__input:focus-within {
+    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+    box-shadow:
+        0 0 0 3px color-mix(in oklch, var(--ring) 35%, transparent),
+        0 20px 48px -26px color-mix(in oklch, var(--primary) 60%, transparent);
+}
+
+.chat-composer__submit {
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 20px -10px color-mix(in oklch, var(--primary) 65%, transparent);
+}
+
+/* Message bubbles in property chat */
+
+.chat-message-user > div {
+    border-radius: 1.125rem !important;
+    border-bottom-right-radius: 0.375rem !important;
+    background: linear-gradient(
+        145deg,
+        var(--primary),
+        color-mix(in oklch, var(--primary) 82%, black)
+    ) !important;
+    box-shadow:
+        0 10px 28px -14px color-mix(in oklch, var(--primary) 70%, transparent),
+        0 0 0 1px color-mix(in oklch, white 12%, transparent) inset;
+}
+
+.chat-message-assistant > div {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.125rem 0 0.125rem 0.75rem;
+    border-left: 2px solid color-mix(in oklch, var(--primary) 35%, transparent);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.chat-message-user > div {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.chat-message-assistant img {
+    display: block;
+    width: 100%;
+    max-height: 16rem;
+    margin: 0.5rem 0;
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    object-fit: cover;
+    box-shadow: 0 12px 32px -20px color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+
+/* Listing photos embedded in assistant markdown */
+
+.chat-listing-gallery {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0.75rem 0;
+}
+
+.chat-listing-gallery__frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    max-height: 16rem;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    background: color-mix(in oklch, var(--muted) 60%, transparent);
+    box-shadow: 0 12px 32px -20px color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+
+.chat-listing-gallery__photo {
+    display: block;
+    width: 100%;
+    max-height: 16rem;
+    object-fit: cover;
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    box-shadow: 0 12px 32px -20px color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+
+.chat-message-assistant .chat-listing-gallery img {
+    margin: 0;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-landing__prompt,
+    .chat-composer__input {
+        transition: none;
+    }
+
+    .chat-landing__prompt:hover {
+        transform: none;
+    }
+}
+
+/* Property rail — compact horizontal gallery above the transcript */
+
+.property-results {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.property-rail {
+    min-width: 0;
+    max-width: 100%;
+    scroll-padding-inline: 0.75rem;
+}
+
+.property-rail > div:last-child {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.property-rail > div:last-child::-webkit-scrollbar {
+    height: 4px;
+}
+
+.property-rail > div:last-child::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--foreground) 18%, transparent);
+}
+
+.property-results .group:hover img {
+    transform: scale(1.04);
+    transition: transform 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .property-results .group:hover img {
+        transform: none;
+        transition: none;
+    }
+}

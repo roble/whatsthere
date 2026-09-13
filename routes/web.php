@@ -11,7 +11,9 @@ Route::get('/', IndexController::class)->name('index');
 Route::get('/privacy', PrivacyController::class)->name('privacy');
 Route::get('/terms', TermsController::class)->name('terms');
 
-Route::post('/locale/{locale}', LocalizationController::class)->name('locale');
+Route::post('/locale/{locale}', LocalizationController::class)
+    ->middleware('throttle:30,1')
+    ->name('locale');
 
 // Chat is this application's home. The route name is kept because the auth module
 // sends users here after login, registration and email verification; redirecting

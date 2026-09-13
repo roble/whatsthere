@@ -1,5 +1,15 @@
 <script setup lang="ts">
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
@@ -13,25 +23,93 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import TypewriterText from './TypewriterText.vue';
 import IconChevronRight from '~icons/lucide/chevron-right';
 import IconHistory from '~icons/lucide/history';
 import IconSquarePen from '~icons/lucide/square-pen';
+import IconTrash2 from '~icons/lucide/trash-2';
 
-// The shape now lives in the module's page-props declaration, so the sidebar
-// and the chat page read one definition instead of restating it.
+type Session = { id: string; title: string };
+
 const page = usePage();
 const { toggleSidebar } = useSidebar();
 
 const sessions = computed(() => page.props.chat?.sessions ?? []);
 
-// Which session is open, read from the URL rather than a prop, so the
-// highlight is correct on every page the sidebar renders on.
 const currentId = computed(
     () => page.url.match(/^\/chat\/([^/?#]+)/)?.[1] ?? null,
 );
+
+const contextMenu = ref<{
+    x: number;
+    y: number;
+    session: Session;
+} | null>(null);
+const pendingDelete = ref<Session | null>(null);
+const deleteDialogOpen = ref(false);
+const deletingId = ref<string | null>(null);
+
+function openContextMenu(event: MouseEvent, session: Session): void {
+    event.preventDefault();
+    contextMenu.value = {
+        x: event.clientX,
+        y: event.clientY,
+        session,
+    };
+}
+
+function closeContextMenu(): void {
+    contextMenu.value = null;
+}
+
+function requestDelete(session: Session): void {
+    closeContextMenu();
+    pendingDelete.value = session;
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    const session = pendingDelete.value;
+
+    if (!session || deletingId.value) {
+        return;
+    }
+
+    deletingId.value = session.id;
+    deleteDialogOpen.value = false;
+
+    router.delete(route('chat.destroy', session.id), {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingId.value = null;
+            pendingDelete.value = null;
+        },
+    });
+}
+
+function onDocumentClick(): void {
+    closeContextMenu();
+}
+
+function onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+        closeContextMenu();
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', onDocumentClick);
+    document.addEventListener('keydown', onDocumentKeydown);
+    document.addEventListener('scroll', closeContextMenu, true);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', onDocumentClick);
+    document.removeEventListener('keydown', onDocumentKeydown);
+    document.removeEventListener('scroll', closeContextMenu, true);
+});
 </script>
 
 <template>
@@ -50,10 +128,6 @@ const currentId = computed(
                     </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <!--
-                    Collapsed, the list is hidden and this is the way back to it.
-                    Expanded, the list is right there, so the shortcut is noise.
-                -->
                 <SidebarMenuItem
                     class="hidden group-data-[collapsible=icon]:block"
                 >
@@ -70,11 +144,6 @@ const currentId = computed(
         </SidebarGroupContent>
     </SidebarGroup>
 
-    <!--
-        The only scroll container in the sidebar. `min-h-0` on both this and the
-        content is what lets it take the leftover height and scroll internally,
-        instead of growing and pushing the user menu off the bottom.
-    -->
     <Collapsible
         v-if="sessions.length"
         default-open
@@ -113,6 +182,9 @@ const currentId = computed(
                                 <Link
                                     :href="route('chat.show', session.id)"
                                     :data-testid="`session-${session.id}`"
+                                    @contextmenu.prevent="
+                                        openContextMenu($event, session)
+                                    "
                                 >
                                     <TypewriterText :text="session.title" />
                                 </Link>
@@ -123,4 +195,59 @@ const currentId = computed(
             </CollapsibleContent>
         </SidebarGroup>
     </Collapsible>
+
+    <Teleport to="body">
+        <div
+            v-if="contextMenu"
+            class="bg-popover text-popover-foreground border-border fixed z-50 min-w-[10rem] overflow-hidden rounded-lg border p-1 shadow-lg"
+            :style="{
+                top: `${contextMenu.y}px`,
+                left: `${contextMenu.x}px`,
+            }"
+            role="menu"
+            data-testid="chat-session-context-menu"
+            @click.stop
+        >
+            <button
+                type="button"
+                class="hover:bg-destructive/10 text-destructive focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm outline-none focus-visible:ring-2"
+                role="menuitem"
+                data-testid="delete-chat-session"
+                @click="requestDelete(contextMenu.session)"
+            >
+                <IconTrash2 class="size-4 shrink-0" aria-hidden="true" />
+                {{ $t('Delete chat') }}
+            </button>
+        </div>
+    </Teleport>
+
+    <AlertDialog v-model:open="deleteDialogOpen">
+        <AlertDialogContent data-testid="delete-chat-dialog">
+            <AlertDialogHeader>
+                <AlertDialogTitle>
+                    {{ $t('Delete this chat?') }}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    {{
+                        $t(
+                            'This removes the conversation and its messages permanently. This cannot be undone.',
+                        )
+                    }}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel data-testid="cancel-delete-chat">
+                    {{ $t('Cancel') }}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    data-testid="confirm-delete-chat"
+                    :disabled="deletingId !== null"
+                    @click.prevent="confirmDelete"
+                >
+                    {{ $t('Delete chat') }}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>

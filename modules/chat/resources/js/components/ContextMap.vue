@@ -24,6 +24,13 @@ import {
     type MapViewport,
     routeDistanceKm,
 } from '@modules/chat/resources/js/map';
+import { safeHttpUrl } from '@/lib/safeHttpUrl';
+import {
+    formatDistance,
+    formatPricePerSqm,
+    isLand,
+    typeLabelKey,
+} from '@modules/chat/resources/js/listing';
 import {
     useMutationObserver,
     useResizeObserver,
@@ -102,7 +109,10 @@ import {
  */
 setWorkerUrl(maplibreWorkerUrl);
 
-const props = defineProps<{ view: MapView }>();
+const props = defineProps<{
+    view: MapView;
+    selectedId?: number | null;
+}>();
 
 const emit = defineEmits<{
     viewport: [MapViewport];
@@ -156,6 +166,17 @@ const ROUTE_LAYER = 'itinerary-route-line';
  * It is the same value in light and dark, so one constant covers both.
  */
 const ROUTE_COLOR = '#6754C4';
+const SELECTED_PIN_COLOR = '#dc2626';
+
+const PROPERTY_HIGHLIGHT_COLORS: Record<
+    NonNullable<MapMarker['highlight']>,
+    string
+> = {
+    value: '#15803d',
+    match: '#0369a1',
+    typical: '#6754C4',
+    premium: '#b45309',
+};
 
 const MAP_CONTAINER_ID = 'context-map-container';
 const container = ref<HTMLDivElement | null>(null);
@@ -213,6 +234,10 @@ const PLACE_MARKER_STYLES: Record<string, PlaceMarkerStyle> = {
     car_park: { icon: IconCarPark, color: '#4b5563' },
     train_station: { icon: IconTrainStation, color: '#6b21a8' },
     bus_station: { icon: IconBusStation, color: '#0e7490' },
+    bus_stop: { icon: IconBusStation, color: '#155e75' },
+    college: { icon: IconSchool, color: '#1d4ed8' },
+    university: { icon: IconSchool, color: '#1e3a8a' },
+    clinic: { icon: IconHospital, color: '#9f1239' },
     toilets: { icon: IconToilets, color: '#374151' },
 };
 
@@ -261,11 +286,23 @@ function boundsOf(view: MapView): LngLatBoundsLike {
     ];
 }
 
+/** Null Island and other junk coordinates must never move the camera. */
+function isPlottable(place: MapMarker): boolean {
+    const lat = Number(place.lat);
+    const lon = Number(place.lon);
+
+    return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lon) &&
+        !(lat === 0 && lon === 0)
+    );
+}
+
 /** Fit searches to what was found, not the often much larger searched area. */
 function boundsOfMarkers(view: MapView): LngLatBoundsLike {
-    const places = view.markers;
+    const places = (view.markers ?? []).filter(isPlottable);
 
-    if (!places?.length) {
+    if (!places.length) {
         return boundsOf(view);
     }
 
@@ -297,15 +334,21 @@ function placeMarkerElement(
     name: string,
     askingPrice?: number,
     currency?: string,
+    highlight?: MapMarker['highlight'],
 ): HTMLElement {
     const element = document.createElement('div');
     const markerStyle =
         PLACE_MARKER_STYLES[categoryKey ?? ''] ?? FALLBACK_MARKER_STYLE;
+    const pinColor =
+        categoryKey === 'property'
+            ? (PROPERTY_HIGHLIGHT_COLORS[highlight ?? 'typical'] ??
+              markerStyle.color)
+            : markerStyle.color;
 
     element.setAttribute('role', 'button');
     element.setAttribute('aria-label', name);
-    element.style.setProperty('--marker-color', markerStyle.color);
-    element.dataset.markerColor = markerStyle.color;
+    element.style.setProperty('--marker-color', pinColor);
+    element.dataset.markerColor = pinColor;
     const isProperty = categoryKey === 'property' && askingPrice !== undefined;
     element.className = isProperty
         ? "relative grid min-w-14 cursor-pointer place-items-center rounded-full border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-black/20 transition-[filter] [background-color:var(--marker-color)] after:absolute after:-bottom-1 after:left-1/2 after:size-2 after:-translate-x-1/2 after:rotate-45 after:border-r-2 after:border-b-2 after:border-white after:[background-color:var(--marker-color)] after:content-[''] hover:brightness-110"
@@ -387,55 +430,118 @@ function formatAskingPrice(place: MapMarker): string {
     }).format((place.asking_price ?? 0) / 100);
 }
 
-/** A compact, Daft-style preview. Activating it opens the fuller gallery. */
+/** A compact listing preview. Activating it opens the fuller gallery. */
+function propertyTypeLabel(place: MapMarker): string {
+    return trans(typeLabelKey(place));
+}
+
+function attachListingPhoto(container: HTMLElement, urls: string[]): void {
+    const sources = urls.filter((url) => url !== '');
+
+    if (!sources.length) {
+        return;
+    }
+
+    let index = 0;
+    const image = document.createElement('img');
+    image.alt = '';
+    image.className = 'size-full object-cover';
+    image.loading = 'lazy';
+    image.addEventListener('error', () => {
+        index += 1;
+        if (index >= sources.length) {
+            image.remove();
+            return;
+        }
+
+        image.src = sources[index];
+    });
+    image.src = sources[index];
+    container.append(image);
+}
+
 function propertyPopupContent(place: MapMarker): HTMLElement {
     const root = document.createElement('button');
     root.type = 'button';
     root.dataset.testid = `property-preview-${place.id}`;
     root.className =
-        'flex w-80 items-center gap-4 bg-white p-4 text-left text-neutral-900';
+        'flex w-72 items-center gap-2.5 rounded-xl bg-popover/95 p-2.5 text-left text-popover-foreground backdrop-blur-xl';
     root.addEventListener('click', () => emit('openProperty', place));
 
-    if (place.images?.[0]) {
-        const image = document.createElement('img');
-        image.src = place.images[0];
-        image.alt = '';
-        image.className = 'size-28 shrink-0 object-cover';
-        root.append(image);
-    }
+    const photo = document.createElement('span');
+    photo.className =
+        'bg-muted relative size-20 shrink-0 overflow-hidden rounded-lg shadow-sm';
+    attachListingPhoto(photo, place.images ?? []);
+    root.append(photo);
 
     const details = document.createElement('span');
-    details.className = 'min-w-0 space-y-1';
+    details.className = 'min-w-0 space-y-0.5';
 
     const price = document.createElement('span');
-    price.className = 'block text-xl font-semibold';
+    price.className = 'text-primary block text-base font-semibold tracking-tight';
     price.textContent = formatAskingPrice(place);
 
     const address = document.createElement('span');
-    address.className = 'block text-base leading-snug';
+    address.className = 'block truncate text-sm leading-snug font-medium';
     address.textContent = place.details?.address ?? place.name;
 
     const facts = document.createElement('span');
-    facts.className = 'block text-sm text-neutral-500';
-    facts.textContent = `${place.bedrooms ?? '?'} Bed · ${place.property_type ?? ''}`;
+    facts.className = 'text-muted-foreground block truncate text-xs';
+    const rate = formatPricePerSqm(place);
+    const factParts = isLand(place)
+        ? [
+              place.size_label || trans('Plot size unlisted'),
+              trans('Land'),
+              rate ?? '',
+          ].filter(Boolean)
+        : [
+              place.bedrooms == null
+                  ? trans('Beds unlisted')
+                  : trans(':count beds', { count: String(place.bedrooms) }),
+              propertyTypeLabel(place),
+              place.floor_area_sqm
+                  ? `${Math.round(place.floor_area_sqm)} m²`
+                  : '',
+              rate ?? '',
+          ].filter(Boolean);
+    facts.textContent = factParts.join(' · ');
 
     details.append(price, address, facts);
+
+    if (place.agent) {
+        const agent = document.createElement('span');
+        agent.className = 'block text-xs text-neutral-400';
+        agent.textContent = place.agent;
+        details.append(agent);
+    }
     root.append(details);
 
     return root;
 }
 
 function refreshPropertyPinStyles(): void {
+    const focused = selectedPropertyId.value;
+
     propertyPins.forEach(({ marker }, propertyId) => {
         const element = marker.getElement();
-        const active =
-            propertyId === selectedPropertyId.value ||
-            propertyId === highlightedPropertyId.value;
+        const selected = propertyId === focused;
+        const hovered = propertyId === highlightedPropertyId.value;
 
         element.style.setProperty(
             '--marker-color',
-            active ? ROUTE_COLOR : (element.dataset.markerColor ?? ROUTE_COLOR),
+            selected
+                ? SELECTED_PIN_COLOR
+                : hovered
+                  ? ROUTE_COLOR
+                  : (element.dataset.markerColor ?? ROUTE_COLOR),
         );
+        element.style.opacity =
+            focused !== null && !selected && !hovered ? '0.38' : '1';
+        element.style.zIndex = selected || hovered ? '20' : '1';
+        element.style.filter = selected
+            ? 'drop-shadow(0 0 0 2px #fff) drop-shadow(0 8px 16px rgb(220 38 38 / 0.45))'
+            : '';
+        element.dataset.selected = selected ? 'true' : '';
     });
 }
 
@@ -461,12 +567,13 @@ function showView(view: MapView, animate: boolean): void {
         placed.push(new Marker().setLngLat([lng, lat]).addTo(instance));
     }
 
-    for (const place of view.markers ?? []) {
+    for (const place of (view.markers ?? []).filter(isPlottable)) {
         const element = placeMarkerElement(
             place.categoryKey ?? view.categoryKey,
             place.name,
             place.asking_price,
             place.currency,
+            place.highlight,
         );
         if (place.id !== undefined) {
             element.dataset.testid = `property-pin-${place.id}`;
@@ -486,9 +593,10 @@ function showView(view: MapView, animate: boolean): void {
 
         if (isProperty && place.id !== undefined) {
             const popup = new Popup({
+                className: 'property-preview-popup',
                 offset: PLACE_POPUP_OFFSET,
                 focusAfterOpen: false,
-                maxWidth: '320px',
+                maxWidth: '300px',
                 closeButton: false,
             }).setDOMContent(propertyPopupContent(place));
 
@@ -528,6 +636,7 @@ function showView(view: MapView, animate: boolean): void {
     }
 
     markers.value = placed;
+    refreshPropertyPinStyles();
     drawRoute(instance);
 }
 
@@ -627,7 +736,7 @@ function drawRoute(instance: MapLibreMap): void {
 function dropMarkers(): void {
     propertyPins.forEach(({ popup }) => popup.remove());
     propertyPins.clear();
-    selectedPropertyId.value = null;
+    selectedPropertyId.value = props.selectedId ?? null;
     highlightedPropertyId.value = null;
     markers.value.forEach((pin) => {
         render(null, pin.getElement());
@@ -652,6 +761,13 @@ function popupContent(place: MapMarker): HTMLElement {
     title.textContent = place.name;
     root.append(title);
 
+    if (place.distance_m !== undefined) {
+        const distance = document.createElement('p');
+        distance.className = 'text-muted-foreground text-xs';
+        distance.textContent = formatDistance(place.distance_m);
+        root.append(distance);
+    }
+
     if (place.asking_price !== undefined) {
         root.dataset.testid = `property-details-${place.id}`;
         const price = document.createElement('p');
@@ -663,30 +779,47 @@ function popupContent(place: MapMarker): HTMLElement {
                 maximumFractionDigits: 0,
             }).format(place.asking_price / 100) + ' asking price';
         const facts = document.createElement('p');
-        facts.textContent = `${place.bedrooms ?? 'Unknown'} bedrooms · ${place.property_type ?? ''}`;
+        facts.textContent = (
+            isLand(place)
+                ? [
+                      place.size_label || trans('Plot size unlisted'),
+                      trans('Land'),
+                  ]
+                : [
+                      place.bedrooms == null
+                          ? trans('Beds unlisted')
+                          : trans(':count beds', {
+                                count: String(place.bedrooms),
+                            }),
+                      propertyTypeLabel(place),
+                  ]
+        ).join(' · ');
         root.append(price, facts);
     }
 
     const details = place.details ?? {};
 
     const lines: Array<[string, string | undefined]> = [
-        ['📍', details.address],
-        ['🕒', details.hours],
-        ['🍽️', details.cuisine?.replaceAll(';', ', ').replaceAll('_', ' ')],
+        [trans('Address'), details.address],
+        [trans('Hours'), details.hours],
         [
-            '♿',
+            trans('Cuisine'),
+            details.cuisine?.replaceAll(';', ', ').replaceAll('_', ' '),
+        ],
+        [
+            trans('Wheelchair'),
             details.wheelchair
                 ? trans('Wheelchair: :value', { value: details.wheelchair })
                 : undefined,
         ],
-        ['📶', details.internet_access ? trans('Wi-Fi') : undefined],
+        [trans('Wi-Fi'), details.internet_access ? trans('Wi-Fi') : undefined],
         [
-            '🪑',
+            trans('Seating'),
             details.outdoor_seating === 'yes'
                 ? trans('Outdoor seating')
                 : undefined,
         ],
-        ['📞', details.phone],
+        [trans('Phone'), details.phone],
     ];
 
     for (const [icon, text] of lines) {
@@ -713,13 +846,15 @@ function popupContent(place: MapMarker): HTMLElement {
         root.append(description);
     }
 
-    if (details.website && /^https?:\/\//i.test(details.website)) {
+    const website = safeHttpUrl(details.website);
+
+    if (website) {
         const link = document.createElement('a');
-        link.href = details.website;
+        link.href = website;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.className = 'text-primary block truncate pt-1 underline';
-        link.textContent = details.website
+        link.textContent = website
             .replace(/^https?:\/\/(www\.)?/i, '')
             .replace(/\/$/, '');
         root.append(link);
@@ -785,6 +920,13 @@ function highlightMarker(place: MapMarker | null): void {
     refreshPropertyPinStyles();
 }
 
+function clearSelection(): void {
+    selectedPropertyId.value = null;
+    highlightedPropertyId.value = null;
+    propertyPins.forEach(({ popup }) => popup.remove());
+    refreshPropertyPinStyles();
+}
+
 function returnToSearch(): void {
     if (!props.view.markers?.length) {
         return;
@@ -796,7 +938,15 @@ function returnToSearch(): void {
     fitView(props.view, true);
 }
 
-defineExpose({ focusMarker, highlightMarker });
+watch(
+    () => props.selectedId,
+    (id) => {
+        selectedPropertyId.value = id ?? null;
+        refreshPropertyPinStyles();
+    },
+);
+
+defineExpose({ focusMarker, highlightMarker, clearSelection });
 
 /**
  * Report where the map ended up, so the assistant can answer "what about
@@ -1072,6 +1222,14 @@ useMutationObserver(
     padding: 0.5rem 2rem 0.5rem 0.75rem;
     font-size: 0.8125rem;
     line-height: 1.35;
+}
+
+.property-preview-popup .maplibregl-popup-content {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: color-mix(in oklab, var(--popover) 88%, transparent);
+    backdrop-filter: blur(20px);
 }
 
 /*

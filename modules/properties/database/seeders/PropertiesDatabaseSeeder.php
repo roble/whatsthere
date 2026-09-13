@@ -8,12 +8,12 @@ use Modules\Properties\Imports\ListingImportService;
 class PropertiesDatabaseSeeder extends Seeder
 {
     /**
-     * Load every listing fixture in the repository.
+     * Load every MyHome Cork listing fixture in the repository.
      *
-     * The fixtures are real scraped listings, so there is nothing to invent
-     * here: seeding is the same import a developer would run by hand, over
-     * every file at once. Inventing properties instead would put addresses
-     * that do not exist in front of anyone looking at the map.
+     * The fixtures are real scraped listings, so seeding is the same import a
+     * developer would run by hand, over every file at once. Inventing properties
+     * instead would put addresses that do not exist in front of anyone looking
+     * at the map.
      *
      * The importer is idempotent, so re-seeding updates rows rather than
      * duplicating them, and a malformed listing is counted and skipped rather
@@ -30,7 +30,7 @@ class PropertiesDatabaseSeeder extends Seeder
         $importer = app(ListingImportService::class);
 
         foreach ($this->fixtures() as $fixture) {
-            $import = $importer->import('daft', $fixture);
+            $import = $importer->import('myhome', $fixture);
 
             $this->command?->getOutput()->writeln(sprintf(
                 '  <fg=gray>%s</>: %d/%d imported%s',
@@ -45,18 +45,10 @@ class PropertiesDatabaseSeeder extends Seeder
     /**
      * Every fixture to import, in a stable order.
      *
-     * Sorted so a re-seed replays the files the same way each time: the last
-     * price record for a property wins, and that should not depend on how the
-     * filesystem happened to order the directory.
-     *
      * @return list<string>
      */
     private function fixtures(): array
     {
-        $fixtures = glob(base_path('modules/properties/database/fixtures/*.json')) ?: [];
-
-        sort($fixtures);
-
-        return $fixtures;
+        return [base_path('modules/properties/database/fixtures/myhome-cork.json')];
     }
 }

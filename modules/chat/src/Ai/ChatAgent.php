@@ -2,6 +2,7 @@
 
 namespace Modules\Chat\Ai;
 
+use Illuminate\Support\Str;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Concerns\RemembersConversations;
@@ -14,6 +15,7 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Laravel\Ai\Providers\Tools\WebSearch;
 use Laravel\Ai\ToolChoice;
+use Modules\Chat\Ai\Tools\CompareListingAmenities;
 use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\InterviewVisitor;
 use Modules\Chat\Ai\Tools\SaveItinerary;
@@ -21,6 +23,7 @@ use Modules\Chat\Ai\Tools\SaveMapReadyPlan;
 use Modules\Chat\Ai\Tools\ShowOnMap;
 use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 use Modules\Chat\Models\OnboardingState;
+use Modules\Properties\PropertySearch;
 use Stringable;
 
 /**
@@ -40,7 +43,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      * to change it, and so the admin pricing form can offer it as the rate
      * that actually matters.
      */
-    public const string MODEL = 'gpt-5.4-mini';
+    public const string MODEL = 'gpt-4o-mini';
 
     /**
      * Whether the pinned model reasons.
@@ -49,7 +52,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      * without the other either loses the route of thought or breaks every
      * request.
      */
-    public const bool REASONS = true;
+    public const bool REASONS = false;
 
     /**
      * Questions the interview always asks before a plan can be saved.
@@ -72,31 +75,41 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
     public function instructions(): Stringable|string
     {
         if ($this->onboarding?->flow === 'property') {
-            $plan = json_encode($this->onboarding->plan ?? [], JSON_THROW_ON_ERROR);
-            $selectedProperty = $this->selectedProperty === null
-                ? 'none'
-                : json_encode($this->selectedProperty, JSON_THROW_ON_ERROR);
+            $preferences = json_encode(
+                $this->onboarding->plan['details'] ?? [],
+                JSON_THROW_ON_ERROR,
+            );
+            $selectedProperty = $this->selectedPropertyContext();
+            $listings = $this->currentListings();
 
             return <<<TEXT
-            You help visitors buy a home. A map of matching properties sits beside the conversation and is already showing results.
-            Saved preferences: {$plan}. Selected property: {$selectedProperty}.
-            Never interview the visitor. Never ask for a budget, bedroom count, property type or BER rating they have not mentioned: anything unstated stays as it is and the search simply stays wide on that filter.
-            On every message that expresses or changes what they are looking for, call update_property_search_preferences with only the filters they actually stated, and nothing else. It preserves every other filter and searches immediately.
-            max_price is the maximum asking price in integer euro cents (350000 euros is 35000000). "B3 or better" sets minimum_ber_rating to B3. "Any" or "no preference" for a filter means pass null for it.
+            You help visitors buy a home or a plot of land from our database. A map of matching listings sits beside the conversation and is already showing results.
+            Saved preferences: {$preferences}. Selected property: {$selectedProperty}.
+            {$listings}
+            Never interview the visitor. Never ask for a budget, bedroom count, property type or BER rating they have not mentioned.
+            Never say you will inspect, analyze, review, determine next steps, or work on the request. Reply with concrete listings, prices, and addresses — not planning language.
+            On every message that expresses or changes what they are looking for, call update_property_search_preferences. A new or broader search — any housing, just homes, a new town, or a new budget without repeating the old type and bedrooms — must set replace to true, or leftover apartment and bedroom filters hide every match. Tightening the same search (cheaper, more beds, only apartments) omits replace and passes only the filters they stated. "Any" or "no preference" passes null for that filter.
+            When they mention Cork city centre, city center, downtown, or "in the centre", set location to Cork and location_type to town before advising.
+            Quote every listing price exactly as written below or in a marker's price field — those are already euro. Never convert asking_price, price_per_sqm or max_price: those are integer cents for the search tool only and must not appear in the reply. €90,000 is ninety thousand euros.
+            max_price is the maximum asking price in integer euro cents (100000 euros is 10000000). "B3 or better" sets minimum_ber_rating to B3. "Any" or "no preference" for a filter means pass null for it.
+            Site, plot, building land, agricultural land or "just land" sets property_type to land. A house, cottage or home sets house. An apartment, flat, duplex or studio sets apartment. A bungalow or dormer sets bungalow. Land has no bedrooms and no BER: do not pass those filters with land. If they ask for bedrooms after a land search, pass min_bedrooms and omit property_type so homes can match.
             Ask a question only when a stated filter is genuinely ambiguous and you cannot search without resolving it, above all city versus county for Cork, Galway and Limerick. Ask it as one short sentence in your reply. Search with your best reading first whenever you can; do not hold results back waiting for an answer.
-            When a visitor has selected a property, answer questions about that property from the selected-property facts only. For questions about schools, parks, transport or amenities around it, use find_places with the property's full address as area.
-            Only describe property facts returned by the search. Do not invent addresses, prices, features, photos, or availability. No results means no matches in our database; say so plainly and offer to widen a filter.
-            No renovation, itinerary, financial advice, valuation, comparisons, or external research in this version. Do not claim to search every listing in an area.
-            Do not repeat the filters or the results list back in prose: the visitor can see both. One or two short sentences at most.
+            sort is price for cheapest asking price first, or price_per_sqm for cheapest euro per square metre first. Use price_per_sqm when they ask for the best value, cheapest per metre, most space for the money, or the lowest price per square metre. For land that rate uses plot size, not floor area. A home or plot with no area has no rate: do not invent one.
+            After a search, advise. Pick two or three standouts from the listings below and name each by its exact address so the map can link them. Compare homes with listed facts only: price, euro per m2, beds, type, town, BER, floor area, highlight, photo count. Compare land with price, euro per m2 of plot, plot size, town, highlight and photo count. Never invent planning permission, services, road frontage or soil. Green value pins are the cheaper matches on the active sort; blue match pins hit the bedroom filter exactly; amber premium pins sit near the top of that sort; purple typical pins sit in the middle. A red pin is the listing the visitor selected in chat or on the map.
+            When a visitor has selected a listing, answer from the selected-property facts first, then compare it briefly to one other listed home or plot if that helps. When they ask which listing has the best, closest or most convenient hospital, school, clinic, bus stop, train station, park or shop, call compare_listing_amenities once with those kinds. Never use find_places or a listing address for that comparison: the tool already walks from each pin. Name the winner by its exact address, give each nearest place with the distance the tool returned, and say when a kind is missing. Do not invent a hospital, school or stop.
+            Only describe facts from the listings below, the selected property, or a compare_listing_amenities result. Do not invent addresses, prices, features, photos, or availability. If photos are 0, do not claim a listing has pictures. No results means no matches in our database; say so plainly and offer to widen a filter.
+            Do not dump the whole list or repeat every filter. Three or four short sentences is enough.
+            {$this->languageRule()}
             TEXT;
         }
 
-        $instructions = <<<'INSTRUCTIONS'
+        $instructions = <<<INSTRUCTIONS
         You are a helpful assistant who answers questions about places anywhere
         in the world. Focus on towns, streets, addresses, landmarks,
         neighbourhoods, and what is in or near them. If a request is not about a
         place, explain that you specialize in location-based questions and offer
         to help the visitor explore somewhere.
+        {$this->languageRule()}
         INSTRUCTIONS;
 
         if ($this->onboarding === null || $this->onboarding->phase === 'mapping') {
@@ -146,7 +159,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             Answers so far: {$answers}. Questions asked so far: {$this->onboarding->question_count} of a hard maximum of 10.
             Each turn do exactly one of these:
             1. If at least two questions have been asked, the goal and a named location are known, and nothing important is missing, call save_map_ready_plan.
-            2. Otherwise call interview_visitor once with the single most useful missing question. Prioritise location, purpose, timing, companions, interests, and constraints such as budget or accessibility. Never ask something the visitor already answered. Give 2 to 5 options with the recommended one first; the interface adds "Other" itself.
+            2. Otherwise call interview_visitor once with the single most useful missing question. Prioritise location, purpose, timing, companions, interests, and constraints such as budget or accessibility. Never ask something the visitor already answered. Give 2 to 5 options with the recommended one first; the interface adds "Other" itself. Write the question and every option in the visitor's language.
             A location is required before saving the plan. Stop as soon as you have enough detail: three or four questions are usually plenty.
             Saved plan so far: {$plan}. If a plan already exists, the visitor came back for more questions: ask at least one new question about something the plan does not cover before saving it again.
             If the visitor asks to skip or says they want the map, call save_map_ready_plan immediately with what you know.
@@ -156,7 +169,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
 
 
             The visitor is reviewing their saved plan before opening the map: {$plan}. Do not ask more questions and do not list places yet.
-            If they change or add anything, call save_map_ready_plan with the complete updated plan and confirm in one sentence.
+            If they change or add anything, call save_map_ready_plan with the complete updated plan and confirm in one sentence in the visitor's language.
             TEXT,
             default => <<<TEXT
 
@@ -166,6 +179,92 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             Order the stops geographically, as one continuous route across the area, so the day never doubles back past a stop already visited. A meal stop belongs between the stops on either side of it: pick somewhere to eat near them rather than moving the route to reach it.
             TEXT,
         };
+    }
+
+    protected function currentListings(): string
+    {
+        $preferences = $this->onboarding?->plan['preferences'] ?? null;
+
+        if (! is_array($preferences)) {
+            return 'No listings are on the map yet.';
+        }
+
+        try {
+            $view = (new PropertySearch)->search($preferences);
+        } catch (\Throwable) {
+            return 'The listing search could not be read.';
+        }
+
+        $markers = $view['markers'] ?? [];
+
+        if ($markers === []) {
+            return 'The map has no matching homes or land from our database right now. Offer to widen a filter.';
+        }
+
+        $lines = [];
+
+        foreach (array_slice($markers, 0, 10) as $marker) {
+            $price = PropertySearch::euroLabel($marker['asking_price'] ?? null) ?? 'price unlisted';
+            $type = $marker['property_type'] ?? 'home';
+            $highlight = $marker['highlight'] ?? 'typical';
+            $name = $marker['name'] ?? 'Listing';
+            $town = $marker['town'] ?? '';
+            $photos = count($marker['images'] ?? []);
+
+            $rate = PropertySearch::rateLabel($marker['price_per_sqm'] ?? null) ?? 'rate unlisted';
+
+            if ($type === 'land') {
+                $plot = $marker['size_label'] ?? 'plot size unlisted';
+                $lines[] = "- {$name} | {$town} | {$price} | {$rate} | land | {$plot} | {$photos} photos | pin {$highlight}";
+
+                continue;
+            }
+
+            $beds = $marker['bedrooms'] ?? 'unlisted';
+            $ber = $marker['ber_rating'] ?? 'unlisted';
+            $area = isset($marker['floor_area_sqm'])
+                ? ((int) round((float) $marker['floor_area_sqm'])).' m2'
+                : 'area unlisted';
+            $lines[] = "- {$name} | {$town} | {$price} | {$rate} | {$beds} beds | {$type} | BER {$ber} | {$area} | {$photos} photos | pin {$highlight}";
+        }
+
+        $shown = count($markers);
+        $total = $view['total'] ?? $shown;
+
+        return "Listings currently on the map ({$shown} of {$total}):\n".implode("\n", $lines);
+    }
+
+    protected function selectedPropertyContext(): string
+    {
+        if ($this->selectedProperty === null) {
+            return 'none';
+        }
+
+        $property = $this->selectedProperty;
+
+        if (isset($property['details']['description']) && is_string($property['details']['description'])) {
+            $property['details']['description'] = Str::limit(
+                $property['details']['description'],
+                400,
+            );
+        }
+
+        if (isset($property['asking_price'])) {
+            $property['price'] = PropertySearch::euroLabel($property['asking_price']);
+            unset($property['asking_price']);
+        }
+
+        if (isset($property['price_per_sqm'])) {
+            $property['rate'] = PropertySearch::rateLabel($property['price_per_sqm']);
+            unset($property['price_per_sqm']);
+        }
+
+        return json_encode($property, JSON_THROW_ON_ERROR);
+    }
+
+    protected function languageRule(): string
+    {
+        return 'Reply in the same language the visitor is writing in. Follow their latest message: Portuguese stays Portuguese, English stays English, and any other language they use is the reply language. Tool names and filter keys stay in English. Place names, addresses and listing facts stay written as stored. Interview questions and option labels must also be in the visitor\'s language.';
     }
 
     /**
@@ -212,14 +311,13 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      */
     public function tools(): iterable
     {
-        // One search tool, not three. It merges a partial change into the saved
-        // filters and searches in the same call, so there is no way to reach a
-        // state where preferences and results disagree, and no confirmation
-        // step between the visitor asking and the map answering.
+        // Search updates filters and results in one call. Nearby comparison is
+        // a second tool because find_places geocodes an address and cannot
+        // rank the pins already on the map.
         if ($this->onboarding?->flow === 'property') {
             return [
                 new UpdatePropertySearchPreferences($this->onboarding),
-                new FindPlaces((string) $this->onboarding->getKey()),
+                new CompareListingAmenities($this->onboarding),
             ];
         }
 

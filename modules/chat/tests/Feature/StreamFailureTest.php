@@ -78,6 +78,19 @@ class StreamFailureTest extends TestCase
         $this->assertStringContainsString('The assistant could not be reached', $sent);
     }
 
+    public function test_an_incomplete_error_frame_is_dropped_when_the_stream_fails(): void
+    {
+        $sent = $this->streamThrough(function (): void {
+            echo 'data: {"type":"error","errorText":"Rate limit reached for org-9cCpgIsPSDoihTAM13Ripuy3"}';
+
+            throw new RuntimeException('provider failed');
+        });
+
+        $this->assertStringNotContainsString('org-9cCpgIsPSDoihTAM13Ripuy3', $sent);
+        $this->assertStringContainsString('The assistant could not be reached', $sent);
+        $this->assertStringContainsString("data: [DONE]\n\n", $sent);
+    }
+
     public function test_an_escaping_exception_becomes_an_error_frame_and_a_terminator(): void
     {
         $sent = $this->streamThrough(function (): void {

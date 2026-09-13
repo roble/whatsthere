@@ -26,6 +26,7 @@ class ConversationTitleAgent implements Agent
             - Clearly distinguish this conversation from others.
             - Reflect the conversation's primary subject or goal.
             - Use natural language.
+            - Write the title in the same language as the conversation.
 
             Return only the title.
             INSTRUCTIONS;

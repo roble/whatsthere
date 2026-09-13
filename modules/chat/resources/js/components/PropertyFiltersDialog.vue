@@ -21,6 +21,7 @@ import IconBedDouble from '~icons/lucide/bed-double';
 import IconHeart from '~icons/lucide/heart';
 import IconMapPin from '~icons/lucide/map-pin';
 import IconWalletCards from '~icons/lucide/wallet-cards';
+import IconArrowDownWideNarrow from '~icons/lucide/arrow-down-wide-narrow';
 import IconZap from '~icons/lucide/zap';
 import { computed, reactive, watch } from 'vue';
 
@@ -32,6 +33,7 @@ export type PropertyPreferences = {
     min_bedrooms: number | null;
     property_type: string | null;
     minimum_ber_rating: string | null;
+    sort: 'price' | 'price_per_sqm';
 };
 
 const open = defineModel<boolean>('open', { required: true });
@@ -49,13 +51,14 @@ const form = reactive<PropertyPreferences>({
     min_bedrooms: null,
     property_type: null,
     minimum_ber_rating: null,
+    sort: 'price',
 });
 
 watch(
     () => [open.value, props.preferences] as const,
     () => {
         if (!open.value || !props.preferences) return;
-        Object.assign(form, props.preferences);
+        Object.assign(form, { sort: 'price', ...props.preferences });
     },
     { immediate: true, deep: true },
 );
@@ -69,28 +72,48 @@ const priceInEuros = computed({
 });
 
 function submit(): void {
-    emit('save', { ...form, county: form.county || null });
+    const land = form.property_type === 'land';
+
+    emit('save', {
+        ...form,
+        county: form.county || null,
+        min_bedrooms: land ? null : form.min_bedrooms,
+        minimum_ber_rating: land ? null : form.minimum_ber_rating,
+    });
 }
 
-function selectCork(): void {
-    form.location = 'Cork';
-    form.location_type = 'town';
-    form.county = 'Cork';
+const locationKey = computed(
+    () => `${form.location_type}:${form.location}`,
+);
+
+function selectLocation(value: unknown): void {
+    if (value === 'county:Cork') {
+        form.location = 'Cork';
+        form.location_type = 'county';
+        form.county = null;
+    } else if (value === 'town:Cork') {
+        form.location = 'Cork';
+        form.location_type = 'town';
+        form.county = 'Cork';
+    }
 }
 </script>
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent data-testid="property-filters-dialog">
-            <DialogHeader>
-                <DialogTitle>{{ $t('Your buying preferences') }}</DialogTitle>
+        <DialogContent
+            class="max-h-[min(36rem,calc(100dvh-2rem))] gap-3 overflow-y-auto p-4 sm:max-w-md"
+            data-testid="property-filters-dialog"
+        >
+            <DialogHeader class="gap-1">
+                <DialogTitle class="text-base">{{ $t('Your buying preferences') }}</DialogTitle>
                 <DialogDescription>{{
                     $t(
                         'Update the search filters, or ask the assistant in the chat.',
                     )
                 }}</DialogDescription>
             </DialogHeader>
-            <form class="grid gap-4" @submit.prevent="submit">
+            <form class="grid gap-3" @submit.prevent="submit">
                 <div class="grid gap-2">
                     <Label class="flex items-center gap-2"
                         ><IconMapPin class="text-primary size-4" />{{
@@ -98,13 +121,31 @@ function selectCork(): void {
                         }}</Label
                     >
                     <Select
-                        :model-value="form.location"
-                        @update:model-value="selectCork"
+                        :model-value="locationKey"
+                        @update:model-value="selectLocation"
                     >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Cork">{{
+                            <SelectItem
+                                v-if="
+                                    locationKey !== 'town:Cork' &&
+                                    locationKey !== 'county:Cork'
+                                "
+                                :value="locationKey"
+                            >
+                                {{
+                                    form.location_type === 'county'
+                                        ? $t('County :place', {
+                                              place: form.location,
+                                          })
+                                        : form.location
+                                }}
+                            </SelectItem>
+                            <SelectItem value="town:Cork">{{
                                 $t('Cork')
+                            }}</SelectItem>
+                            <SelectItem value="county:Cork">{{
+                                $t('County Cork')
                             }}</SelectItem>
                         </SelectContent>
                     </Select>
@@ -115,7 +156,7 @@ function selectCork(): void {
                             for="property-price"
                             class="flex items-center gap-2"
                             ><IconWalletCards class="text-primary size-4" />{{
-                                $t('Maximum price (€)')
+                                $t('Maximum price in euro')
                             }}</Label
                         >
                         <Input
@@ -133,7 +174,10 @@ function selectCork(): void {
                                 $t('Bedrooms')
                             }}</Label
                         >
-                        <Select v-model="form.min_bedrooms">
+                        <Select
+                            v-model="form.min_bedrooms"
+                            :disabled="form.property_type === 'land'"
+                        >
                             <SelectTrigger
                                 ><SelectValue :placeholder="$t('Any')"
                             /></SelectTrigger>
@@ -173,6 +217,9 @@ function selectCork(): void {
                                 <SelectItem value="bungalow">{{
                                     $t('Bungalow')
                                 }}</SelectItem>
+                                <SelectItem value="land">{{
+                                    $t('Land')
+                                }}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -182,7 +229,10 @@ function selectCork(): void {
                                 $t('Minimum BER')
                             }}</Label
                         >
-                        <Select v-model="form.minimum_ber_rating">
+                        <Select
+                            v-model="form.minimum_ber_rating"
+                            :disabled="form.property_type === 'land'"
+                        >
                             <SelectTrigger
                                 ><SelectValue :placeholder="$t('Any')"
                             /></SelectTrigger>
@@ -217,6 +267,39 @@ function selectCork(): void {
                         </Select>
                     </div>
                 </div>
+                <div class="grid gap-2">
+                    <Label class="flex items-center gap-2"
+                        ><IconArrowDownWideNarrow class="text-primary size-4" />{{
+                            $t('Sort listings')
+                        }}</Label
+                    >
+                    <Select v-model="form.sort">
+                        <SelectTrigger data-testid="property-filter-sort">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="price">{{
+                                $t('Lowest price')
+                            }}</SelectItem>
+                            <SelectItem value="price_per_sqm">{{
+                                $t('Lowest price per m²')
+                            }}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p class="text-muted-foreground text-xs">
+                        {{
+                            $t(
+                                'Price per m² uses floor area for homes and plot size for land.',
+                            )
+                        }}
+                    </p>
+                </div>
+                <p
+                    v-if="form.property_type === 'land'"
+                    class="text-muted-foreground text-xs"
+                >
+                    {{ $t('Bedrooms and BER apply to homes, not land.') }}
+                </p>
                 <DialogFooter>
                     <Button
                         type="submit"
