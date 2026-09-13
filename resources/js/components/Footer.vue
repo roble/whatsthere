@@ -27,12 +27,6 @@ const settings = useSettings();
                     >
                         {{ $t('GitHub') }}
                     </a>
-                    <a
-                        href="https://webmcp.devpost.com/"
-                        class="hover:text-foreground"
-                    >
-                        {{ $t('WebMCP Challenge') }}
-                    </a>
                     <Link
                         :href="route('privacy')"
                         class="hover:text-foreground"

@@ -1,9 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Whatsthere</title>
-  <desc id="desc">A symmetrical purple wayfinding mark with a centered W-shaped cutout and subtly rounded points.</desc>
+  <desc id="desc">A purple wayfinding mark with a centered compass needle cut out of it.</desc>
 
+  <!-- One path, two subpaths, evenodd: the needle is a hole rather than a
+       second shape painted on top, so the mark keeps working on any
+       background. -->
   <path
     fill="#6754c4"
+    fill-rule="evenodd"
     d="
       M 210 48
       C 119 57, 48 128, 48 210
@@ -13,15 +17,13 @@
       C 392 464, 464 392, 464 302
       L 464 210
       C 464 128, 393 57, 302 48
-      Q 294 47, 297 56
-      L 380 346
-      Q 383 356, 374 351
-      L 264 294
-      Q 256 290, 248 294
-      L 138 351
-      Q 129 356, 132 346
-      L 215 56
-      Q 218 47, 210 48
+      Z
+      M 374.7 137.3
+      l -50.5 151.5
+      a 56.0 56.0 0 0 1 -35.4 35.4
+      L 137.3 374.7
+      l 50.5 -151.5
+      a 56.0 56.0 0 0 1 35.4 -35.4
       Z
     "
   />

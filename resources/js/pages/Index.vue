@@ -2,21 +2,21 @@
 import SiteLayout from '@/layouts/SiteLayout.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    Accessibility,
     ArrowRight,
     Bot,
     Check,
-    Clock3,
-    CloudRain,
-    Disc3,
+    Compass,
+    Euro,
+    GraduationCap,
+    House,
     Map,
     MapPin,
     MessageCircle,
     MousePointer2,
-    Route,
+    ShoppingCart,
     Sparkles,
-    UtensilsCrossed,
-    UsersRound,
+    TrainFront,
+    Trees,
 } from '@lucide/vue';
 import { computed } from 'vue';
 
@@ -31,109 +31,113 @@ const primaryHref = computed(() =>
     canRegister.value ? route('register') : route('login'),
 );
 const primaryLabel = computed(() =>
-    canRegister.value ? 'Start planning' : 'Sign in to continue',
+    canRegister.value ? 'Start searching' : 'Sign in to continue',
 );
 
-const proofPoints = ['18 WebMCP tools', 'Open map data', 'Live map context'];
+const proofPoints = [
+    'Real Cork listings',
+    'OpenStreetMap data',
+    'No forms to fill in',
+];
 
 const journeyExamples = [
     {
-        id: 'porto',
-        icon: CloudRain,
-        eyebrow: 'Family day',
-        title: 'A rainy Sunday in Porto',
-        prompt: 'Two kids, indoor stops, short walks, and an affordable lunch.',
-        tags: ['Rain-safe', 'Family', 'Low budget'],
-        result: 'A three-stop itinerary that keeps everyone dry.',
+        id: 'family-home',
+        icon: House,
+        eyebrow: 'Family home',
+        title: 'Three bedrooms under €400k',
+        prompt: 'A 3 bed house in Cork under 400k.',
+        tags: ['3+ beds', 'House', 'Under €400k'],
+        result: 'Every match on the map, in one message.',
     },
     {
-        id: 'tokyo',
-        icon: Disc3,
-        eyebrow: 'Night out',
-        title: 'Tokyo records after dinner',
-        prompt: 'Independent shops, one neighbourhood and somewhere for a late drink.',
-        tags: ['Vinyl', 'Walkable', 'Late night'],
-        result: 'A focused evening without crossing the whole city.',
+        id: 'schools',
+        icon: GraduationCap,
+        eyebrow: 'Schools nearby',
+        title: 'What is within walking distance',
+        prompt: 'Which schools are near this one?',
+        tags: ['Primary', 'Secondary', 'Walkable'],
+        result: 'Schools around the property, pinned beside it.',
     },
     {
-        id: 'paris',
-        icon: Accessibility,
-        eyebrow: 'Accessible culture',
-        title: 'A step-free art afternoon',
-        prompt: 'Paris galleries, accessible routes and a quiet place to take a break.',
-        tags: ['Step-free', 'Art', 'Quiet breaks'],
-        result: 'An art route shaped around access and energy.',
+        id: 'commute',
+        icon: TrainFront,
+        eyebrow: 'Getting to work',
+        title: 'Close to a station',
+        prompt: 'Show me the transport links around here.',
+        tags: ['Rail', 'Bus', 'Park and ride'],
+        result: 'The commute, before you book a viewing.',
     },
     {
-        id: 'dublin',
-        icon: Clock3,
-        eyebrow: 'Short layover',
-        title: 'Four useful hours in Dublin',
-        prompt: 'One landmark, a casual meal, and good coffee near the station.',
-        tags: ['4 hours', 'Carry-on', 'Near transit'],
-        result: 'A timed loop with enough margin to catch the train.',
+        id: 'first-home',
+        icon: Euro,
+        eyebrow: 'First home',
+        title: 'A two-bed apartment under €250k',
+        prompt: 'Looking for a 2 bed apartment in Cork under 250k.',
+        tags: ['2 beds', 'Apartment', 'Under €250k'],
+        result: 'Filters you can change with one click.',
     },
     {
-        id: 'barcelona',
-        icon: UtensilsCrossed,
-        eyebrow: 'Food constraints',
-        title: 'Gluten-free tapas in Gràcia',
-        prompt: 'Three relaxed stops with outdoor seating and no tourist traps.',
-        tags: ['Gluten-free', 'Local', 'Outdoor seats'],
-        result: 'A neighbourhood food trail built around the constraint.',
+        id: 'everyday',
+        icon: ShoppingCart,
+        eyebrow: 'Everyday life',
+        title: 'The shop, the pharmacy, the coffee',
+        prompt: 'What is actually around this house?',
+        tags: ['Supermarkets', 'Pharmacies', 'Cafés'],
+        result: 'The ordinary things a listing never mentions.',
     },
     {
-        id: 'lisbon',
-        icon: UsersRound,
-        eyebrow: 'Three generations',
-        title: 'An easy morning in Lisbon',
-        prompt: 'Grandparents, a toddler, fewer hills, and somewhere shady to pause.',
-        tags: ['Low walking', 'Toddler', 'Rest stops'],
-        result: 'A gentler route that works for the whole group.',
+        id: 'green-space',
+        icon: Trees,
+        eyebrow: 'Green space',
+        title: 'Somewhere to walk on a Sunday',
+        prompt: 'Are there parks near this address?',
+        tags: ['Parks', 'Playgrounds', 'Open space'],
+        result: 'Open space mapped around the door.',
     },
 ];
 
 const workflow = [
     {
-        id: 'describe',
+        id: 'look',
         number: '01',
-        icon: MessageCircle,
-        title: 'Describe the experience',
-        description:
-            'Start with a rough idea, a mood, or the constraints that matter to you.',
-    },
-    {
-        id: 'refine',
-        number: '02',
-        icon: Sparkles,
-        title: 'Refine the details',
-        description:
-            'Whatsthere asks a short set of useful questions and turns the answers into a plan.',
-    },
-    {
-        id: 'explore',
-        number: '03',
         icon: Map,
-        title: 'Explore it on the map',
+        title: 'Start on the map',
         description:
-            'See every suggestion in context, move the map, and ask for better alternatives.',
+            'Every property we hold is already pinned. There is nothing to fill in before you can see something.',
+    },
+    {
+        id: 'narrow',
+        number: '02',
+        icon: MessageCircle,
+        title: 'Say what matters',
+        description:
+            'One sentence narrows the search. Anything you leave out simply stays open, and the filters are one click away.',
+    },
+    {
+        id: 'surroundings',
+        number: '03',
+        icon: Compass,
+        title: 'Ask what is there',
+        description:
+            'Pick a property and see the schools, shops, parks and transport around it, drawn from OpenStreetMap.',
     },
 ];
 
 const guestTools = ['open_login', 'open_signup'];
 const planningTools = [
-    'start_trip',
-    'answer_question',
-    'open_map',
+    'ask_this_assistant',
+    'read_current_chat',
     'read_map_location',
     'show_place_on_map',
+    'open_chat_session',
 ];
 </script>
 
 <template>
     <SiteLayout
-        title="Agent-native trip planning"
-        description="Plan days and trips through conversation, then explore every recommendation on a live map with an AI agent that can use Whatsthere through WebMCP."
+        title="Property search on a live map"
+        description="Search homes for sale in Cork in plain language, then ask what is actually around any of them — schools, shops, parks and transport — on the same map. Your browser agent can drive all of it through WebMCP."
     >
         <main class="w-full overflow-hidden">
             <section
@@ -153,22 +157,19 @@ const planningTools = [
                     class="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-12 lg:gap-10"
                 >
                     <div class="lg:col-span-6 xl:col-span-5">
-                        <a
-                            href="https://webmcp.devpost.com/"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="border-primary/20 bg-primary/8 text-primary hover:bg-primary/12 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold tracking-wide transition-colors sm:text-sm"
+                        <p
+                            class="border-primary/20 bg-primary/8 text-primary inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold tracking-wide sm:text-sm"
                         >
                             <Sparkles class="size-4" aria-hidden="true" />
-                            {{ $t('Built for the WebMCP Challenge') }}
-                        </a>
+                            {{ $t('Built for the Ireland AI Challenge') }}
+                        </p>
 
                         <h1
                             class="mt-7 max-w-3xl text-5xl leading-[0.96] font-bold tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl"
                         >
-                            {{ $t('Plan the experience.') }}
+                            {{ $t('Find the house.') }}
                             <span class="text-primary block">
-                                {{ $t('Whatsthere finds the places.') }}
+                                {{ $t('Then find out what is there.') }}
                             </span>
                         </h1>
 
@@ -177,7 +178,7 @@ const planningTools = [
                         >
                             {{
                                 $t(
-                                    'Describe the day you want. Whatsthere asks a few useful questions, creates a map-ready plan, and lets your browser agent help at every step.',
+                                    'Every home we have is already on the map. Say what you are looking for and it narrows down — then pick one and see the schools, shops and transport around it.',
                                 )
                             }}
                         </p>
@@ -250,7 +251,7 @@ const planningTools = [
                                             class="text-primary size-3.5"
                                             aria-hidden="true"
                                         />
-                                        {{ $t('São Paulo day plan') }}
+                                        {{ $t('Cork property search') }}
                                     </div>
                                     <div class="w-12" />
                                 </div>
@@ -266,7 +267,7 @@ const planningTools = [
                                         >
                                             {{
                                                 $t(
-                                                    'A rainy Sunday in São Paulo with two kids.',
+                                                    'A 3 bed house in Cork under €400,000.',
                                                 )
                                             }}
                                         </div>
@@ -291,7 +292,7 @@ const planningTools = [
                                                 >
                                                     {{
                                                         $t(
-                                                            'I’ll keep the walks short and the stops indoors.',
+                                                            '56 matches. Pick one and I’ll show you what’s around it.',
                                                         )
                                                     }}
                                                 </p>
@@ -307,12 +308,16 @@ const planningTools = [
                                                 <p
                                                     class="text-sm font-semibold"
                                                 >
-                                                    {{ $t('Your Sunday') }}
+                                                    {{
+                                                        $t(
+                                                            'Properties for sale',
+                                                        )
+                                                    }}
                                                 </p>
                                                 <span
                                                     class="bg-secondary/15 text-secondary rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                                                 >
-                                                    {{ $t('Ready') }}
+                                                    {{ $t('56 matches') }}
                                                 </span>
                                             </div>
                                             <ol
@@ -323,20 +328,30 @@ const planningTools = [
                                                         class="bg-primary mt-1 size-1.5 shrink-0 rounded-full"
                                                     />
                                                     {{
-                                                        $t('10:00 · Pinacoteca')
+                                                        $t(
+                                                            '€265,000 · 3 bed · Fermoy',
+                                                        )
                                                     }}
                                                 </li>
                                                 <li class="flex gap-2">
                                                     <span
                                                         class="bg-secondary mt-1 size-1.5 shrink-0 rounded-full"
                                                     />
-                                                    {{ $t('12:30 · Café') }}
+                                                    {{
+                                                        $t(
+                                                            '€285,000 · 3 bed · Mallow',
+                                                        )
+                                                    }}
                                                 </li>
                                                 <li class="flex gap-2">
                                                     <span
                                                         class="bg-primary mt-1 size-1.5 shrink-0 rounded-full"
                                                     />
-                                                    {{ $t('14:00 · Mercadão') }}
+                                                    {{
+                                                        $t(
+                                                            '€295,000 · 4 bed · Carrigaline',
+                                                        )
+                                                    }}
                                                 </li>
                                             </ol>
                                         </div>
@@ -350,7 +365,7 @@ const planningTools = [
                                             />
                                             <span
                                                 class="border-border bg-muted rounded-md border px-1.5 py-1"
-                                                >start_trip</span
+                                                >ask_this_assistant</span
                                             >
                                             <ArrowRight
                                                 class="size-3"
@@ -358,14 +373,14 @@ const planningTools = [
                                             />
                                             <span
                                                 class="border-border bg-muted rounded-md border px-1.5 py-1"
-                                                >open_map</span
+                                                >show_place_on_map</span
                                             >
                                         </div>
                                     </div>
 
                                     <div
                                         class="bg-muted relative min-h-72 overflow-hidden sm:min-h-full"
-                                        aria-label="Illustrated map preview with three itinerary stops"
+                                        aria-label="Illustrated map preview with three property pins"
                                     >
                                         <div
                                             class="absolute inset-0 opacity-60 dark:opacity-35"
@@ -408,42 +423,26 @@ const planningTools = [
                                         <div
                                             class="bg-card/95 absolute top-4 left-4 flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold shadow-md"
                                         >
-                                            <Route
+                                            <MapPin
                                                 class="text-primary size-3.5"
                                                 aria-hidden="true"
                                             />
-                                            {{ $t('3 stops · 2.4 km') }}
-                                        </div>
-                                        <svg
-                                            viewBox="0 0 100 100"
-                                            preserveAspectRatio="none"
-                                            class="text-primary absolute inset-0 size-full opacity-70"
-                                            fill="none"
-                                            aria-hidden="true"
-                                        >
-                                            <path
-                                                d="M23 28C40 41 54 42 76 51C67 66 54 68 57 84"
-                                                stroke="currentColor"
-                                                stroke-width="3"
-                                                stroke-linecap="round"
-                                                stroke-dasharray="6 8"
-                                                vector-effect="non-scaling-stroke"
-                                            />
-                                        </svg>
-                                        <div
-                                            class="bg-primary text-primary-foreground absolute top-[28%] left-[23%] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white text-sm font-bold shadow-lg dark:border-slate-800"
-                                        >
-                                            1
+                                            {{ $t('56 homes in view') }}
                                         </div>
                                         <div
-                                            class="bg-secondary text-secondary-foreground absolute top-[51%] left-[76%] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white text-sm font-bold shadow-lg dark:border-slate-800"
+                                            class="bg-primary text-primary-foreground absolute top-[28%] left-[23%] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white px-2.5 py-1 text-xs font-bold shadow-lg dark:border-slate-800"
                                         >
-                                            2
+                                            €265k
                                         </div>
                                         <div
-                                            class="bg-primary text-primary-foreground absolute top-[84%] left-[57%] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white text-sm font-bold shadow-lg dark:border-slate-800"
+                                            class="bg-secondary text-secondary-foreground absolute top-[51%] left-[76%] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white px-2.5 py-1 text-xs font-bold shadow-lg dark:border-slate-800"
                                         >
-                                            3
+                                            €285k
+                                        </div>
+                                        <div
+                                            class="bg-primary text-primary-foreground absolute top-[84%] left-[57%] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white px-2.5 py-1 text-xs font-bold shadow-lg dark:border-slate-800"
+                                        >
+                                            €295k
                                         </div>
                                         <div
                                             class="bg-card/95 absolute bottom-2 left-2 rounded-sm border p-2 px-3 shadow-lg"
@@ -495,15 +494,15 @@ const planningTools = [
                         <p
                             class="text-primary text-sm font-bold tracking-[0.18em] uppercase"
                         >
-                            {{ $t('Start with an idea') }}
+                            {{ $t('Ask in plain language') }}
                         </p>
                         <h2
                             id="examples-heading"
                             class="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-5xl"
                         >
-                            {{ $t('Specific enough to be useful.') }}
+                            {{ $t('One sentence is enough.') }}
                             <span class="text-muted-foreground">
-                                {{ $t('Flexible enough to feel like you.') }}
+                                {{ $t('No forms, no funnel, no waiting.') }}
                             </span>
                         </h2>
                     </div>
@@ -540,7 +539,7 @@ const planningTools = [
                             </p>
                             <ul
                                 class="mt-5 mb-2 flex flex-wrap gap-2"
-                                :aria-label="$t('Trip constraints')"
+                                :aria-label="$t('Search filters')"
                             >
                                 <li
                                     v-for="tag in example.tags"
@@ -583,7 +582,7 @@ const planningTools = [
                         >
                             {{
                                 $t(
-                                    'From a half-formed idea to a day you can follow.',
+                                    'From the whole county to one street, in three steps.',
                                 )
                             }}
                         </h2>
@@ -661,7 +660,7 @@ const planningTools = [
                             >
                                 {{
                                     $t(
-                                        'Whatsthere exposes safe, purpose-built actions to browser agents. The available tools change with authentication and with each phase of your trip.',
+                                        'Whatsthere exposes safe, purpose-built actions to browser agents. The available tools change with authentication and with what is on screen.',
                                     )
                                 }}
                             </p>
@@ -674,7 +673,7 @@ const planningTools = [
                                 <span
                                     class="border-background/15 bg-background/8 rounded-full border px-3 py-1.5 font-mono text-sm"
                                 >
-                                    {{ $t('Phase-aware') }}
+                                    {{ $t('Context-aware') }}
                                 </span>
                                 <span
                                     class="border-background/15 bg-background/8 rounded-full border px-3 py-1.5 font-mono text-sm"
@@ -801,7 +800,7 @@ const planningTools = [
                         >
                             {{
                                 $t(
-                                    'Whatsthere keeps the conversation, trip plan, and visible map area together. You can explore naturally while your agent works with the same context.',
+                                    'Whatsthere keeps the conversation, the saved filters, and the visible map area together. You can explore naturally while your agent works with the same context.',
                                 )
                             }}
                         </p>
@@ -871,19 +870,19 @@ const planningTools = [
                         <div
                             class="border-border bg-card rounded-2xl border p-5 shadow-sm sm:translate-y-6"
                         >
-                            <Route
+                            <Compass
                                 class="text-primary size-5"
                                 aria-hidden="true"
                             />
                             <p class="mt-5 text-sm font-bold">
-                                {{ $t('The plan improves') }}
+                                {{ $t('The search narrows') }}
                             </p>
                             <p
                                 class="text-muted-foreground mt-2 text-sm leading-relaxed"
                             >
                                 {{
                                     $t(
-                                        'Keep the useful discoveries in one coherent itinerary.',
+                                        'Every answer sharpens the filters, and the map keeps up.',
                                     )
                                 }}
                             </p>
@@ -907,14 +906,14 @@ const planningTools = [
                     <h2
                         class="mt-5 text-3xl font-bold tracking-tight sm:text-5xl"
                     >
-                        {{ $t('Ready to find your way?') }}
+                        {{ $t('Ready to find your next home?') }}
                     </h2>
                     <p
                         class="text-muted-foreground mx-auto mt-4 max-w-xl text-lg"
                     >
                         {{
                             $t(
-                                'Bring a rough idea. Leave with a plan you can see, question, and explore.',
+                                'Start with a sentence. Leave knowing the street, not just the price.',
                             )
                         }}
                     </p>

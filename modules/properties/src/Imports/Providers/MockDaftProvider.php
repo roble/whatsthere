@@ -56,7 +56,7 @@ class MockDaftProvider extends JsonListingProvider
     /**
      * One real fixture, for an import run without an explicit `--file`.
      *
-     * The whole folder is what `PropertySeeder` loads; this is only the single
+     * The whole folder is what `PropertiesDatabaseSeeder` loads; this is only the single
      * file a bare `data:import` reaches for.
      */
     public function defaultSourcePath(): string
