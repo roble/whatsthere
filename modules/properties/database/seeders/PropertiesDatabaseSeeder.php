@@ -5,7 +5,7 @@ namespace Modules\Properties\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Modules\Properties\Imports\ListingImportService;
 
-class PropertySeeder extends Seeder
+class PropertiesDatabaseSeeder extends Seeder
 {
     /**
      * Load every listing fixture in the repository.
@@ -17,14 +17,16 @@ class PropertySeeder extends Seeder
      *
      * The importer is idempotent, so re-seeding updates rows rather than
      * duplicating them, and a malformed listing is counted and skipped rather
-     * than taking the rest of its file down with it.
+     * than taking the rest of its file down with it. That makes it safe to run
+     * on every deploy.
+     *
+     * Deliberately not guarded against production. The listings are real, so
+     * there is nothing here that must be kept off a live site, and a guard
+     * would only make a deploy step succeed while doing nothing. `db:seed`
+     * already demands `--force` outside local environments.
      */
     public function run(): void
     {
-        if (app()->isProduction()) {
-            return;
-        }
-
         $importer = app(ListingImportService::class);
 
         foreach ($this->fixtures() as $fixture) {
