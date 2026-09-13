@@ -10,10 +10,9 @@ use Modules\Chat\Insights\ChatInsights;
 /**
  * What the assistant was asked to place and could not.
  *
- * The most directly actionable panel here. A repeated miss is one of three
- * fixable things: a place Nominatim spells differently, a routing key missing
- * from the Eircode table, or somewhere outside Ireland that people keep asking
- * for anyway -- which is a question about the scope, not a bug.
+ * The most directly actionable panel here. A repeated miss usually means a
+ * place Nominatim spells differently or OpenStreetMap lacks the requested
+ * category in that area.
  */
 class UnresolvedRequests extends TableWidget
 {

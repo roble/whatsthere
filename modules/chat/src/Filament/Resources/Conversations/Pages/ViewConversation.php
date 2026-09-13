@@ -98,7 +98,7 @@ class ViewConversation extends ViewRecord
 
             return [
                 'name' => (string) ($call['name'] ?? 'unknown'),
-                'input' => (string) ($call['arguments']['place'] ?? $call['arguments']['eircode'] ?? json_encode($call['arguments'] ?? [])),
+                'input' => (string) ($call['arguments']['place'] ?? json_encode($call['arguments'] ?? [])),
                 'result' => $result,
                 // Same rule the browser uses: the map tools answer in prose when
                 // they find nothing, so a parsed view is the only proof of a hit.

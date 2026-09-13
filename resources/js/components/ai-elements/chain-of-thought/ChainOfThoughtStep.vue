@@ -7,7 +7,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 defineOptions({ inheritAttrs: false });
 
@@ -16,11 +16,14 @@ const props = withDefaults(
         label: string;
         description?: string;
         status?: 'complete' | 'active' | 'pending';
+        /** Steps open by default; a long body can ask to start folded away. */
+        defaultOpen?: boolean;
         class?: HTMLAttributes['class'];
     }>(),
     {
         status: 'complete',
         description: undefined,
+        defaultOpen: true,
     },
 );
 
@@ -30,7 +33,18 @@ const statusStyles = {
     pending: 'text-muted-foreground/50',
 };
 
-const isOpen = ref(true);
+const isOpen = ref(props.defaultOpen);
+
+// A streaming step is mounted before its body exists, so a caller deciding
+// from the body -- "this one is a long list, start it folded" -- can only say
+// so once the result lands. Without this the decision would arrive too late to
+// have any effect.
+watch(
+    () => props.defaultOpen,
+    (open) => {
+        isOpen.value = open;
+    },
+);
 </script>
 
 <template>

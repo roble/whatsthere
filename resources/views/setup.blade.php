@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Saucebase — Setup</title>
+    <title>Whatsthere — Setup</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -120,7 +120,7 @@
             <div class="pb-4 text-center">
                 <h1 class="text-center text-5xl font-bold md:text-6xl"
                     style="color: var(--primary); text-shadow: 0 4px 25px color-mix(in oklch, var(--primary) 15%, var(--background))">
-                    The fundation is ready
+                    The foundation is ready
                 </h1>
                 <h2 class="mt-1 text-center text-5xl font-bold md:text-6xl"
                     style="color: var(--secondary)">
@@ -128,7 +128,7 @@
                 </h2>
                 <p class="mt-3 text-center text-xl tracking-normal md:text-2xl"
                     style="color: var(--muted-foreground)">
-                    Saucebase handles everything else
+                    Whatsthere handles everything else
                 </p>
             </div>
 

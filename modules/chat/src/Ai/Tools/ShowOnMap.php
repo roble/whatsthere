@@ -36,7 +36,7 @@ class ShowOnMap implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'Show a place in Ireland on the map next to the conversation. Call this whenever the answer is about somewhere the visitor could look at: a town, address, landmark, neighbourhood, or county. Only Irish places can be found.';
+        return 'Show a place on the map next to the conversation. Call this whenever the answer is about somewhere the visitor could look at: a town, address, landmark, neighbourhood, region, or country.';
     }
 
     /**
@@ -76,7 +76,7 @@ class ShowOnMap implements Tool
      */
     protected function geocode(string $place): ?array
     {
-        $key = 'geocode:ie:'.md5(mb_strtolower($place));
+        $key = 'geocode:global:'.md5(mb_strtolower($place));
 
         if ($cached = Cache::get($key)) {
             return $cached;
@@ -132,13 +132,9 @@ class ShowOnMap implements Tool
      */
     protected function lookup(string $place): ?array
     {
-        // countrycodes is the half of the Ireland scope that cannot be talked
-        // around: the instructions ask the model to stay in Ireland, this makes
-        // anywhere else unfindable.
         $match = $this->nominatim('search', [
             'q' => $place,
             'limit' => 1,
-            'countrycodes' => 'ie',
         ])[0] ?? null;
 
         return isset($match['boundingbox']) && count($match['boundingbox']) === 4
@@ -169,7 +165,7 @@ class ShowOnMap implements Tool
     {
         return [
             'place' => $schema->string()
-                ->description('The place in Ireland to show, as specific as possible, e.g. "Douglas, Cork".')
+                ->description('The place to show, as specific as possible, e.g. "Shibuya, Tokyo, Japan".')
                 ->required(),
         ];
     }

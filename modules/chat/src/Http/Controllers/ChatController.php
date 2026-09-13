@@ -5,20 +5,29 @@ namespace Modules\Chat\Http\Controllers;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Messages\Message;
+use Laravel\Ai\Messages\MessageRole;
 use Laravel\Ai\Messages\ToolResultMessage;
 use Laravel\Ai\Models\Conversation;
-use Laravel\Ai\Responses\Data\ToolResult;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Modules\Chat\Ai\ChatAgent;
-use Modules\Chat\Ai\Tools\EircodeToGeoLocation;
 use Modules\Chat\Ai\Tools\FindPlaces;
+use Modules\Chat\Ai\Tools\SaveItinerary;
+use Modules\Chat\Ai\Tools\SavePropertyPreferences;
+use Modules\Chat\Ai\Tools\SearchProperties;
 use Modules\Chat\Ai\Tools\ShowOnMap;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
 use Modules\Chat\Jobs\GenerateConversationTitle;
+use Modules\Chat\Models\OnboardingState;
 use Modules\Chat\Testing\CannedReplies;
+use Modules\Properties\PropertyPreferences;
+use Modules\Properties\PropertySearch;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -34,19 +43,37 @@ class ChatController
      */
     public const array MAP_TOOLS = [
         ShowOnMap::NAME,
-        EircodeToGeoLocation::NAME,
         FindPlaces::NAME,
+        SaveItinerary::NAME,
+        SearchProperties::NAME,
+        UpdatePropertySearchPreferences::NAME,
     ];
 
     /**
-     * Show a blank chat. No row exists until the first message is sent.
+     * Show a blank chat, already looking at the home area's properties.
+     *
+     * No conversation row exists until the first message is sent, but the map
+     * is never allowed to open empty: a visitor who lands here sees what is for
+     * sale before they have typed anything, and the opening message narrows it
+     * rather than starting it.
      */
     public function index(): Response
     {
+        $preferences = PropertyPreferences::defaults();
+
         return Inertia::render('Chat::Index', [
             'conversationId' => null,
             'initialMessages' => [],
-            'initialMapView' => null,
+            'initialMapView' => (new PropertySearch)->search($preferences),
+            'onboarding' => [
+                'phase' => 'mapping',
+                'question_count' => 0,
+                'current_question' => null,
+                'answers' => [],
+                'plan' => SavePropertyPreferences::plan($preferences),
+                'flow' => 'property',
+            ],
+            'flow' => 'property',
         ]);
     }
 
@@ -61,9 +88,14 @@ class ChatController
             ->continue($owned->id, $request->user())
             ->messages();
 
+        $onboarding = OnboardingState::find($owned->id);
+
         return Inertia::render('Chat::Index', [
             'conversationId' => $owned->id,
             'initialMessages' => collect($messages)
+                // Tool rows carry no prose, and an assistant turn that only
+                // asked a question would otherwise reopen as an empty bubble.
+                ->reject(fn (Message $message): bool => $message instanceof ToolResultMessage || trim((string) $message->content) === '')
                 ->values()
                 ->map(fn (Message $message, int $index): array => [
                     'id' => 'history-'.$index,
@@ -73,29 +105,270 @@ class ChatController
                     ],
                 ])
                 ->all(),
-            'initialMapView' => $this->lastMapView($messages),
+            'initialMapView' => $onboarding?->flow === 'property'
+                ? ($onboarding->property_result_ids !== null && isset($onboarding->plan['preferences'])
+                    ? (new PropertySearch)->search($onboarding->plan['preferences'], $onboarding->property_result_ids)
+                    : null)
+                : $this->lastMapView($messages),
+            'onboarding' => $onboarding?->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']),
+            'flow' => $onboarding?->flow ?? 'trip',
         ]);
     }
 
     /**
-     * Find the place the map was last showing in this conversation.
+     * Move the onboarding phase forward without going through the model.
      *
-     * The transcript is rebuilt as plain text, so the tool call that moved the
-     * map is dropped on the way to the browser. Without this, reopening a
+     * "Skip questions", "Show my map" and "Back to planning" must be certain,
+     * so they are recorded here rather than sent as chat messages the
+     * assistant may misread. A skip before any plan exists saves the opening
+     * message as a minimal plan.
+     */
+    public function onboarding(Request $request, string $conversation): JsonResponse
+    {
+        $owned = $this->ownedConversation($request, $conversation);
+
+        $phase = $request->validate(['phase' => ['required', 'in:mapping,interviewing']])['phase'];
+
+        $state = OnboardingState::firstOrCreate(['conversation_id' => $owned->id]);
+
+        if ($state->flow === 'property') {
+            if ($phase === 'mapping') {
+                abort_unless(in_array($state->phase, ['reviewing', 'mapping'], true), 422, 'Review your preferences before searching.');
+                $preferences = PropertyPreferences::validate($state->plan['preferences'] ?? []);
+                $view = DB::transaction(function () use ($state, $preferences): array {
+                    $state->update(['phase' => 'mapping', 'current_question' => null]);
+
+                    return json_decode((string) (new SearchProperties($state))->handle(new ToolRequest($preferences)), true, flags: JSON_THROW_ON_ERROR);
+                });
+
+                return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']) + ['map_view' => $view]);
+            }
+            $state->update(['phase' => 'interviewing', 'current_question' => null, 'question_count' => 0]);
+
+            return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']));
+        }
+
+        // Going back to the interview keeps the plan and the answers: the
+        // visitor wants more questions, not a fresh start.
+        $state->update([
+            'phase' => $phase,
+            'current_question' => null,
+            'plan' => $phase === 'mapping'
+                ? ($state->plan ?? ['goal' => (string) $owned->getAttribute('title'), 'location' => '', 'details' => []])
+                : $state->plan,
+        ]);
+
+        return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan']));
+    }
+
+    /**
+     * Save an explicit filter edit from the property-results interface and
+     * return its new, already-searched map view. Chat uses the matching tool,
+     * so both entry points persist the same preference shape.
+     */
+    public function updatePropertyPreferences(Request $request, string $conversation): JsonResponse
+    {
+        $owned = $this->ownedConversation($request, $conversation);
+        $state = OnboardingState::findOrFail($owned->id);
+
+        abort_unless($state->flow === 'property', 404);
+
+        $changes = $request->validate(PropertyPreferences::partialRules());
+        $preferences = PropertyPreferences::merge($state->plan['preferences'] ?? [], $changes);
+        $view = (new PropertySearch)->search($preferences);
+
+        $state->update([
+            'plan' => SavePropertyPreferences::plan($preferences),
+            'phase' => 'mapping',
+            'current_question' => null,
+            'property_result_ids' => array_column($view['markers'], 'id'),
+        ]);
+
+        return response()->json($state->only(['phase', 'question_count', 'current_question', 'answers', 'plan', 'flow']) + ['map_view' => $view]);
+    }
+
+    /**
+     * Search properties without a conversation to save the preferences to.
+     *
+     * The landing page opens on results, so its filters must work before the
+     * visitor has typed anything. Nothing is persisted: the browser holds the
+     * preferences until a first message creates the conversation that owns
+     * them.
+     */
+    public function propertySearch(Request $request): JsonResponse
+    {
+        $preferences = PropertyPreferences::validate($request->all());
+
+        return response()->json([
+            'plan' => SavePropertyPreferences::plan($preferences),
+            'map_view' => (new PropertySearch)->search($preferences),
+        ]);
+    }
+
+    /**
+     * What is around a property: schools, cafes, transport, and the rest.
+     *
+     * Runs without the model. The visitor has already pointed at a property, so
+     * there is nothing to interpret: each category is one cached Overpass
+     * search around its coordinates, and the results are pooled into a single
+     * map view the way a multi-search reply already pools them.
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lon' => ['required', 'numeric', 'between:-180,180'],
+            'label' => ['nullable', 'string', 'max:200'],
+            // Bounded so one click cannot fan out into a dozen calls to a
+            // donated service.
+            'categories' => ['required', 'array', 'min:1', 'max:8'],
+            'categories.*' => ['string', Rule::in(array_keys(FindPlaces::CATEGORIES))],
+        ]);
+
+        $markers = (new FindPlaces)->aroundMany(
+            (float) $validated['lat'],
+            (float) $validated['lon'],
+            array_values($validated['categories']),
+        );
+
+        if ($markers === null) {
+            return response()->json(['message' => __('The map data service could not be reached.')], 503);
+        }
+
+        $around = $validated['label'] ?? __('this property');
+
+        return response()->json([
+            'label' => __('Around :place', ['place' => $around]),
+            'category' => __('nearby places'),
+            'total' => count($markers),
+            'markers' => $markers,
+            'bbox' => $this->boxAround((float) $validated['lat'], (float) $validated['lon'], $markers),
+        ]);
+    }
+
+    /**
+     * A bounding box holding the property and everything found around it.
+     *
+     * Anchored on the property rather than on the results alone, so the pin the
+     * visitor clicked is always inside the view they get back.
+     *
+     * @param  list<array<string, mixed>>  $markers
+     * @return list<string>
+     */
+    protected function boxAround(float $latitude, float $longitude, array $markers): array
+    {
+        $latitudes = [$latitude, ...array_map(fn (array $marker): float => (float) $marker['lat'], $markers)];
+        $longitudes = [$longitude, ...array_map(fn (array $marker): float => (float) $marker['lon'], $markers)];
+
+        return [
+            (string) (min($longitudes) - 0.002),
+            (string) (min($latitudes) - 0.002),
+            (string) (max($longitudes) + 0.002),
+            (string) (max($latitudes) + 0.002),
+        ];
+    }
+
+    /**
+     * Find what the map was last showing in this conversation.
+     *
+     * The transcript is rebuilt as plain text, so the tool calls that moved the
+     * map are dropped on the way to the browser. Without this, reopening a
      * conversation snaps the map back to its default while the messages beside
      * it still discuss somewhere else.
+     *
+     * Views are grouped per reply, and searches in the last reply are pooled
+     * the same way the browser pools them live, so a refresh shows the same
+     * pins the visitor was just looking at.
      *
      * @param  iterable<Message>  $messages
      * @return array<string, mixed>|null
      */
     protected function lastMapView(iterable $messages): ?array
     {
-        return collect($messages)
-            ->filter(fn (Message $message): bool => $message instanceof ToolResultMessage)
-            ->flatMap(fn (ToolResultMessage $message): array => $message->toolResults->all())
-            ->filter(fn (ToolResult $result): bool => in_array($result->name, self::MAP_TOOLS, true))
-            ->map(fn (ToolResult $result): mixed => json_decode((string) $result->result, true))
-            ->last(fn (mixed $view): bool => is_array($view) && isset($view['bbox']));
+        $replies = [];
+        $current = [];
+
+        foreach ($messages as $message) {
+            // Matched on the role: the store rehydrates history as generic
+            // messages, so an instanceof check on UserMessage never fires.
+            if ($message->role === MessageRole::User) {
+                if ($current !== []) {
+                    $replies[] = $current;
+                }
+                $current = [];
+
+                continue;
+            }
+
+            if (! $message instanceof ToolResultMessage) {
+                continue;
+            }
+
+            foreach ($message->toolResults->all() as $result) {
+                if (! in_array($result->name, self::MAP_TOOLS, true)) {
+                    continue;
+                }
+
+                $view = json_decode((string) $result->result, true);
+
+                if (is_array($view) && isset($view['bbox'])) {
+                    $current[] = $view;
+                }
+            }
+        }
+
+        if ($current !== []) {
+            $replies[] = $current;
+        }
+
+        return $replies === [] ? null : $this->mergeViews(end($replies));
+    }
+
+    /**
+     * Pool the searches of one reply into a single view. Mirrors `mergeViews()`
+     * in `map.ts`: searches win over a bare placement, and their pins are combined.
+     *
+     * @param  list<array<string, mixed>>  $views
+     * @return array<string, mixed>
+     */
+    protected function mergeViews(array $views): array
+    {
+        // An itinerary is the deliberate answer of the whole reply, not one
+        // search among several, so it wins outright over the lookups that fed it.
+        $itineraries = array_values(array_filter($views, fn (array $view): bool => ! empty($view['stops'])));
+
+        if ($itineraries !== []) {
+            return end($itineraries);
+        }
+
+        $searches = array_values(array_filter($views, fn (array $view): bool => ! empty($view['markers'])));
+
+        if (count($searches) <= 1) {
+            return $searches[0] ?? end($views);
+        }
+
+        $markers = [];
+        $lons = [];
+        $lats = [];
+
+        foreach ($searches as $view) {
+            foreach ($view['markers'] as $marker) {
+                $markers[] = $marker + ['categoryKey' => $view['categoryKey'] ?? null];
+            }
+
+            array_push($lons, (float) $view['bbox'][0], (float) $view['bbox'][2]);
+            array_push($lats, (float) $view['bbox'][1], (float) $view['bbox'][3]);
+        }
+
+        $area = Str::after($searches[0]['label'], ' in ');
+        $categories = implode(' and ', array_map(fn (array $view): string => $view['category'] ?? $view['label'], $searches));
+
+        return [
+            'label' => $area === $searches[0]['label'] ? $categories : "{$categories} in {$area}",
+            'category' => $categories,
+            'bbox' => [(string) min($lons), (string) min($lats), (string) max($lons), (string) max($lats)],
+            'markers' => $markers,
+        ];
     }
 
     /**
@@ -168,17 +441,44 @@ class ChatController
             'map.center.1' => ['required_with:map', 'numeric', 'between:-180,180'],
             'map.zoom' => ['required_with:map', 'numeric', 'between:0,24'],
             'map.moved' => ['required_with:map', 'boolean'],
+            // What the landing page's filters were set to, for a first
+            // message. Ignored once the conversation owns its own.
+            'preferences' => ['nullable', 'array'],
+            'selected_property' => ['nullable', 'array'],
+            'selected_property.id' => ['nullable', 'integer'],
+            'selected_property.name' => ['required_with:selected_property', 'string', 'max:255'],
+            'selected_property.asking_price' => ['nullable', 'integer', 'min:0'],
+            'selected_property.currency' => ['nullable', 'string', 'size:3'],
+            'selected_property.bedrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'selected_property.bathrooms' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'selected_property.floor_area_sqm' => ['nullable', 'numeric', 'min:0'],
+            'selected_property.ber_rating' => ['nullable', 'string', 'max:3'],
+            'selected_property.property_type' => ['nullable', 'string', 'max:50'],
+            'selected_property.details' => ['nullable', 'array'],
+            'selected_property.details.address' => ['nullable', 'string', 'max:500'],
+            'selected_property.details.description' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $conversation = isset($validated['conversation_id'])
             ? $this->ownedConversation($request, $validated['conversation_id'])
-            : $this->startConversation($request, $validated['message']);
+            : $this->startConversation($request, $validated['message'], $validated['preferences'] ?? null);
 
-        if ($this->inTestMode()) {
-            return $this->cannedStream($request, $conversation->id);
+        $onboarding = OnboardingState::firstOrCreate(['conversation_id' => $conversation->id]);
+
+        // Whatever is typed while a question is open answers that question, so
+        // the row stops advertising it and the model can see it was answered.
+        if ($onboarding->current_question !== null) {
+            $onboarding->update([
+                'answers' => [...($onboarding->answers ?? []), ['question' => $onboarding->current_question['question'], 'answer' => $validated['message']]],
+                'current_question' => null,
+            ]);
         }
 
-        $stream = (new ChatAgent($validated['map'] ?? null))
+        if ($this->inTestMode()) {
+            return $this->cannedStream($request, $conversation->id, $onboarding);
+        }
+
+        $stream = (new ChatAgent($validated['map'] ?? null, $onboarding, $validated['selected_property'] ?? null))
             ->continue($conversation->id, $request->user())
             ->stream($validated['message'])
             ->then(function () use ($conversation): void {
@@ -224,18 +524,30 @@ class ChatController
      * Stream a canned reply, picked at random unless one was named.
      *
      * `?scenario=` is honoured so a particular state can be returned to while
-     * it is being worked on, rather than refreshing until it comes up. Nothing
-     * is persisted: the conversation row exists, but reopening it shows an
-     * empty transcript, because none of this came from the model and none of
-     * it belongs in the history the model later reads back.
+     * it is being worked on, rather than refreshing until it comes up. The
+     * property workflow is the exception to the otherwise stateless canned
+     * replies: it records only the onboarding state needed to exercise the
+     * real review and database-search steps.
      */
-    protected function cannedStream(Request $request, string $conversationId): SymfonyResponse
+    protected function cannedStream(Request $request, string $conversationId, OnboardingState $onboarding): SymfonyResponse
     {
-        $scenario = CannedReplies::pick($request->query('scenario'));
-        $replies = new CannedReplies($conversationId);
+        $scenario = $request->query('scenario')
+            ?? ($onboarding->flow === 'property' ? 'property_workflow' : CannedReplies::pick());
+        $frameScenario = $scenario;
 
-        $response = new StreamedResponse(function () use ($replies, $scenario): void {
-            foreach ($replies->frames($scenario) as $frame) {
+        // The property scenario is the exception to the otherwise stateless
+        // canned replies: the search it streams is real, run against the real
+        // database, so test mode puts the same pins on the map as a live turn.
+        [$input, $output] = $scenario === 'property_workflow'
+            ? $this->realPropertySearch($onboarding)
+            : [[], '{}'];
+
+        $replies = $scenario === 'property_workflow'
+            ? new CannedReplies($conversationId, $input, $output)
+            : new CannedReplies($conversationId);
+
+        $response = new StreamedResponse(function () use ($replies, $frameScenario): void {
+            foreach ($replies->frames($frameScenario) as $frame) {
                 $this->writeFrame($frame);
 
                 // Slow enough to watch the reply build, which is the point of
@@ -254,6 +566,27 @@ class ChatController
         ]);
 
         return $this->keepFailuresInTheStream($response);
+    }
+
+    /**
+     * Run the real search tool so test mode is only pretending about the prose.
+     *
+     * Nothing is narrowed here: with no model to read the message, the widest
+     * saved preferences are searched again, which is exactly what an unchanged
+     * filter set should do.
+     *
+     * @return array{array<string, mixed>, string}
+     */
+    protected function realPropertySearch(OnboardingState $onboarding): array
+    {
+        $preferences = PropertyPreferences::validate(
+            $onboarding->plan['preferences'] ?? PropertyPreferences::defaults()
+        );
+
+        $output = (string) (new UpdatePropertySearchPreferences($onboarding))
+            ->handle(new ToolRequest($preferences));
+
+        return [$preferences, $output];
     }
 
     /**
@@ -393,14 +726,51 @@ class ChatController
      * report back to the browser. Creating it here also means the package skips
      * its own title generation, so the title is the opening message.
      */
-    protected function startConversation(Request $request, string $message): Conversation
+    /** @param array<string, mixed>|null $preferences What the visitor had already filtered to. */
+    protected function startConversation(Request $request, string $message, ?array $preferences = null): Conversation
     {
-        return Conversation::create([
+        $conversation = Conversation::create([
             'id' => (string) Str::uuid(),
             'participant_type' => Conversation::participantType($request->user()),
             'participant_id' => Conversation::participantKey($request->user()),
             'title' => Str::limit(trim($message), 50, preserveWords: true) ?: __('New chat'),
         ]);
+        // Straight into mapping with the widest search already saved. There is
+        // no interview to pass through: the opening message narrows this, and
+        // anything it does not mention simply stays wide open.
+        OnboardingState::create([
+            'conversation_id' => $conversation->id,
+            'flow' => 'property',
+            'phase' => 'mapping',
+            'plan' => SavePropertyPreferences::plan($this->openingPreferences($preferences)),
+        ]);
+
+        return $conversation;
+    }
+
+    /**
+     * The filters a new conversation starts from.
+     *
+     * Whatever the visitor narrowed the landing page to carries into the
+     * conversation, so a first message refines the search in front of them
+     * rather than silently widening it back to everything. Anything the browser
+     * sends that does not validate falls back to the defaults rather than
+     * failing the message.
+     *
+     * @param  array<string, mixed>|null  $preferences
+     * @return array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string}
+     */
+    protected function openingPreferences(?array $preferences): array
+    {
+        if ($preferences === null) {
+            return PropertyPreferences::defaults();
+        }
+
+        try {
+            return PropertyPreferences::validate($preferences);
+        } catch (ValidationException) {
+            return PropertyPreferences::defaults();
+        }
     }
 
     /**

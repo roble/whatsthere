@@ -3,6 +3,8 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Chat\Ai\Tools\UpdatePropertySearchPreferences;
+use Modules\Chat\Models\OnboardingState;
 use Modules\Chat\Testing\CannedReplies;
 use Tests\TestCase;
 
@@ -79,7 +81,7 @@ class CannedRepliesTest extends TestCase
 
     public function test_the_map_scenarios_hand_back_views_the_map_can_read(): void
     {
-        foreach (['place' => 'marker', 'eircode' => 'marker', 'places' => 'markers'] as $scenario => $pins) {
+        foreach (['place' => 'marker', 'places' => 'markers'] as $scenario => $pins) {
             $output = collect($this->framesFor($scenario))
                 ->firstWhere('type', 'tool-output-available')['output'];
 
@@ -126,6 +128,29 @@ class CannedRepliesTest extends TestCase
         $body = $response->streamedContent();
         $this->assertStringContainsString('data: {"type":"start"', $body);
         $this->assertStringContainsString("data: [DONE]\n\n", $body);
+    }
+
+    public function test_the_property_scenario_streams_a_real_search_of_the_home_area(): void
+    {
+        config(['chat.test_mode' => true]);
+
+        $response = $this->actingAs($this->createUser())
+            ->post(route('chat.stream').'?scenario=property_workflow', [
+                'message' => 'I want to buy a home in Cork.',
+            ]);
+
+        $conversationId = (string) $response->headers->get('X-Conversation-Id');
+        $state = OnboardingState::find($conversationId);
+
+        // No interview to walk through: one message lands straight on results.
+        $this->assertSame('mapping', $state?->phase);
+        $this->assertSame(0, $state?->question_count);
+        $this->assertNull($state?->current_question);
+        $this->assertSame(config('properties.home.location'), $state?->plan['preferences']['location']);
+
+        // The search itself is real, so the frames carry a genuine map view.
+        $this->assertStringContainsString(UpdatePropertySearchPreferences::NAME, $response->streamedContent());
+        $this->assertNotNull($state?->property_result_ids);
     }
 
     public function test_the_failure_scenario_never_leaks_the_provider_wording(): void

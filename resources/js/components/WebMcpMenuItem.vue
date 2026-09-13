@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -19,6 +20,7 @@ import {
     webMcpAuthenticated,
     webMcpSupported,
     webMcpTools,
+    webMcpVisitorTools,
 } from '@/webmcp';
 import { trans } from 'laravel-vue-i18n';
 import { computed, onUnmounted, ref } from 'vue';
@@ -32,39 +34,45 @@ import IconPencil from '~icons/lucide/pencil';
 const copyState = ref<'idle' | 'copied' | 'failed'>('idle');
 let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
+const listed = computed(() => webMcpVisitorTools.value);
+
 const activeNames = computed(
     () => new Set(webMcpActiveTools.value.map((tool) => tool.name)),
 );
 
-// Callable tools lead; the rest still show, because their presence is the
-// argument for signing in or switching browser.
-const listed = computed(() =>
-    [...webMcpTools.value].sort(
-        (a, b) =>
-            Number(activeNames.value.has(b.name)) -
-            Number(activeNames.value.has(a.name)),
-    ),
-);
+/**
+ * Two sections, not one long list.
+ *
+ * What a visitor wants to know first is what their agent can do *right now*;
+ * the rest is a preview of where the trip goes next. Splitting on that answers
+ * both without a dot on every row to decode.
+ */
+const groups = computed(() => {
+    const live = webMcpVisitorTools.value.filter((tool) =>
+        activeNames.value.has(tool.name),
+    );
+    const later = webMcpVisitorTools.value.filter(
+        (tool) => !activeNames.value.has(tool.name),
+    );
+
+    return [
+        { key: 'active', label: 'Ready to call', tools: live },
+        { key: 'later', label: 'Later in the trip', tools: later },
+    ].filter((group) => group.tools.length);
+});
 
 const label = computed(() =>
-    webMcpSupported ? 'Agent tools' : 'Agent tools available',
+    webMcpSupported ? 'WebMCP tools' : 'WebMCP is available',
 );
 
 const icon = computed(() => (webMcpSupported ? IconBot : IconBotOff));
 
-// State lives on the badge dot, so the icon inherits whatever colour the
-// sidebar gives every other menu icon.
-const stateColor = computed(() =>
-    webMcpSupported ? 'bg-emerald-500' : 'bg-orange-500',
-);
-
 const chatUrl = route('chat.index');
 
 const agentPrompt = computed(() =>
-    trans(
-        "Open :url. Discover and use this page's WebMCP tools to help me",
-        { url: chatUrl },
-    ),
+    trans("Open :url. Discover and use this page's WebMCP tools to help me", {
+        url: chatUrl,
+    }),
 );
 
 async function copyAgentPrompt(): Promise<void> {
@@ -93,7 +101,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <SidebarMenu v-if="webMcpTools.length" data-testid="webmcp-menu">
+    <SidebarMenu
+        v-if="
+            webMcpTools.length && (!webMcpSupported || webMcpActiveTools.length)
+        "
+        data-testid="webmcp-menu"
+    >
         <SidebarMenuItem>
             <Dialog>
                 <DialogTrigger as-child>
@@ -107,21 +120,25 @@ onUnmounted(() => {
                 </DialogTrigger>
 
                 <SidebarMenuBadge data-testid="webmcp-state">
-                    <span
-                        class="size-2 rounded-full"
-                        :class="stateColor"
-                        role="img"
-                        :aria-label="
-                            webMcpSupported
-                                ? $t('Connected')
-                                : $t('Not connected')
-                        "
-                        :title="
-                            webMcpSupported
-                                ? $t('Connected')
-                                : $t('Not connected')
-                        "
-                    />
+                    <!-- The same badge the panel's title carries, so the two
+                         readings of "how much can my agent do here" match.
+                         Without WebMCP there is no count to give: the badge
+                         says why instead. -->
+                    <Badge
+                        v-if="webMcpSupported && listed.length"
+                        variant="secondary"
+                        class="font-mono text-[10px]"
+                        data-testid="webmcp-sidebar-count"
+                    >
+                        {{ activeNames.size }}/{{ listed.length }}
+                    </Badge>
+                    <Badge
+                        v-else-if="!webMcpSupported"
+                        variant="outline"
+                        class="text-[10px] font-medium text-orange-500"
+                    >
+                        {{ $t('Off') }}
+                    </Badge>
                 </SidebarMenuBadge>
 
                 <DialogContent class="sm:max-w-lg" data-testid="webmcp-panel">
@@ -129,8 +146,16 @@ onUnmounted(() => {
                         <DialogTitle class="flex items-center gap-2">
                             <component :is="icon" class="size-4" />
                             {{ $t('WebMCP') }}
+                            <Badge
+                                v-if="listed.length"
+                                variant="secondary"
+                                class="font-mono text-xs"
+                                data-testid="webmcp-count"
+                            >
+                                {{ activeNames.size }}/{{ listed.length }}
+                            </Badge>
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription class="p-0">
                             <template v-if="!webMcpSupported">
                                 {{
                                     $t(
@@ -141,7 +166,7 @@ onUnmounted(() => {
                             <template v-else-if="!webMcpAuthenticated">
                                 {{
                                     $t(
-                                        'Your AI agent can use these. Sign in to unlock the rest.',
+                                        'Your AI agent can open sign in or registration. Sign in to unlock trip planning tools.',
                                     )
                                 }}
                             </template>
@@ -232,51 +257,67 @@ onUnmounted(() => {
                         </p>
                     </section>
 
-                    <ul class="-mx-6 max-h-80 min-h-0 overflow-y-auto px-6 py-2">
-                        <li
-                            v-for="tool in listed"
-                            :key="tool.name"
-                            class="py-2"
-                            :class="{
-                                'opacity-50': !activeNames.has(tool.name),
-                            }"
-                            :data-testid="`webmcp-tool-${tool.name}`"
+                    <div
+                        class="-mx-6 max-h-80 min-h-0 overflow-y-auto px-6 py-2"
+                    >
+                        <section
+                            v-for="group in groups"
+                            :key="group.key"
+                            :data-testid="`webmcp-group-${group.key}`"
                         >
-                            <div class="flex items-center gap-2">
-                                <component
-                                    :is="tool.readOnly ? IconEye : IconPencil"
-                                    class="text-muted-foreground size-3.5 shrink-0"
-                                />
-                                <code class="text-xs font-medium">{{
-                                    tool.name
-                                }}</code>
-                                <span
-                                    class="size-2 shrink-0 rounded-full"
-                                    :class="
-                                        activeNames.has(tool.name)
-                                            ? 'bg-emerald-500'
-                                            : 'bg-muted-foreground/40'
-                                    "
-                                    role="img"
-                                    :aria-label="
-                                        activeNames.has(tool.name)
-                                            ? $t('Connected')
-                                            : $t('Not connected')
-                                    "
-                                    :title="
-                                        activeNames.has(tool.name)
-                                            ? $t('Connected')
-                                            : $t('Not connected')
-                                    "
-                                />
-                            </div>
-                            <p
-                                class="text-muted-foreground mt-0.5 ml-5.5 text-xs"
+                            <h3
+                                v-if="group.key !== 'active'"
+                                class="text-muted-foreground bg-background/95 sticky top-0 z-10 flex items-center gap-2 py-2 text-[11px] font-semibold tracking-wider uppercase"
                             >
-                                {{ tool.description }}
-                            </p>
-                        </li>
-                    </ul>
+                                <span
+                                    class="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
+                                    aria-hidden="true"
+                                />
+                                {{ $t(group.label) }}
+                                <span class="opacity-60">{{
+                                    group.tools.length
+                                }}</span>
+                            </h3>
+
+                            <ul class="divide-border/70 divide-y">
+                                <li
+                                    v-for="tool in group.tools"
+                                    :key="tool.name"
+                                    class="py-2"
+                                    :class="
+                                        group.key === 'active'
+                                            ? undefined
+                                            : 'opacity-70'
+                                    "
+                                    :data-testid="`webmcp-tool-${tool.name}`"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <component
+                                            :is="
+                                                tool.readOnly
+                                                    ? IconEye
+                                                    : IconPencil
+                                            "
+                                            class="text-muted-foreground size-3.5 shrink-0"
+                                            :aria-label="
+                                                tool.readOnly
+                                                    ? $t('Reads only')
+                                                    : $t('Changes something')
+                                            "
+                                        />
+                                        <code class="text-xs font-medium">{{
+                                            tool.name
+                                        }}</code>
+                                    </div>
+                                    <p
+                                        class="text-muted-foreground mt-0.5 ml-5.5 text-xs"
+                                    >
+                                        {{ tool.description }}
+                                    </p>
+                                </li>
+                            </ul>
+                        </section>
+                    </div>
                 </DialogContent>
             </Dialog>
         </SidebarMenuItem>

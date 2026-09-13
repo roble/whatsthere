@@ -32,15 +32,14 @@ class ShowOnMapTest extends TestCase
         ], json_decode((string) $result, true));
     }
 
-    public function test_it_only_ever_asks_the_geocoder_for_irish_places(): void
+    public function test_it_does_not_restrict_geocoding_to_a_country(): void
     {
         Http::fake(['nominatim.openstreetmap.org/*' => Http::response([])]);
 
         (new ShowOnMap)->handle(new Request(['place' => 'Paris, France']));
 
-        // The instructions ask the model to stay in Ireland; this is the half
-        // of the scope it cannot talk its way around.
-        Http::assertSent(fn ($request) => $request['countrycodes'] === 'ie');
+        Http::assertSent(fn ($request): bool => $request['q'] === 'Paris, France'
+            && ! isset($request['countrycodes']));
     }
 
     public function test_it_only_geocodes_a_repeated_place_once(): void

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8f38b475cced429e9e442662183007fc",
+    "content-hash": "94e4f986a971c6c74b57660004987ae6",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -5210,6 +5210,38 @@
                     "name": "Saucebase",
                     "email": "hello@saucebase.dev"
                 }
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "modules/properties",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "modules/properties",
+                "reference": "ddee83eafa79a99f5ba8318fe0a2f4329598b4f9"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Modules\\Properties\\Providers\\PropertiesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Modules\\Properties\\": "src/",
+                    "Modules\\Properties\\Tests\\": "tests/",
+                    "Modules\\Properties\\Database\\Factories\\": "database/factories/",
+                    "Modules\\Properties\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
             ],
             "transport-options": {
                 "symlink": true,

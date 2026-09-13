@@ -1,11 +1,16 @@
 import {
     BrainIcon,
+    CircleHelpIcon,
     CogIcon,
     MapPinIcon,
     MapPinnedIcon,
-    SignpostIcon,
+    RouteIcon,
 } from '@lucide/vue';
-import { toMapView, type MapView } from '@modules/chat/resources/js/map';
+import {
+    toMapView,
+    type MapMarker,
+    type MapView,
+} from '@modules/chat/resources/js/map';
 import type { Component } from 'vue';
 
 /**
@@ -27,7 +32,10 @@ export type ThoughtPart = {
 /** What renders inside a step, mapped to the chain-of-thought body components. */
 export type ThoughtBody =
     | { kind: 'markdown'; text: string }
-    | { kind: 'results'; items: string[] }
+    | {
+          kind: 'results';
+          items: Array<{ label: string; marker: MapMarker }>;
+      }
     | { kind: 'image'; src: string; caption?: string };
 
 export type ThoughtKind = {
@@ -65,16 +73,25 @@ export type ThoughtKind = {
 /**
  * How many a search turned up, as the step should word it.
  *
- * The tool asks for one more than it keeps, so a capped result means there
- * were others it never showed -- "40" would be a total it cannot vouch for.
+ * FindPlaces returns a selection rather than a complete inventory.
  */
 function countOf(view: MapView | null): string {
-    const found = view?.markers?.length ?? 0;
-
-    return view?.capped ? `${found}+` : String(found);
+    return String(view?.markers?.length ?? 0);
 }
 
 export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
+    'tool-save_property_preferences': {
+        icon: CircleHelpIcon,
+        label: 'Preparing buying preferences',
+        doneLabel: 'Preferences ready to review',
+    },
+    'tool-search_properties': {
+        icon: MapPinnedIcon,
+        label: 'Searching properties for sale',
+        doneLabel: 'Found :count matching properties',
+        params: (part) => ({ count: countOf(toMapView(part.output)) }),
+        succeeded: (part) => toMapView(part.output) !== null,
+    },
     reasoning: {
         icon: BrainIcon,
         label: 'Thinking',
@@ -94,22 +111,10 @@ export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
         description: (part) => toMapView(part.output)?.label,
     },
 
-    'tool-eircode_to_geolocation': {
-        icon: SignpostIcon,
-        label: 'Looking up :eircode',
-        doneLabel: 'Located :eircode',
-        failedLabel: 'Could not place :eircode',
-        // The map tools answer in prose when they come up empty, so a parsed
-        // view is the only proof the call landed anywhere.
-        succeeded: (part) => toMapView(part.output) !== null,
-        params: (part) => ({ eircode: String(part.input?.eircode ?? '') }),
-        description: (part) => toMapView(part.output)?.label,
-    },
-
     'tool-find_places': {
         icon: MapPinnedIcon,
         label: 'Searching :area for :category',
-        doneLabel: 'Found :count :category in :area',
+        doneLabel: 'Showing :count :category in :area',
         failedLabel: 'Found no :category in :area',
         // The map tools answer in prose when they come up empty, so a parsed
         // view is the only proof the call landed anywhere.
@@ -124,15 +129,60 @@ export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
             count: countOf(toMapView(part.output)),
         }),
         description: (part) => toMapView(part.output)?.label,
-        // Reuses the `results` body the registry already had rather than
-        // inventing a fourth shape: a list of names is exactly what it draws.
+        // Keep the marker with its label so the result can drive the map as
+        // well as describe what the search found.
         body: (part) => {
             const found = toMapView(part.output)?.markers ?? [];
 
             return found.length
-                ? { kind: 'results', items: found.map((place) => place.name) }
+                ? {
+                      kind: 'results',
+                      items: found.map((marker) => ({
+                          label: marker.name,
+                          marker,
+                      })),
+                  }
                 : undefined;
         },
+    },
+
+    'tool-save_itinerary': {
+        icon: RouteIcon,
+        label: 'Planning the day',
+        doneLabel: 'Planned :count stops',
+        failedLabel: 'Could not plan the day',
+        // Stops that would not geocode are dropped, so a result can come back
+        // well-formed and empty.
+        succeeded: (part) => Boolean(toMapView(part.output)?.stops?.length),
+        params: (part) => ({
+            count: String(toMapView(part.output)?.stops?.length ?? 0),
+        }),
+        description: (part) => toMapView(part.output)?.label,
+        // The same chips a search produces, so a stop is clickable straight
+        // from the route of thought.
+        body: (part) => {
+            const stops = toMapView(part.output)?.stops ?? [];
+
+            return stops.length
+                ? {
+                      kind: 'results',
+                      items: stops.map((stop, index) => ({
+                          label: `${index + 1}. ${stop.title}`,
+                          marker: {
+                              lat: stop.lat,
+                              lon: stop.lon,
+                              name: stop.title,
+                          },
+                      })),
+                  }
+                : undefined;
+        },
+    },
+
+    'tool-interview_visitor': {
+        icon: CircleHelpIcon,
+        label: 'Ask a user question',
+        doneLabel: 'Asked a user question',
     },
 };
 

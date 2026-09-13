@@ -17,8 +17,19 @@ export interface WebMcpTool {
     };
     /** Safe to call speculatively. Anything that changes state must leave this false. */
     readOnly?: boolean;
-    /** Only registered while someone is signed in; shown as locked otherwise. */
+    /** Only registered while someone is signed in. */
     requiresAuth?: boolean;
+    /** Only registered while signed out, for entry points such as authentication. */
+    requiresGuest?: boolean;
+    /**
+     * Withheld for now, but still worth listing.
+     *
+     * A page may offer a tool that only makes sense at a certain moment -- an
+     * answer tool while a question is open, map tools once the map is up.
+     * Setting this false keeps it out of the browser's hands while leaving it
+     * visible to the visitor as something their agent will be able to call.
+     */
+    available?: boolean;
     /**
      * Return anything JSON-serialisable. Plain values are wrapped in the
      * protocol's content envelope for you.
