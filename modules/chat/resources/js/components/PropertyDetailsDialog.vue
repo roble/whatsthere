@@ -9,12 +9,19 @@ import {
 import type { MapMarker } from '@modules/chat/resources/js/map';
 import IconChevronLeft from '~icons/lucide/chevron-left';
 import IconChevronRight from '~icons/lucide/chevron-right';
+import IconCompass from '~icons/lucide/compass';
 import IconImage from '~icons/lucide/image';
+import { Button } from '@/components/ui/button';
 import { computed, ref, watch } from 'vue';
 
 const open = defineModel<boolean>('open', { required: true });
 
-const props = defineProps<{ property: MapMarker | null }>();
+const props = defineProps<{
+    property: MapMarker | null;
+    loadingNearby: boolean;
+}>();
+
+const emit = defineEmits<{ nearby: [MapMarker] }>();
 
 const imageIndex = ref(0);
 const images = computed(() => props.property?.images ?? []);
@@ -148,6 +155,23 @@ function nextImage(): void {
                             />
                         </button>
                     </div>
+
+                    <!-- The map is already open beside this, so "what is around
+                         here" is answered by dropping the surroundings onto it
+                         rather than by describing them. -->
+                    <Button
+                        class="w-full"
+                        :disabled="loadingNearby"
+                        data-testid="show-nearby"
+                        @click="emit('nearby', property)"
+                    >
+                        <IconCompass class="size-4" />
+                        {{
+                            loadingNearby
+                                ? $t('Looking around…')
+                                : $t("What's there?")
+                        }}
+                    </Button>
                 </section>
             </div>
         </DialogContent>

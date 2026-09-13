@@ -7,6 +7,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Ai\Messages\Message;
@@ -186,6 +188,87 @@ class ChatController
     }
 
     /**
+     * Search properties without a conversation to save the preferences to.
+     *
+     * The landing page opens on results, so its filters must work before the
+     * visitor has typed anything. Nothing is persisted: the browser holds the
+     * preferences until a first message creates the conversation that owns
+     * them.
+     */
+    public function propertySearch(Request $request): JsonResponse
+    {
+        $preferences = PropertyPreferences::validate($request->all());
+
+        return response()->json([
+            'plan' => SavePropertyPreferences::plan($preferences),
+            'map_view' => (new PropertySearch)->search($preferences),
+        ]);
+    }
+
+    /**
+     * What is around a property: schools, cafes, transport, and the rest.
+     *
+     * Runs without the model. The visitor has already pointed at a property, so
+     * there is nothing to interpret: each category is one cached Overpass
+     * search around its coordinates, and the results are pooled into a single
+     * map view the way a multi-search reply already pools them.
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lon' => ['required', 'numeric', 'between:-180,180'],
+            'label' => ['nullable', 'string', 'max:200'],
+            // Bounded so one click cannot fan out into a dozen calls to a
+            // donated service.
+            'categories' => ['required', 'array', 'min:1', 'max:8'],
+            'categories.*' => ['string', Rule::in(array_keys(FindPlaces::CATEGORIES))],
+        ]);
+
+        $markers = (new FindPlaces)->aroundMany(
+            (float) $validated['lat'],
+            (float) $validated['lon'],
+            array_values($validated['categories']),
+        );
+
+        if ($markers === null) {
+            return response()->json(['message' => __('The map data service could not be reached.')], 503);
+        }
+
+        $around = $validated['label'] ?? __('this property');
+
+        return response()->json([
+            'label' => __('Around :place', ['place' => $around]),
+            'category' => __('nearby places'),
+            'total' => count($markers),
+            'markers' => $markers,
+            'bbox' => $this->boxAround((float) $validated['lat'], (float) $validated['lon'], $markers),
+        ]);
+    }
+
+    /**
+     * A bounding box holding the property and everything found around it.
+     *
+     * Anchored on the property rather than on the results alone, so the pin the
+     * visitor clicked is always inside the view they get back.
+     *
+     * @param  list<array<string, mixed>>  $markers
+     * @return list<string>
+     */
+    protected function boxAround(float $latitude, float $longitude, array $markers): array
+    {
+        $latitudes = [$latitude, ...array_map(fn (array $marker): float => (float) $marker['lat'], $markers)];
+        $longitudes = [$longitude, ...array_map(fn (array $marker): float => (float) $marker['lon'], $markers)];
+
+        return [
+            (string) (min($longitudes) - 0.002),
+            (string) (min($latitudes) - 0.002),
+            (string) (max($longitudes) + 0.002),
+            (string) (max($latitudes) + 0.002),
+        ];
+    }
+
+    /**
      * Find what the map was last showing in this conversation.
      *
      * The transcript is rebuilt as plain text, so the tool calls that moved the
@@ -358,6 +441,9 @@ class ChatController
             'map.center.1' => ['required_with:map', 'numeric', 'between:-180,180'],
             'map.zoom' => ['required_with:map', 'numeric', 'between:0,24'],
             'map.moved' => ['required_with:map', 'boolean'],
+            // What the landing page's filters were set to, for a first
+            // message. Ignored once the conversation owns its own.
+            'preferences' => ['nullable', 'array'],
             'selected_property' => ['nullable', 'array'],
             'selected_property.id' => ['nullable', 'integer'],
             'selected_property.name' => ['required_with:selected_property', 'string', 'max:255'],
@@ -375,7 +461,7 @@ class ChatController
 
         $conversation = isset($validated['conversation_id'])
             ? $this->ownedConversation($request, $validated['conversation_id'])
-            : $this->startConversation($request, $validated['message']);
+            : $this->startConversation($request, $validated['message'], $validated['preferences'] ?? null);
 
         $onboarding = OnboardingState::firstOrCreate(['conversation_id' => $conversation->id]);
 
@@ -640,7 +726,8 @@ class ChatController
      * report back to the browser. Creating it here also means the package skips
      * its own title generation, so the title is the opening message.
      */
-    protected function startConversation(Request $request, string $message): Conversation
+    /** @param array<string, mixed>|null $preferences What the visitor had already filtered to. */
+    protected function startConversation(Request $request, string $message, ?array $preferences = null): Conversation
     {
         $conversation = Conversation::create([
             'id' => (string) Str::uuid(),
@@ -655,10 +742,35 @@ class ChatController
             'conversation_id' => $conversation->id,
             'flow' => 'property',
             'phase' => 'mapping',
-            'plan' => SavePropertyPreferences::plan(PropertyPreferences::defaults()),
+            'plan' => SavePropertyPreferences::plan($this->openingPreferences($preferences)),
         ]);
 
         return $conversation;
+    }
+
+    /**
+     * The filters a new conversation starts from.
+     *
+     * Whatever the visitor narrowed the landing page to carries into the
+     * conversation, so a first message refines the search in front of them
+     * rather than silently widening it back to everything. Anything the browser
+     * sends that does not validate falls back to the defaults rather than
+     * failing the message.
+     *
+     * @param  array<string, mixed>|null  $preferences
+     * @return array{location: string, location_type: string, county: ?string, max_price: int, min_bedrooms: ?int, property_type: ?string, minimum_ber_rating: ?string}
+     */
+    protected function openingPreferences(?array $preferences): array
+    {
+        if ($preferences === null) {
+            return PropertyPreferences::defaults();
+        }
+
+        try {
+            return PropertyPreferences::validate($preferences);
+        } catch (ValidationException) {
+            return PropertyPreferences::defaults();
+        }
     }
 
     /**

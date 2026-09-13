@@ -176,6 +176,110 @@ class FindPlaces implements Tool
      *
      * @return array{label: string, bbox: array{string, string, string, string}}|null
      */
+    /**
+     * Everything of several kinds around a point, in one request.
+     *
+     * Asking for seven categories as seven searches means seven round trips to
+     * a donated service, which is both slow and the sort of thing that gets
+     * throttled -- in practice most of them came back empty. Overpass unions
+     * clauses natively, so this is one query, and each result is matched back
+     * to the category whose tag it carries.
+     *
+     * @param  list<string>  $categories
+     * @return list<array<string, mixed>>|null Null when Overpass could not be reached.
+     */
+    public function aroundMany(float $latitude, float $longitude, array $categories, float $radiusKm = 2.0): ?array
+    {
+        $categories = array_values(array_filter(
+            array_unique($categories),
+            fn (string $category): bool => isset(self::CATEGORIES[$category]),
+        ));
+
+        if ($categories === []) {
+            return [];
+        }
+
+        $latitudeSpan = $radiusKm / 111.0;
+        $longitudeSpan = $latitudeSpan / max(cos(deg2rad($latitude)), 0.01);
+        $box = sprintf(
+            '%F,%F,%F,%F',
+            $latitude - $latitudeSpan,
+            $longitude - $longitudeSpan,
+            $latitude + $latitudeSpan,
+            $longitude + $longitudeSpan,
+        );
+
+        $key = 'overpass:around:v1:'.md5($box.'|'.implode(',', $categories));
+
+        if (($cached = Cache::get($key)) !== null) {
+            return $cached;
+        }
+
+        $clauses = implode('', array_map(
+            fn (string $category): string => sprintf('nwr%s(%s);', self::CATEGORIES[$category], $box),
+            $categories,
+        ));
+
+        $response = Http::asForm()
+            ->withUserAgent(config('app.name').' ('.config('app.url').')')
+            ->timeout(45)
+            ->post('https://overpass-api.de/api/interpreter', [
+                'data' => sprintf('[out:json][timeout:40];(%s);out center %d;', $clauses, self::LIMIT * 2),
+            ]);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $grouped = [];
+
+        foreach ($response->json('elements') ?? [] as $element) {
+            $category = $this->categoryOf((array) ($element['tags'] ?? []), $categories);
+
+            if ($category !== null) {
+                $grouped[$category][] = $element;
+            }
+        }
+
+        $markers = [];
+
+        foreach ($grouped as $category => $elements) {
+            foreach ($this->toMarkers($elements, $category) as $marker) {
+                $markers[] = ['categoryKey' => $category] + $marker;
+            }
+        }
+
+        $this->rememberMarkers($markers);
+        Cache::put($key, $markers, now()->addDay());
+
+        return $markers;
+    }
+
+    /**
+     * Which of the requested categories a result belongs to.
+     *
+     * The tag pairs are read back out of the category map so there is still one
+     * place that decides what a category means. First match wins: a building
+     * tagged as both is shown once.
+     *
+     * @param  array<string, mixed>  $tags
+     * @param  list<string>  $categories
+     */
+    protected function categoryOf(array $tags, array $categories): ?string
+    {
+        foreach ($categories as $category) {
+            if (preg_match('/^\["([^"]+)"="([^"]+)"\]$/', self::CATEGORIES[$category], $matches) !== 1) {
+                continue;
+            }
+
+            if (($tags[$matches[1]] ?? null) === $matches[2]) {
+                return $category;
+            }
+        }
+
+        return null;
+    }
+
     protected function boundsOf(string $area): ?array
     {
         $view = json_decode(

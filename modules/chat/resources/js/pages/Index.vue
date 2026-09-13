@@ -277,6 +277,13 @@ const chat = new Chat({
                     .join('\n'),
                 conversation_id: conversationId.value,
                 map: viewport.value,
+                // Only on the first message: whatever the landing page's
+                // filters were set to seeds the new conversation, so the reply
+                // narrows the search already on screen instead of reopening
+                // the widest one. Afterwards the conversation owns them.
+                preferences: conversationId.value
+                    ? null
+                    : propertyPreferences.value,
                 selected_property: selectedProperty.value,
             },
             headers: { 'X-XSRF-TOKEN': csrfToken() },
@@ -586,7 +593,7 @@ const propertyPreferences = computed<PropertyPreferences | null>(() => {
 async function applyPropertyFilters(
     preferences: PropertyPreferences,
 ): Promise<void> {
-    if (!conversationId.value || searchingProperties.value) {
+    if (searchingProperties.value) {
         return;
     }
 
@@ -594,10 +601,18 @@ async function applyPropertyFilters(
     searchError.value = '';
 
     try {
+        // Before a conversation exists there is nowhere to save these, so the
+        // search is run without persisting and the browser keeps the answer
+        // until a first message creates the conversation that owns it.
         const response = await guardedFetch(
-            route('chat.property-preferences.update', conversationId.value),
+            conversationId.value
+                ? route(
+                      'chat.property-preferences.update',
+                      conversationId.value,
+                  )
+                : route('chat.property-search'),
             {
-                method: 'PATCH',
+                method: conversationId.value ? 'PATCH' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
@@ -612,7 +627,9 @@ async function applyPropertyFilters(
         }
 
         const result = await response.json();
-        onboarding.value = result;
+        onboarding.value = conversationId.value
+            ? result
+            : { ...(onboarding.value ?? {}), plan: result.plan };
         overrideView.value = result.map_view as MapView;
         propertyView.value = result.map_view as MapView;
         selectedPropertyId.value = null;
@@ -622,6 +639,87 @@ async function applyPropertyFilters(
             'Could not update the property search. Please try again.';
     } finally {
         searchingProperties.value = false;
+    }
+}
+
+/**
+ * The categories a property's surroundings are worth showing as.
+ *
+ * The everyday questions about a home's area -- schools, food, a park, the
+ * shop, getting into town -- rather than every category the tool can search.
+ * Each one is a separate cached lookup, so the list is kept short on purpose.
+ */
+const NEARBY_CATEGORIES = [
+    'school',
+    'supermarket',
+    'cafe',
+    'restaurant',
+    'park',
+    'pharmacy',
+    'train_station',
+] as const;
+
+const loadingNearby = ref(false);
+
+/**
+ * Put everything around a property onto the map, without the assistant.
+ *
+ * The visitor has already pointed at the property, so there is nothing to
+ * interpret and no reason to spend a model call on it.
+ */
+async function showNearby(property: MapMarker): Promise<void> {
+    if (loadingNearby.value) {
+        return;
+    }
+
+    loadingNearby.value = true;
+    searchError.value = '';
+    // Closed before the request, not after it: Overpass takes several seconds
+    // and the answer is a map, so the wait belongs on the map rather than
+    // behind a dialog covering it.
+    propertyDetails.value = null;
+
+    try {
+        const response = await guardedFetch(route('chat.nearby'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify({
+                lat: property.lat,
+                lon: property.lon,
+                label: property.name,
+                categories: NEARBY_CATEGORIES,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Nearby search failed');
+        }
+
+        const view = (await response.json()) as MapView;
+
+        // Kept beside the property rather than replacing it: the point is what
+        // is around this home, so the home has to stay on the map.
+        //
+        // Tagged as a property view because it already carries the selected
+        // property. Without that, `mapView` would treat it as a stray search
+        // and merge it back into the full result set, dragging the camera out
+        // to the whole county instead of the street.
+        overrideView.value = {
+            ...view,
+            categoryKey: 'property',
+            markers: [
+                { ...property, categoryKey: 'property' },
+                ...(view.markers ?? []),
+            ],
+        };
+    } catch {
+        searchError.value = 'Could not load what is nearby. Please try again.';
+    } finally {
+        loadingNearby.value = false;
     }
 }
 
@@ -1498,17 +1596,9 @@ watch(tripPhase, () => {
                         ]"
                     />
 
-                    <!-- The landing page shows the home area's properties
-                         before any conversation exists, but a filter edit has
-                         nowhere to be saved until one does, so the chips wait
-                         for the first message rather than silently doing
-                         nothing. -->
                     <PropertyFilterBar
                         v-if="
-                            propertyFlow &&
-                            !isMapStaging &&
-                            conversationId &&
-                            propertyPreferences
+                            propertyFlow && !isMapStaging && propertyPreferences
                         "
                         :preferences="propertyPreferences"
                         :saving="searchingProperties"
@@ -1516,10 +1606,15 @@ watch(tripPhase, () => {
                         @preferences="propertyFiltersOpen = true"
                     />
 
+                    <!-- With no transcript yet the results are the page, so
+                         they take the room the conversation is not using
+                         instead of being capped at a fixed height that cuts a
+                         card in half. -->
                     <PropertyResults
                         v-if="
                             propertyFlow && !isMapStaging && propertyListingView
                         "
+                        :class="messages.length ? 'max-h-72' : 'flex-1'"
                         :view="propertyListingView"
                         :selected-id="selectedPropertyId"
                         @select="selectProperty"
@@ -1536,9 +1631,14 @@ watch(tripPhase, () => {
                     <PropertyDetailsDialog
                         v-model:open="propertyDetailsOpen"
                         :property="propertyDetails"
+                        :loading-nearby="loadingNearby"
+                        @nearby="showNearby"
                     />
 
-                    <Conversation ref="conversation">
+                    <Conversation
+                        ref="conversation"
+                        :class="messages.length ? undefined : 'flex-none'"
+                    >
                         <ConversationContent
                             data-testid="chat-messages"
                             @click="onTranscriptClick"
@@ -1548,17 +1648,19 @@ watch(tripPhase, () => {
                                  already pinned, so the first message narrows a
                                  search the visitor can see, instead of starting
                                  one they cannot. -->
+                            <!-- The opening screen sits beside the map
+                                 rather than in place of it, and stays small:
+                                 the results above it are the thing worth
+                                 looking at, so this is one line of orientation
+                                 and a few starting points. -->
                             <div
                                 v-if="!messages.length && propertyFlow"
-                                class="flex flex-col gap-6 px-2 py-8"
+                                class="space-y-3 px-2 py-4"
                                 data-testid="chat-landing"
                             >
-                                <div class="space-y-2">
-                                    <h1
-                                        class="text-2xl font-semibold tracking-tight"
-                                    >
-                                        {{ $t('What are you looking for?') }}
-                                    </h1>
+                                <div
+                                    class="flex items-baseline justify-between gap-3"
+                                >
                                     <p class="text-muted-foreground text-sm">
                                         {{
                                             $t(
@@ -1566,44 +1668,30 @@ watch(tripPhase, () => {
                                             )
                                         }}
                                     </p>
-                                </div>
-                                <div
-                                    class="space-y-1"
-                                    data-testid="landing-examples"
-                                >
-                                    <div
-                                        class="flex items-center justify-between gap-3 px-3"
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="text-muted-foreground shrink-0"
+                                        data-testid="refresh-examples"
+                                        @click="refreshExamplePrompts"
                                     >
-                                        <p
-                                            class="text-muted-foreground text-sm font-medium"
-                                        >
-                                            {{ $t('Try an idea') }}
-                                        </p>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            class="text-muted-foreground"
-                                            data-testid="refresh-examples"
-                                            @click="refreshExamplePrompts"
-                                        >
-                                            <RefreshCwIcon aria-hidden="true" />
-                                            {{ $t('More ideas') }}
-                                        </Button>
-                                    </div>
+                                        <RefreshCwIcon aria-hidden="true" />
+                                        {{ $t('More ideas') }}
+                                    </Button>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
                                     <Button
                                         v-for="example in examplePrompts"
                                         :key="example.text"
-                                        variant="ghost"
-                                        class="text-muted-foreground hover:bg-muted hover:text-foreground h-auto w-full cursor-pointer justify-start gap-3 px-3 py-1 text-left whitespace-normal"
+                                        variant="outline"
+                                        size="sm"
+                                        class="text-muted-foreground hover:text-foreground h-auto rounded-full px-3 py-1.5 text-left text-xs whitespace-normal"
                                         @click="startExample(example.text)"
                                     >
-                                        <span
-                                            class="text-base"
-                                            aria-hidden="true"
-                                        >
-                                            {{ example.emoji }}
-                                        </span>
+                                        <span aria-hidden="true">{{
+                                            example.emoji
+                                        }}</span>
                                         {{ $t(example.text) }}
                                     </Button>
                                 </div>
@@ -1987,11 +2075,7 @@ watch(tripPhase, () => {
                             <PromptInputFooter align="inline-end">
                                 <PromptInputTools>
                                     <Button
-                                        v-if="
-                                            propertyFlow &&
-                                            !isMapStaging &&
-                                            conversationId
-                                        "
+                                        v-if="propertyFlow && !isMapStaging"
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -2026,7 +2110,7 @@ watch(tripPhase, () => {
                         <ContextMap
                             ref="contextMap"
                             :class="
-                                isMapStaging || awaitingPlaces
+                                isMapStaging || awaitingPlaces || loadingNearby
                                     ? 'blur-md'
                                     : undefined
                             "
@@ -2178,7 +2262,11 @@ watch(tripPhase, () => {
                         </div>
 
                         <div
-                            v-if="awaitingPlaces || searchingProperties"
+                            v-if="
+                                awaitingPlaces ||
+                                searchingProperties ||
+                                loadingNearby
+                            "
                             class="bg-background/35 absolute inset-0 z-10 grid place-items-center p-6 backdrop-blur-xs"
                             data-testid="map-loading"
                         >

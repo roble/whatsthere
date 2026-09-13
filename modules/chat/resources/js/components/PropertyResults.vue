@@ -31,11 +31,11 @@ function price(marker: MapMarker): string {
         :class="
             expanded
                 ? 'bg-background absolute inset-0 z-40 h-full border-0'
-                : 'max-h-72'
+                : 'min-h-0'
         "
         data-testid="property-results"
     >
-        <header class="flex items-center gap-3 border-b px-4 py-3">
+        <header class="flex items-center gap-3 border-b px-2 py-1">
             <h2 class="truncate font-semibold whitespace-nowrap">
                 {{ $t('Properties for sale') }}
             </h2>

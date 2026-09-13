@@ -81,8 +81,12 @@ function selectCork(): void {
                 :model-value="form.location"
                 @update:model-value="selectCork"
             >
+                <!-- The trigger sets its own height through a `data-size`
+                     variant, which outranks a plain `h-6`. Overriding the same
+                     variant is what actually lands it on the row height the
+                     chips beside it use. -->
                 <SelectTrigger
-                    class="h-6 w-auto shrink-0 gap-1 px-2 text-xs"
+                    class="h-6 w-auto shrink-0 gap-1 rounded-md px-2 py-0 text-xs data-[size=default]:h-6"
                     data-testid="property-filter-location"
                 >
                     <IconMapPin class="size-3" /><SelectValue
