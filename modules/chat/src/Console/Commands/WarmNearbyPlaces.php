@@ -84,7 +84,7 @@ class WarmNearbyPlaces extends Command
                 continue;
             }
 
-            $markers = $places->aroundMany($latitude, $longitude, self::CATEGORIES);
+            $markers = $places->aroundMany($latitude, $longitude, self::CATEGORIES, fresh: $force);
 
             if ($markers === null) {
                 $failed++;

@@ -2,6 +2,7 @@
 
 namespace Modules\Properties;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -79,13 +80,21 @@ class PlaceBounds
      */
     protected function lookUp(string $query): ?array
     {
-        $response = Http::withUserAgent(config('app.name').' ('.config('app.url').')')
-            ->timeout(self::TIMEOUT_SECONDS)
-            ->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $query,
-                'format' => 'json',
-                'limit' => 1,
-            ]);
+        try {
+            $response = Http::withUserAgent(config('app.name').' ('.config('app.url').')')
+                ->timeout(self::TIMEOUT_SECONDS)
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $query,
+                    'format' => 'json',
+                    'limit' => 1,
+                ]);
+        } catch (ConnectionException) {
+            // A timeout or a refused connection raises rather than returning a
+            // response, and this sits inside the search every property page
+            // runs. Uncaught it does not degrade the search to the name match,
+            // it takes the whole page down with it.
+            return null;
+        }
 
         if ($response->failed()) {
             return null;

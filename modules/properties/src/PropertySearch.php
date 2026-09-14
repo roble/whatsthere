@@ -57,7 +57,6 @@ class PropertySearch
         if ($savedIds !== null) {
             $query->whereIn('id', $savedIds);
         }
-
         $cap = max(1, (int) config('properties.search_limit', 100));
         $full = max($cap, (int) config('properties.search_limit_full', 250));
         $limit = $total <= $full ? $total : $cap;

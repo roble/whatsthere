@@ -3,6 +3,7 @@
 namespace Modules\Properties\Tests\Feature;
 
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Modules\Properties\Database\Seeders\PropertiesDatabaseSeeder;
 use Modules\Properties\Imports\ListingImportService;
@@ -362,7 +363,7 @@ class PropertySearchTest extends TestCase
      * `town` is whatever the listing called the area, not a settlement, so a
      * place spans several of them and none of them equals what a person types.
      *
-     * @return list<array{0: string, 1: string, 2: bool}>
+     * @return array<string, array{0: string, 1: string, 2: bool}>
      */
     public static function localities(): array
     {
@@ -465,6 +466,23 @@ class PropertySearchTest extends TestCase
         (new PropertySearch)->search($this->preferences('Cork', 40000000, locationType: 'county'));
 
         Http::assertNothingSent();
+    }
+
+    public function test_a_geocoder_that_never_answers_leaves_the_search_working(): void
+    {
+        // A timeout raises rather than returning a response. This sits inside
+        // the search every property page runs, so uncaught it does not fall
+        // back to the name match, it takes the page down.
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => fn () => throw new ConnectionException('timed out'),
+        ]);
+
+        $property = $this->property('mallow', 'Mallow', 'Cork', 'for_sale', 3, 'house');
+        $this->price($property, 'asking_price', 30000000, '2026-09-01');
+
+        $result = (new PropertySearch)->search($this->preferences('Mallow', 40000000));
+
+        $this->assertSame([$property->id], array_column($result['markers'], 'id'));
     }
 
     public function test_an_unreachable_geocoder_leaves_the_search_working(): void

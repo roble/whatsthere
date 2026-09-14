@@ -27,6 +27,6 @@ class ConversationTitleModelTest extends TestCase
 
         $model = app(AiManager::class)->textProvider($provider)->cheapestTextModel();
 
-        $this->assertNotSame('', $model);
+        $this->assertNotEmpty($model);
     }
 }
