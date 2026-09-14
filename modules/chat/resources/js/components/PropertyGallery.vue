@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { safeHttpUrls } from '@/lib/safeHttpUrl';
+import { safeListingImageUrls } from '@/lib/safeHttpUrl';
 import IconChevronLeft from '~icons/lucide/chevron-left';
 import IconChevronRight from '~icons/lucide/chevron-right';
 import IconImageOff from '~icons/lucide/image-off';
@@ -18,6 +18,8 @@ const props = withDefaults(
         initialIndex?: number;
         /** Swipe-only: no dots, counter, or always-visible arrows. */
         compact?: boolean;
+        /** Keep arrows visible even without hover — used in chat embeds. */
+        alwaysShowControls?: boolean;
     }>(),
     {
         src: null,
@@ -30,17 +32,18 @@ const props = withDefaults(
         showThumbnails: false,
         initialIndex: 0,
         compact: false,
+        alwaysShowControls: false,
     },
 );
 
 const sources = computed(() => {
-    const fromList = safeHttpUrls(props.images);
+    const fromList = safeListingImageUrls(props.images);
 
     if (fromList.length) {
         return fromList;
     }
 
-    const src = safeHttpUrls([props.src ?? ''])[0];
+    const src = safeListingImageUrls([props.src ?? ''])[0];
 
     return src ? [src] : [];
 });
@@ -51,6 +54,7 @@ const status = ref<'empty' | 'loading' | 'ready' | 'error'>(
 );
 const imageEl = ref<HTMLImageElement | null>(null);
 const touchStartX = ref<number | null>(null);
+const pointerStartX = ref<number | null>(null);
 const swiped = ref(false);
 
 const canNavigate = computed(
@@ -138,6 +142,22 @@ function next(event?: Event): void {
     goTo(index.value + 1, event);
 }
 
+function applySwipe(delta: number): boolean {
+    if (!canNavigate.value || Math.abs(delta) < 36) {
+        return false;
+    }
+
+    swiped.value = true;
+
+    if (delta > 0) {
+        previous();
+    } else {
+        next();
+    }
+
+    return true;
+}
+
 function onTouchStart(event: TouchEvent): void {
     if (!canNavigate.value) {
         return;
@@ -153,19 +173,59 @@ function onTouchEnd(event: TouchEvent): void {
     }
 
     const endX = event.changedTouches[0]?.clientX ?? touchStartX.value;
-    const delta = endX - touchStartX.value;
+    applySwipe(endX - touchStartX.value);
+    touchStartX.value = null;
+}
 
-    if (Math.abs(delta) >= 36) {
-        swiped.value = true;
-
-        if (delta > 0) {
-            previous();
-        } else {
-            next();
-        }
+function onPointerDown(event: PointerEvent): void {
+    if (!canNavigate.value || event.pointerType === 'touch') {
+        return;
     }
 
-    touchStartX.value = null;
+    pointerStartX.value = event.clientX;
+    swiped.value = false;
+}
+
+function onPointerUp(event: PointerEvent): void {
+    if (pointerStartX.value === null || !canNavigate.value) {
+        return;
+    }
+
+    applySwipe(event.clientX - pointerStartX.value);
+    pointerStartX.value = null;
+}
+
+function onImageClick(event: MouseEvent): void {
+    if (!canNavigate.value || swiped.value) {
+        return;
+    }
+
+    const target = event.currentTarget;
+
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width;
+
+    if (ratio < 0.35) {
+        previous(event);
+    } else if (ratio > 0.65) {
+        next(event);
+    }
+}
+
+function onKeydown(event: KeyboardEvent): void {
+    if (!canNavigate.value) {
+        return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+        previous(event);
+    } else if (event.key === 'ArrowRight') {
+        next(event);
+    }
 }
 
 function onClickCapture(event: MouseEvent): void {
@@ -185,10 +245,20 @@ onMounted(async () => {
 <template>
     <span
         class="property-gallery group relative isolate flex size-full items-center justify-center overflow-hidden bg-muted"
+        :class="canNavigate ? 'cursor-ew-resize' : ''"
         :data-state="status"
+        :tabindex="canNavigate ? 0 : undefined"
+        role="group"
+        :aria-roledescription="canNavigate ? $t('Image gallery') : undefined"
+        :aria-label="alt || undefined"
         @touchstart.passive="onTouchStart"
         @touchend.passive="onTouchEnd"
+        @pointerdown="onPointerDown"
+        @pointerup="onPointerUp"
+        @pointercancel="pointerStartX = null"
+        @click="onImageClick"
         @click.capture="onClickCapture"
+        @keydown="onKeydown"
     >
         <span
             v-if="status === 'loading'"
@@ -223,11 +293,14 @@ onMounted(async () => {
             <button
                 type="button"
                 class="absolute top-1/2 z-20 grid -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none"
-                :class="
-                    compact
-                        ? 'left-0.5 size-5 opacity-0 group-hover:opacity-90 group-focus-within:opacity-90'
-                        : 'left-1.5 size-7 opacity-90 sm:opacity-0 sm:group-hover:opacity-100'
-                "
+                :class="[
+                    compact ? 'left-0.5 size-5' : 'left-1.5 size-7',
+                    alwaysShowControls
+                        ? 'opacity-90'
+                        : compact
+                          ? 'opacity-0 group-hover:opacity-90 group-focus-within:opacity-90'
+                          : 'opacity-90 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100',
+                ]"
                 :aria-label="$t('Previous image')"
                 @click="previous"
             >
@@ -236,11 +309,14 @@ onMounted(async () => {
             <button
                 type="button"
                 class="absolute top-1/2 z-20 grid -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none"
-                :class="
-                    compact
-                        ? 'right-0.5 size-5 opacity-0 group-hover:opacity-90 group-focus-within:opacity-90'
-                        : 'right-1.5 size-7 opacity-90 sm:opacity-0 sm:group-hover:opacity-100'
-                "
+                :class="[
+                    compact ? 'right-0.5 size-5' : 'right-1.5 size-7',
+                    alwaysShowControls
+                        ? 'opacity-90'
+                        : compact
+                          ? 'opacity-0 group-hover:opacity-90 group-focus-within:opacity-90'
+                          : 'opacity-90 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100',
+                ]"
                 :aria-label="$t('Next image')"
                 @click="next"
             >
@@ -280,18 +356,24 @@ onMounted(async () => {
 
         <div
             v-if="showThumbnails && canNavigate && sources.length > 1"
-            class="absolute inset-x-0 bottom-0 z-20 flex gap-1 overflow-x-auto bg-gradient-to-t from-black/55 to-transparent p-2 pt-6 [scrollbar-width:none]"
+            class="absolute inset-x-0 bottom-0 z-20 flex gap-1.5 overflow-x-auto bg-gradient-to-t from-black/70 via-black/25 to-transparent px-3 pt-8 pb-2.5 [scrollbar-width:none]"
         >
             <button
                 v-for="(thumb, thumbIndex) in sources"
                 :key="thumb"
                 type="button"
-                class="size-11 shrink-0 overflow-hidden rounded-lg ring-2 transition-all duration-200"
+                class="size-10 shrink-0 overflow-hidden rounded-full border-2 bg-black/30 shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_4px_10px_rgba(0,0,0,0.28)] transition-all duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none active:scale-95"
                 :class="
                     thumbIndex === index
-                        ? 'ring-white opacity-100'
-                        : 'opacity-70 ring-transparent hover:opacity-100'
+                        ? 'border-white opacity-100'
+                        : 'border-white/80 opacity-85 hover:border-white hover:opacity-100'
                 "
+                :aria-label="
+                    $t('View image :number', {
+                        number: String(thumbIndex + 1),
+                    })
+                "
+                :aria-current="thumbIndex === index ? 'true' : undefined"
                 @click="goTo(thumbIndex, $event)"
             >
                 <img

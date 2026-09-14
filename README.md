@@ -65,7 +65,8 @@ The app is served at https://localhost. Set an AI provider key in `.env` before
 the chat will answer.
 
 Property chats need listings in the database. `composer setup` runs migrations
-but does not seed them:
+but does not seed them. The seeder loads `myhome-cork-lite.json` plus the Daft
+buy and sold fixtures — not the full 52 MB MyHome dump, which is gitignored:
 
 ```bash
 docker compose exec app php artisan db:seed --class=Modules\\Properties\\Database\\Seeders\\PropertiesDatabaseSeeder
@@ -75,6 +76,7 @@ Or import a file by hand:
 
 ```bash
 docker compose exec app php artisan data:import --provider=myhome
+docker compose exec app php artisan data:import --provider=daft
 ```
 
 Frontend changes need Vite running:
@@ -100,12 +102,12 @@ Manus cannot call Laravel tools. In hybrid mode, prose can stay on Manus while
 map and listing tools run on `CHAT_AI_TOOLS_PROVIDER` (OpenAI by default).
 
 ```dotenv
-AI_PROVIDER=manus
+AI_PROVIDER=openai
 OPENAI_API_KEY=
-MANUS_API_KEY=
-MANUS_AGENT_PROFILE=lite
+# AI_PROVIDER=manus
+# MANUS_API_KEY=
+# MANUS_AGENT_PROFILE=lite
 # CHAT_AI_PROVIDER=openai
-# CHAT_OPENAI_MODEL=gpt-4o-mini
 ```
 
 Override chat alone with `CHAT_AI_PROVIDER` when the rest of the app should stay

@@ -36,3 +36,22 @@ if (! function_exists('safe_http_url')) {
         return preg_match('#^https?://#i', $url) === 1 ? $url : null;
     }
 }
+
+if (! function_exists('safe_listing_image_url')) {
+    /**
+     * Listing photos: remote http(s), or the bundled placeholder the importer
+     * stores when a fixture has no pictures.
+     */
+    function safe_listing_image_url(?string $url): ?string
+    {
+        if ($url === null || $url === '') {
+            return null;
+        }
+
+        if (preg_match('#^/modules/properties/images/[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif)$#i', $url) === 1) {
+            return $url;
+        }
+
+        return safe_http_url($url);
+    }
+}

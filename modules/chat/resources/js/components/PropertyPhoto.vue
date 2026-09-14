@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PropertyGallery from '@modules/chat/resources/js/components/PropertyGallery.vue';
-import { safeHttpUrls } from '@/lib/safeHttpUrl';
+import { safeListingImageUrls } from '@/lib/safeHttpUrl';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -25,13 +25,13 @@ const props = withDefaults(
 );
 
 const sources = computed(() => {
-    const fromList = safeHttpUrls(props.images);
+    const fromList = safeListingImageUrls(props.images);
 
     if (fromList.length) {
         return fromList;
     }
 
-    const src = safeHttpUrls([props.src ?? ''])[0];
+    const src = safeListingImageUrls([props.src ?? ''])[0];
 
     return src ? [src] : [];
 });

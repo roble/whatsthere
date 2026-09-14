@@ -108,6 +108,7 @@ function price(property: MapMarker): string {
                         :images="images"
                         :alt="property.name"
                         eager
+                        always-show-controls
                         show-thumbnails
                     />
                 </section>

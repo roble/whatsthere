@@ -288,23 +288,35 @@
     scroll-padding-inline: 0.75rem;
 }
 
-.property-rail > div:last-child {
-    scroll-behavior: smooth;
+.property-rail__scroller {
+    scrollbar-width: thin;
+    scroll-behavior: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    cursor: grab;
 }
 
-.property-rail > div:last-child::-webkit-scrollbar {
+.property-rail__scroller.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.property-rail__scroller::-webkit-scrollbar {
     height: 4px;
 }
 
-.property-rail > div:last-child::-webkit-scrollbar-thumb {
+.property-rail__scroller::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: color-mix(in oklch, var(--foreground) 18%, transparent);
+    background: color-mix(in oklch, var(--foreground) 22%, transparent);
 }
 
-.property-results .group:hover img {
-    transform: scale(1.04);
-    transition: transform 400ms ease-out;
+.property-rail__track {
+    contain: layout style;
+}
+
+.property-results .property-rail .group:hover img {
+    transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

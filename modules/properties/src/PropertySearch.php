@@ -255,7 +255,7 @@ class PropertySearch
             'categoryKey' => $marker['categoryKey'] ?? 'property',
         ];
 
-        $safeImage = is_string($firstImage[0] ?? null) ? safe_http_url($firstImage[0]) : null;
+        $safeImage = is_string($firstImage[0] ?? null) ? safe_listing_image_url($firstImage[0]) : null;
 
         if ($safeImage !== null) {
             $slim['images'] = [$safeImage];
@@ -325,7 +325,7 @@ class PropertySearch
         $metadata = $listing?->metadata ?? [];
         $images = array_values(array_filter(
             array_map(
-                fn (mixed $url): ?string => is_string($url) ? safe_http_url($url) : null,
+                fn (mixed $url): ?string => is_string($url) ? safe_listing_image_url($url) : null,
                 $listing?->media->pluck('url')->all() ?? [],
             ),
         ));

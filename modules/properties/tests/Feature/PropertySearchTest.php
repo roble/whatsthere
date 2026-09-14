@@ -3,7 +3,9 @@
 namespace Modules\Properties\Tests\Feature;
 
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Modules\Properties\Database\Seeders\PropertiesDatabaseSeeder;
 use Modules\Properties\Imports\ListingImportService;
+use Modules\Properties\Imports\ListingProviderRegistry;
 use Modules\Properties\Imports\MyHomeCorkListingMapper;
 use Modules\Properties\Models\Property;
 use Modules\Properties\Models\PropertyListing;
@@ -100,6 +102,33 @@ class PropertySearchTest extends TestCase
         $this->assertCount(50, $result['markers']);
         $this->assertSame(20000001, $result['markers'][0]['asking_price']);
         $this->assertSame(20000050, $result['markers'][49]['asking_price']);
+    }
+
+    public function test_seeder_uses_lite_myhome_and_daft_fixtures_not_the_full_dump(): void
+    {
+        $seeder = new PropertiesDatabaseSeeder;
+        $fixtures = $seeder->fixtures();
+        $names = array_map(basename(...), $fixtures);
+
+        $this->assertContains('myhome-cork-lite.json', $names);
+        $this->assertContains('sold-0001-daft.json', $names);
+        $this->assertContains('buy-0001-daft.json', $names);
+        $this->assertNotContains('myhome-cork.json', $names);
+        $this->assertSame('myhome', $seeder->providerFor(base_path('modules/properties/database/fixtures/myhome-cork-lite.json')));
+        $this->assertSame('daft', $seeder->providerFor(base_path('modules/properties/database/fixtures/sold-0001-daft.json')));
+        $this->assertEqualsCanonicalizing(['myhome', 'daft'], ListingProviderRegistry::make()->names());
+    }
+
+    public function test_sold_daft_fixture_imports_sale_price_history(): void
+    {
+        $import = app(ListingImportService::class)->import(
+            'daft',
+            base_path('modules/properties/database/fixtures/sold-0001-daft.json'),
+        );
+
+        $this->assertGreaterThan(0, $import->imported_records);
+        $this->assertGreaterThan(0, Property::query()->where('status', 'sold')->count());
+        $this->assertGreaterThan(0, PropertyPriceRecord::query()->where('record_type', 'sale')->count());
     }
 
     public function test_importing_a_myhome_fixture_twice_does_not_duplicate_properties_or_price_records(): void
@@ -400,6 +429,90 @@ class PropertySearchTest extends TestCase
         $this->assertNull(safe_http_url("https://example.test/photo.jpg\njavascript:alert(1)"));
         $this->assertNull(safe_http_url('https://user:pass@example.test/photo.jpg'));
         $this->assertSame('https://example.test/photo.jpg', safe_http_url('https://example.test/photo.jpg'));
+        $this->assertSame(
+            '/modules/properties/images/cork-home-exterior.png',
+            safe_listing_image_url('/modules/properties/images/cork-home-exterior.png'),
+        );
+        $this->assertNull(safe_listing_image_url('/modules/properties/images/../secret.png'));
+        $this->assertNull(safe_listing_image_url('javascript:alert(1)'));
+    }
+
+    public function test_import_keeps_safe_photos_and_drops_script_urls(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'listing');
+        file_put_contents($path, json_encode([[
+            'id' => 'unsafe-1',
+            'address' => '1 Test Street',
+            'town' => 'Mallow',
+            'county' => 'Cork',
+            'status' => 'active',
+            'latitude' => 52.14,
+            'longitude' => -8.65,
+            'url' => 'javascript:alert(1)',
+            'media' => [
+                ['url' => 'javascript:alert(1)'],
+                ['url' => 'https://photos.example.test/house.jpg'],
+            ],
+            'prices' => [[
+                'record_type' => 'asking_price',
+                'amount' => 10000000,
+                'effective_date' => '2026-01-01',
+            ]],
+        ]], JSON_THROW_ON_ERROR));
+
+        try {
+            $import = app(ListingImportService::class)->import('myhome', $path);
+
+            $this->assertSame(1, $import->imported_records);
+
+            $listing = PropertyListing::query()
+                ->where('provider', 'myhome')
+                ->where('provider_listing_id', 'unsafe-1')
+                ->first();
+
+            $this->assertNotNull($listing);
+            $this->assertNull($listing->url);
+            $this->assertSame(
+                ['https://photos.example.test/house.jpg'],
+                $listing->media()->pluck('url')->all(),
+            );
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function test_import_without_photos_exposes_the_bundled_placeholder(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'listing');
+        file_put_contents($path, json_encode([[
+            'id' => 'no-photos',
+            'address' => '2 Test Street',
+            'town' => 'Mallow',
+            'county' => 'Cork',
+            'status' => 'active',
+            'latitude' => 52.14,
+            'longitude' => -8.65,
+            'media' => [],
+            'prices' => [[
+                'record_type' => 'asking_price',
+                'amount' => 10000000,
+                'effective_date' => '2026-01-01',
+            ]],
+        ]], JSON_THROW_ON_ERROR));
+
+        try {
+            app(ListingImportService::class)->import('myhome', $path);
+
+            $property = Property::query()->where('reference', 'myhome:no-photos')->first();
+
+            $this->assertNotNull($property);
+            $this->assertSame(
+                ['/modules/properties/images/cork-home-exterior.png'],
+                (new PropertySearch)->listing($property->id)['images'] ?? null,
+            );
+        } finally {
+            unlink($path);
+        }
     }
 
     public function test_compact_tool_response_omits_heavy_listing_fields(): void

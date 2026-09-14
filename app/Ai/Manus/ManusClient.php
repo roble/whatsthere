@@ -27,7 +27,7 @@ class ManusClient
     /**
      * @return array<string, mixed>
      */
-    public function listMessages(string $taskId, string $order = 'desc', int $limit = 50): array
+    public function listMessages(string $taskId, string $order = 'desc', int $limit = 200): array
     {
         return $this->request('get', 'task.listMessages', [
             'task_id' => $taskId,
@@ -45,7 +45,7 @@ class ManusClient
         $deadline = microtime(true) + $timeoutSeconds;
 
         while (microtime(true) < $deadline) {
-            $messages = ($this->listMessages($taskId))['messages'] ?? [];
+            $messages = ($this->listMessages($taskId, 'desc', 200))['messages'] ?? [];
 
             if ($this->taskHasStopped($messages)) {
                 $reply = $this->latestAssistantReply($messages);
@@ -86,8 +86,8 @@ class ManusClient
      */
     protected function latestAssistantReply(array $messages): ?string
     {
-        $reply = null;
-
+        // listMessages is requested newest-first. The first non-empty assistant
+        // message is the final reply; walking to the last one returned the draft.
         foreach ($messages as $message) {
             if (($message['type'] ?? null) !== 'assistant_message') {
                 continue;
@@ -96,11 +96,11 @@ class ManusClient
             $content = trim((string) ($message['assistant_message']['content'] ?? ''));
 
             if ($content !== '') {
-                $reply = $content;
+                return $content;
             }
         }
 
-        return $reply;
+        return null;
     }
 
     /**
@@ -141,6 +141,7 @@ class ManusClient
     {
         return Http::acceptJson()
             ->asJson()
+            ->throw()
             ->withHeaders([
                 'x-manus-api-key' => $this->apiKey,
             ]);

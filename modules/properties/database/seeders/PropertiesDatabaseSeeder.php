@@ -8,12 +8,12 @@ use Modules\Properties\Imports\ListingImportService;
 class PropertiesDatabaseSeeder extends Seeder
 {
     /**
-     * Load every MyHome Cork listing fixture in the repository.
+     * Load every listing fixture in the repository.
      *
-     * The fixtures are real scraped listings, so seeding is the same import a
-     * developer would run by hand, over every file at once. Inventing properties
-     * instead would put addresses that do not exist in front of anyone looking
-     * at the map.
+     * MyHome Cork lite covers current for-sale stock. Daft sold fixtures keep
+     * the price history a portal search does not give you. The full
+     * myhome-cork.json dump is gitignored — it is too large to seed on a
+     * default 128M PHP box and must not re-enter git history.
      *
      * The importer is idempotent, so re-seeding updates rows rather than
      * duplicating them, and a malformed listing is counted and skipped rather
@@ -30,11 +30,13 @@ class PropertiesDatabaseSeeder extends Seeder
         $importer = app(ListingImportService::class);
 
         foreach ($this->fixtures() as $fixture) {
-            $import = $importer->import('myhome', $fixture);
+            $provider = $this->providerFor($fixture);
+            $import = $importer->import($provider, $fixture);
 
             $this->command?->getOutput()->writeln(sprintf(
-                '  <fg=gray>%s</>: %d/%d imported%s',
+                '  <fg=gray>%s</> (%s): %d/%d imported%s',
                 basename($fixture),
+                $provider,
                 $import->imported_records,
                 $import->total_records,
                 $import->failed_records > 0 ? ", {$import->failed_records} skipped" : '',
@@ -45,10 +47,28 @@ class PropertiesDatabaseSeeder extends Seeder
     /**
      * Every fixture to import, in a stable order.
      *
+     * Sorted so a re-seed replays the files the same way each time: the last
+     * price record for a property wins, and that should not depend on how the
+     * filesystem happened to order the directory.
+     *
      * @return list<string>
      */
-    private function fixtures(): array
+    public function fixtures(): array
     {
-        return [base_path('modules/properties/database/fixtures/myhome-cork.json')];
+        $fixtures = glob(base_path('modules/properties/database/fixtures/*.json')) ?: [];
+
+        $fixtures = array_values(array_filter(
+            $fixtures,
+            static fn (string $path): bool => basename($path) !== 'myhome-cork.json',
+        ));
+
+        sort($fixtures);
+
+        return $fixtures;
+    }
+
+    public function providerFor(string $fixture): string
+    {
+        return str_ends_with(basename($fixture), '-daft.json') ? 'daft' : 'myhome';
     }
 }

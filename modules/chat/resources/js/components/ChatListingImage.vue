@@ -4,7 +4,7 @@ import {
     CHAT_LISTING_MARKERS,
     resolveListingImages,
 } from '@modules/chat/resources/js/listingImages';
-import { safeHttpUrl } from '@/lib/safeHttpUrl';
+import { safeListingImageUrl } from '@/lib/safeHttpUrl';
 import { computed, inject } from 'vue';
 import type { MapMarker } from '@modules/chat/resources/js/map';
 
@@ -25,7 +25,7 @@ const listing = computed(() =>
     resolveListingImages(props.node.url, markers.value),
 );
 
-const fallbackSrc = computed(() => safeHttpUrl(props.node.url));
+const fallbackSrc = computed(() => safeListingImageUrl(props.node.url));
 
 const alt = computed(
     () => listing.value?.name ?? props.node.alt ?? props.node.title ?? '',
@@ -44,6 +44,7 @@ const alt = computed(
                 :alt="alt"
                 :initial-index="listing.startIndex"
                 navigable
+                always-show-controls
                 show-dots
                 show-counter
             />

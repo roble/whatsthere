@@ -29,3 +29,29 @@ export function safeHttpUrl(url: string | null | undefined): string | null {
 export function safeHttpUrls(urls: string[] | undefined): string[] {
     return (urls ?? []).filter((url): url is string => safeHttpUrl(url) !== null);
 }
+
+const BUNDLED_LISTING_IMAGE =
+    /^\/modules\/properties\/images\/[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif)$/i;
+
+/** Remote listing photos, or the importer's bundled placeholder. */
+export function safeListingImageUrl(
+    url: string | null | undefined,
+): string | null {
+    if (!url) {
+        return null;
+    }
+
+    if (BUNDLED_LISTING_IMAGE.test(url)) {
+        return url;
+    }
+
+    return safeHttpUrl(url);
+}
+
+export function safeListingImageUrls(
+    urls: string[] | undefined,
+): string[] {
+    return (urls ?? []).filter(
+        (url): url is string => safeListingImageUrl(url) !== null,
+    );
+}

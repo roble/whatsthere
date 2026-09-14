@@ -14,14 +14,17 @@ import {
 import PropertyPhoto from '@modules/chat/resources/js/components/PropertyPhoto.vue';
 import IconBedDouble from '~icons/lucide/bed-double';
 import IconBadgeCheck from '~icons/lucide/badge-check';
+import IconChevronLeft from '~icons/lucide/chevron-left';
+import IconChevronRight from '~icons/lucide/chevron-right';
 import IconHome from '~icons/lucide/house';
 import IconMaximize2 from '~icons/lucide/maximize-2';
 import IconMinimize2 from '~icons/lucide/minimize-2';
 import IconSlidersHorizontal from '~icons/lucide/sliders-horizontal';
 import IconSparkles from '~icons/lucide/sparkles';
 import IconStar from '~icons/lucide/star';
+import { usePreferredReducedMotion } from '@vueuse/core';
 import type { Component } from 'vue';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const highlightIcons: Record<string, Component> = {
     value: IconSparkles,
@@ -38,7 +41,7 @@ const props = withDefaults(
     }>(),
     { dense: false, loading: false },
 );
-defineEmits<{
+const emit = defineEmits<{
     select: [MapMarker];
     highlight: [MapMarker | null];
     preferences: [];
@@ -46,12 +49,251 @@ defineEmits<{
 
 const expanded = ref(false);
 const root = ref<HTMLElement | null>(null);
+const railEl = ref<HTMLElement | null>(null);
+const canScrollPrev = ref(false);
+const canScrollNext = ref(false);
+const reducedMotion = usePreferredReducedMotion();
+const scrollBehavior = computed(() =>
+    reducedMotion.value === 'reduce' ? 'auto' : 'smooth',
+);
+const railWindow = ref({ start: 0, end: 16 });
+const railDragged = ref(false);
+
+const cardWidthPx = computed(() => (props.dense ? 148 : 168));
+const cardHeightPx = computed(() => Math.round(cardWidthPx.value * 0.75));
+const cardStridePx = computed(() => cardWidthPx.value + 10);
+const railTrackWidth = computed(() => {
+    const count = visible.value;
+
+    return count === 0 ? 0 : count * cardStridePx.value - 10;
+});
+const windowedMarkers = computed(() => {
+    const markers = props.view.markers ?? [];
+    const { start, end } = railWindow.value;
+
+    return markers.slice(start, end).map((property, offset) => ({
+        property,
+        index: start + offset,
+    }));
+});
 
 const visible = computed(() => props.view.markers?.length ?? 0);
 const total = computed(() => props.view.total ?? 0);
 const title = computed(() => headingKey(props.view.markers));
-const asRail = computed(() => props.dense && !expanded.value);
+const asRail = computed(() => !expanded.value);
 const mapCapped = computed(() => visible.value < total.value);
+const showRailArrows = computed(
+    () => asRail.value && !props.loading && visible.value > 1,
+);
+
+function updateRailScroll(): void {
+    const rail = railEl.value;
+
+    if (!rail || !asRail.value) {
+        canScrollPrev.value = false;
+        canScrollNext.value = false;
+
+        return;
+    }
+
+    const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+
+    canScrollPrev.value = rail.scrollLeft > 8;
+    canScrollNext.value = max > 8 && rail.scrollLeft < max - 8;
+
+    const stride = cardStridePx.value;
+    const count = visible.value;
+    const viewCount = Math.max(4, Math.ceil(rail.clientWidth / stride) + 1);
+    const buffer = 4;
+    const start =
+        count === 0
+            ? 0
+            : Math.max(
+                  0,
+                  Math.min(
+                      count - 1,
+                      Math.floor(rail.scrollLeft / stride) - buffer,
+                  ),
+              );
+    const end = Math.min(count, Math.max(start + 1, start + viewCount + buffer * 2));
+
+    if (railWindow.value.start !== start || railWindow.value.end !== end) {
+        railWindow.value = { start, end };
+    }
+}
+
+function railStep(): number {
+    return cardStridePx.value * (props.dense ? 2 : 1);
+}
+
+function scrollRail(direction: -1 | 1): void {
+    railEl.value?.scrollBy({
+        left: direction * railStep(),
+        behavior: scrollBehavior.value,
+    });
+}
+
+function onRailWheel(event: WheelEvent): void {
+    if (expanded.value) {
+        return;
+    }
+
+    const rail = railEl.value;
+
+    if (!rail || rail.scrollWidth <= rail.clientWidth) {
+        return;
+    }
+
+    if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) {
+        return;
+    }
+
+    const max = rail.scrollWidth - rail.clientWidth;
+
+    if ((event.deltaY < 0 && rail.scrollLeft <= 0) || (event.deltaY > 0 && rail.scrollLeft >= max - 1)) {
+        return;
+    }
+
+    event.preventDefault();
+    rail.scrollLeft += event.deltaY;
+}
+
+let drag: {
+    pointerId: number;
+    startX: number;
+    startScroll: number;
+    moved: boolean;
+} | null = null;
+
+function onRailPointerDown(event: PointerEvent): void {
+    if (event.pointerType === 'touch' || event.button !== 0 || !railEl.value) {
+        return;
+    }
+
+    drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startScroll: railEl.value.scrollLeft,
+        moved: false,
+    };
+    railDragged.value = false;
+}
+
+function onRailPointerMove(event: PointerEvent): void {
+    const rail = railEl.value;
+
+    if (!drag || drag.pointerId !== event.pointerId || !rail) {
+        return;
+    }
+
+    const delta = event.clientX - drag.startX;
+
+    if (!drag.moved && Math.abs(delta) < 8) {
+        return;
+    }
+
+    if (!drag.moved) {
+        drag.moved = true;
+        railDragged.value = true;
+        rail.setPointerCapture(event.pointerId);
+        rail.classList.add('is-dragging');
+    }
+
+    event.preventDefault();
+    rail.scrollLeft = drag.startScroll - delta;
+}
+
+function endRailDrag(event: PointerEvent): void {
+    if (!drag || drag.pointerId !== event.pointerId) {
+        return;
+    }
+
+    if (drag.moved) {
+        railEl.value?.classList.remove('is-dragging');
+        requestAnimationFrame(() => {
+            railDragged.value = false;
+        });
+    }
+
+    drag = null;
+}
+
+function onCardSelect(property: MapMarker): void {
+    if (railDragged.value) {
+        return;
+    }
+
+    emit('select', property);
+}
+
+function onRailKeydown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowLeft' && canScrollPrev.value) {
+        event.preventDefault();
+        scrollRail(-1);
+    }
+
+    if (event.key === 'ArrowRight' && canScrollNext.value) {
+        event.preventDefault();
+        scrollRail(1);
+    }
+}
+
+let railObserver: ResizeObserver | null = null;
+let scrollFrame = 0;
+
+function onRailScroll(): void {
+    if (scrollFrame) {
+        return;
+    }
+
+    scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        updateRailScroll();
+    });
+}
+
+function bindRail(el: HTMLElement | null, previous: HTMLElement | null): void {
+    previous?.removeEventListener('wheel', onRailWheel);
+    previous?.removeEventListener('pointerdown', onRailPointerDown);
+    previous?.removeEventListener('pointermove', onRailPointerMove);
+    previous?.removeEventListener('pointerup', endRailDrag);
+    previous?.removeEventListener('pointercancel', endRailDrag);
+    railObserver?.disconnect();
+    railObserver = null;
+
+    if (!el) {
+        canScrollPrev.value = false;
+        canScrollNext.value = false;
+
+        return;
+    }
+
+    el.addEventListener('wheel', onRailWheel, { passive: false });
+    el.addEventListener('pointerdown', onRailPointerDown);
+    el.addEventListener('pointermove', onRailPointerMove);
+    el.addEventListener('pointerup', endRailDrag);
+    el.addEventListener('pointercancel', endRailDrag);
+    railObserver = new ResizeObserver(() => updateRailScroll());
+    railObserver.observe(el);
+    updateRailScroll();
+}
+
+watch(railEl, (el, previous) => {
+    bindRail(el, previous ?? null);
+});
+
+onMounted(() => {
+    bindRail(railEl.value, null);
+});
+
+onBeforeUnmount(() => {
+    if (scrollFrame) {
+        cancelAnimationFrame(scrollFrame);
+        scrollFrame = 0;
+    }
+
+    bindRail(null, railEl.value);
+});
 
 function meta(marker: MapMarker): { beds: string | null; extra: string } {
     if (isLand(marker)) {
@@ -75,13 +317,34 @@ watch(
         }
 
         await nextTick();
-        root.value
-            ?.querySelector(`[data-testid="select-property-${id}"]`)
-            ?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'nearest',
+
+        const markers = props.view.markers ?? [];
+        const index = markers.findIndex((marker) => marker.id === id);
+
+        if (asRail.value && index >= 0 && railEl.value) {
+            railEl.value.scrollTo({
+                left: index * cardStridePx.value,
+                behavior: scrollBehavior.value,
             });
+        } else {
+            root.value
+                ?.querySelector(`[data-testid="select-property-${id}"]`)
+                ?.scrollIntoView({
+                    behavior: scrollBehavior.value,
+                    block: 'nearest',
+                    inline: 'nearest',
+                });
+        }
+
+        updateRailScroll();
+    },
+);
+
+watch(
+    () => [props.view.markers, asRail.value, props.loading] as const,
+    async () => {
+        await nextTick();
+        updateRailScroll();
     },
 );
 </script>
@@ -100,23 +363,21 @@ watch(
         data-testid="property-results"
     >
         <header
-            class="flex items-center gap-2 px-3"
+            class="flex items-center gap-1.5 px-3"
             :class="
                 expanded
                     ? 'border-border/50 sticky top-0 z-10 border-b bg-background/90 py-2 backdrop-blur-xl'
-                    : asRail
-                      ? 'py-1.5'
-                      : 'py-2'
+                    : 'h-7 py-0'
             "
         >
             <h2
-                class="min-w-0 truncate text-[13px] font-semibold tracking-tight"
+                class="text-muted-foreground min-w-0 truncate text-[11px] font-medium tracking-tight"
             >
                 {{ $t(title) }}
             </h2>
             <span
                 v-if="!loading"
-                class="bg-muted/80 text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums"
+                class="text-muted-foreground shrink-0 text-[11px] font-medium tabular-nums"
                 :title="
                     mapCapped
                         ? $t(':shown of :total match your filters', {
@@ -148,7 +409,7 @@ watch(
                 v-if="!loading && visible"
                 variant="ghost"
                 size="sm"
-                class="text-muted-foreground hover:text-foreground ml-auto h-7 shrink-0 gap-1 rounded-lg px-2 text-[11px] transition-all duration-200 hover:bg-primary/10"
+                class="text-muted-foreground hover:text-foreground ml-auto h-6 shrink-0 gap-1 rounded-md px-1.5 text-[11px] transition-all duration-200 hover:bg-primary/10"
                 :aria-label="
                     $t(expanded ? 'Close full results' : 'Expand results')
                 "
@@ -161,7 +422,7 @@ watch(
             >
                 <IconMinimize2 v-if="expanded" class="size-3.5" />
                 <IconMaximize2 v-else class="size-3.5" />
-                {{ $t(expanded ? 'Close' : 'See all listings') }}
+                <span v-if="expanded">{{ $t('Close') }}</span>
             </Button>
         </header>
 
@@ -179,17 +440,17 @@ watch(
 
         <div
             v-if="loading"
-            class="property-rail flex gap-2.5 overflow-hidden px-3 pb-2.5"
+            class="property-rail flex gap-2.5 overflow-hidden px-11 pb-1.5"
             aria-busy="true"
             aria-live="polite"
         >
             <div
                 v-for="index in 4"
                 :key="index"
-                class="border-border/40 bg-background/60 w-[10.5rem] shrink-0 overflow-hidden rounded-2xl border shadow-sm"
+                class="border-border/40 bg-background/60 w-[9.25rem] shrink-0 overflow-hidden rounded-2xl border shadow-sm"
             >
                 <div
-                    class="from-muted via-background/50 to-muted aspect-[4/5] w-full animate-pulse bg-gradient-to-br"
+                    class="from-muted via-background/50 to-muted aspect-[4/3] w-full animate-pulse bg-gradient-to-br"
                 />
             </div>
         </div>
@@ -229,43 +490,81 @@ watch(
             </Button>
         </div>
 
-        <div v-else-if="asRail" class="property-rail relative pb-2.5">
+        <div v-else-if="asRail" class="property-rail relative pb-1.5">
             <div
-                class="pointer-events-none absolute inset-y-0 left-0 z-10 w-3 bg-gradient-to-r from-background/95 to-transparent"
+                class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/70 to-transparent"
                 aria-hidden="true"
             />
             <div
-                class="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background/95 to-transparent"
+                class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/70 to-transparent"
                 aria-hidden="true"
             />
-            <div
-                class="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 [scrollbar-width:thin]"
+            <button
+                v-if="showRailArrows"
+                type="button"
+                class="border-border/60 bg-background/90 text-foreground absolute top-1/2 left-1.5 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-full border shadow-lg shadow-black/20 backdrop-blur-md transition-all duration-200 hover:scale-105 hover:border-primary/40 hover:bg-background hover:shadow-primary/15 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-30"
+                :aria-label="$t('Previous listings')"
+                :disabled="!canScrollPrev"
+                data-testid="property-rail-prev"
+                @click="scrollRail(-1)"
             >
-                <button
-                    v-for="(property, index) in view.markers"
-                    :key="property.id"
-                    type="button"
-                    :data-testid="`select-property-${property.id}`"
-                    :aria-pressed="selectedId === property.id"
-                    class="group border-border/45 bg-background/70 focus-visible:ring-ring motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 relative w-[10.5rem] shrink-0 snap-start overflow-hidden rounded-2xl border text-left shadow-md shadow-black/10 transition-all duration-200 outline-none hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-primary/15 focus-visible:ring-2 active:scale-[0.98]"
-                    :class="
-                        selectedId === property.id
-                            ? 'border-red-500/90 ring-2 ring-red-500/35 shadow-red-500/15'
-                            : ''
-                    "
-                    :style="{ animationDelay: `${Math.min(index, 8) * 35}ms` }"
-                    @click="$emit('select', property)"
-                    @mouseenter="$emit('highlight', property)"
-                    @mouseleave="$emit('highlight', null)"
-                    @focus="$emit('highlight', property)"
-                    @blur="$emit('highlight', null)"
+                <IconChevronLeft class="size-4" />
+            </button>
+            <button
+                v-if="showRailArrows"
+                type="button"
+                class="border-border/60 bg-background/90 text-foreground absolute top-1/2 right-1.5 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-full border shadow-lg shadow-black/20 backdrop-blur-md transition-all duration-200 hover:scale-105 hover:border-primary/40 hover:bg-background hover:shadow-primary/15 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-30"
+                :aria-label="$t('Next listings')"
+                :disabled="!canScrollNext"
+                data-testid="property-rail-next"
+                @click="scrollRail(1)"
+            >
+                <IconChevronRight class="size-4" />
+            </button>
+            <div
+                ref="railEl"
+                class="property-rail__scroller overflow-x-auto overflow-y-hidden px-11"
+                tabindex="0"
+                role="region"
+                :aria-label="$t(title)"
+                @scroll.passive="onRailScroll"
+                @keydown="onRailKeydown"
+            >
+                <div
+                    class="property-rail__track relative"
+                    :style="{
+                        width: `${railTrackWidth}px`,
+                        height: `${cardHeightPx}px`,
+                    }"
                 >
-                    <span class="relative block aspect-[4/5] w-full overflow-hidden">
+                    <button
+                        v-for="{ property, index } in windowedMarkers"
+                        :key="property.id"
+                        type="button"
+                        :data-testid="`select-property-${property.id}`"
+                        :aria-pressed="selectedId === property.id"
+                        class="group border-border/45 bg-background/70 focus-visible:ring-ring absolute top-0 overflow-hidden rounded-2xl border text-left shadow-md shadow-black/10 outline-none hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10 focus-visible:ring-2"
+                        :class="
+                            selectedId === property.id
+                                ? 'border-red-500/90 ring-2 ring-red-500/35 shadow-red-500/15'
+                                : ''
+                        "
+                        :style="{
+                            left: `${index * cardStridePx}px`,
+                            width: `${cardWidthPx}px`,
+                            height: `${cardHeightPx}px`,
+                        }"
+                        @click="onCardSelect(property)"
+                        @mouseenter="emit('highlight', property)"
+                        @mouseleave="emit('highlight', null)"
+                        @focus="emit('highlight', property)"
+                        @blur="emit('highlight', null)"
+                    >
+                    <span class="relative block aspect-[4/3] w-full overflow-hidden">
                         <PropertyPhoto
                             :images="property.images ?? []"
                             :alt="property.name"
-                            :eager="index < 5"
-                            navigable
+                            :eager="index < 3"
                             compact
                         />
                         <span
@@ -310,12 +609,12 @@ watch(
                             <IconBedDouble class="size-2.5" aria-hidden="true" />
                             {{ meta(property).beds }}
                         </span>
-                        <span class="absolute inset-x-0 bottom-0 space-y-0.5 p-2.5">
-                            <span class="block text-[15px] font-semibold tracking-tight text-white">
+                        <span class="absolute inset-x-0 bottom-0 space-y-0 p-2">
+                            <span class="block text-[13px] font-semibold tracking-tight text-white">
                                 {{ formatPrice(property) }}
                             </span>
                             <span
-                                class="block truncate text-[11px] leading-tight text-white/90"
+                                class="block truncate text-[10px] leading-tight text-white/90"
                             >
                                 {{ property.name }}
                             </span>
@@ -327,7 +626,8 @@ watch(
                             </span>
                         </span>
                     </span>
-                </button>
+                    </button>
+                </div>
             </div>
         </div>
 

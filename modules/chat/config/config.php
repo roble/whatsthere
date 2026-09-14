@@ -1,5 +1,7 @@
 <?php
 
+use Modules\Chat\Ai\ChatAgent;
+
 return [
 
     /*
@@ -34,12 +36,12 @@ return [
     |
     */
 
-    'ai_provider' => env('CHAT_AI_PROVIDER') ?: env('AI_PROVIDER', 'manus'),
+    'ai_provider' => env('CHAT_AI_PROVIDER') ?: env('AI_PROVIDER', 'openai'),
 
     'ai_tools_provider' => env('CHAT_AI_TOOLS_PROVIDER', 'openai'),
 
     'models' => [
-        'openai' => env('CHAT_OPENAI_MODEL', 'gpt-4o-mini'),
+        'openai' => env('CHAT_OPENAI_MODEL') ?: ChatAgent::MODEL,
         'manus' => env('CHAT_MANUS_PROFILE', env('MANUS_AGENT_PROFILE', 'lite')),
     ],
 

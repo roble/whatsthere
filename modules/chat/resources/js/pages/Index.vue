@@ -77,7 +77,10 @@ import {
     nearestByCategory,
     slimSelectedProperty,
 } from '@modules/chat/resources/js/listing';
-import { CHAT_LISTING_MARKERS } from '@modules/chat/resources/js/listingImages';
+import {
+    CHAT_LISTING_MARKERS,
+    richerImages,
+} from '@modules/chat/resources/js/listingImages';
 import {
     chatTools,
     type TripPhase,
@@ -621,8 +624,7 @@ function mergePropertyMarkers(
             return marker;
         }
 
-        const images =
-            marker.images?.length ? marker.images : (previous.images ?? []);
+        const images = richerImages(marker.images, previous.images);
 
         return {
             ...previous,
@@ -1789,7 +1791,7 @@ watch(tripPhase, () => {
                     data-testid="chat-pane"
                 >
                     <AppHeader
-                        class="relative z-[1] border-b border-border/40 bg-background/40 backdrop-blur-md"
+                        class="relative z-[1] !h-10 border-b border-border/40 bg-background/40 backdrop-blur-md"
                         :title="currentTitle ?? $t(title)"
                         :breadcrumbs="[
                             { title: currentTitle ?? $t('New chat') },
@@ -1802,7 +1804,7 @@ watch(tripPhase, () => {
                         "
                         :preferences="propertyPreferences"
                         :saving="searchingProperties"
-                        :compact="listingsCompact"
+                        compact
                         @update="applyPropertyFilters"
                         @preferences="propertyFiltersOpen = true"
                     />
@@ -1817,7 +1819,6 @@ watch(tripPhase, () => {
                         v-if="
                             propertyFlow && !isMapStaging && propertyListingView
                         "
-                        :class="listingsCompact ? undefined : 'flex-1'"
                         :dense="listingsCompact"
                         :loading="searchingProperties"
                         :view="propertyListingView"
@@ -1846,7 +1847,6 @@ watch(tripPhase, () => {
                     <Conversation
                         ref="conversation"
                         class="chat-transcript min-h-0 flex-1"
-                        :class="listingsCompact ? undefined : 'flex-none'"
                     >
                         <ConversationContent
                             :class="[

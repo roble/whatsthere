@@ -24,7 +24,7 @@ import {
     type MapViewport,
     routeDistanceKm,
 } from '@modules/chat/resources/js/map';
-import { safeHttpUrl } from '@/lib/safeHttpUrl';
+import { safeHttpUrl, safeListingImageUrls } from '@/lib/safeHttpUrl';
 import {
     formatDistance,
     formatPricePerSqm,
@@ -436,7 +436,7 @@ function propertyTypeLabel(place: MapMarker): string {
 }
 
 function attachListingPhoto(container: HTMLElement, urls: string[]): void {
-    const sources = urls.filter((url) => url !== '');
+    const sources = safeListingImageUrls(urls);
 
     if (!sources.length) {
         return;

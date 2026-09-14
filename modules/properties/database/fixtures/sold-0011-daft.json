@@ -1,0 +1,1233 @@
+{
+    "listings": [
+        {
+            "listing": {
+                "id": 5911713,
+                "title": "16 The Sherkin, Lancaster Gate, Lancaster Quay, Cork",
+                "seoTitle": "16 The Sherkin, Lancaster Gate, Lancaster Quay, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "D9B8517DB2F757BD80258E51005AB1F5",
+                "category": "Sold",
+                "price": "€850,000",
+                "abbreviatedPrice": "€850k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "2 Bath",
+                "propertyType": "Apartment",
+                "daftShortcode": "15911713",
+                "seller": {
+                    "sellerId": 2570,
+                    "name": "Casey & Kingston",
+                    "phone": "021 4271127",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjRcL2NcLzRjZTkwM2JhNWY0NDYwZTk4NjBlMGY0NmE2MzlhYzc5LnBuZyJ9?signature=8d581f90f61ea9cc5c05cdecca5e76ca5c1ea80f67b3fa9886401af181c8d7aa",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiI0XC9jXC80Y2U5MDNiYTVmNDQ2MGU5ODYwZTBmNDZhNjM5YWM3OS5wbmcifQ==?signature=c6d272324910e0b990d2b8b6b6ac5eda576b9ec0d8ab996fbffda28e8f09eca7",
+                    "branch": "Casey & Kingston",
+                    "address": "43 Grand Parade\r\nCork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvNlwvNzY0Mjc3MDYwZjhmYzBlNmM3MjJkYTVlYmEwNGRiMzJfc3RhbmRhcmQucG5nIn0=?signature=11fe7dcf1ed333f30ae372e20f0ffb26c302fc514b47bd41bacbc9ee943c8649",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI1XC9kXC81ZDVjMDc3YTRiYmU0MDg4YjExNDAwZGRiYjhlZjUxZC5qcGcifQ==?signature=01000e4d23db66420c6a74de6ed25db99972d2f995af4ff611449afa479e7ea4",
+                    "backgroundColour": "#324999",
+                    "licenceNumber": "001643",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€870,000",
+                "soldDate": "30/07/2026",
+                "media": {
+                    "images": [
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjdcL2VcLzdlYjc5YTM4LTc5NzUtNGI4Yi05MmE1LTEwNjdmNzZkYmJlNi5KUEVHIn0=?signature=6849774358069265dda4bd24d4c44f8a2e75afebe81597d8ba05475a9073d6f6"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjdcLzJcLzcyNjQ5NzMzLThiYWQtNGRkYi1hZjc2LWMzY2E4MDY5OWQ1Ni5KUEVHIn0=?signature=efadbb38c3f03b9415cf1ecb8cef6ab567376e64667c8dd1b085c049d0619a9b"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImNcLzNcL2MzYjU5YzEzLWFmMTItNDFhZi1iY2FiLTE3NmRjMGZiODMxOC5KUEVHIn0=?signature=37f044f9073ba99ad0739a9273c39fa9bb525b3d819d5ba3b9aa09b9bb644c28"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjZcLzFcLzYxN2Y4MGJjLTdkYzgtNDg2OS1hYjMyLTVlOTdiM2NkOGQzZi5KUEVHIn0=?signature=043c84dd85e05011d2b8f0c3cc9da244e01a7002f9a586e035244581292169f2"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjJcL2ZcLzJmNzlmOTI2LWYzODYtNDViMS04YWRhLTY4NGExYWFmMzRhNS5KUEVHIn0=?signature=ba70d2b33ed1685fdb4648ad4ad43e5cfccb0a8b856dbca64521005fb2f8e19d"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjNcLzVcLzM1YzU2MTFmLWQ5MzMtNGU5ZS05Y2IxLTNiZTY4YThlZTQwYy5KUEVHIn0=?signature=392d9958ba33422540526442699f7dcd8f5ad1e700b9d9aa3cd773f733f658c9"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjlcLzdcLzk3Nzk4ZGU5LTIxOTAtNDE4Mi1iZWM1LWM3ZDVhOGQzYjM0MC5KUEVHIn0=?signature=f36254497677abe7301d1872af4bf4f8632b0f9d76757b1fa97843e77514809b"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjBcLzFcLzAxMzFiNzI0LWNjMTUtNDU1MC1hNjY5LWU5YzcyNTk3MmU5MS5KUEVHIn0=?signature=7f0b02b49fb77eb939f1580e934724930e7c14983c47824d60edf08f8eb9fc34"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjlcL2FcLzlhYWY2MTJkLTk4ZDMtNDljMS1iZDk2LWMxYTc4OTgwNjVkMS5KUEVHIn0=?signature=d36330f1f9acd6f6acec7deff0c4f419b4d648ccc8aa4099ffdde4c99d7db5be"
+                        }
+                    ],
+                    "totalImages": 53,
+                    "hasVideo": true,
+                    "hasVirtualTour": true,
+                    "hasBrochure": false
+                },
+                "ber": {
+                    "rating": "Exempt",
+                    "code": "0",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "164.9 m²",
+                "seoFriendlyPath": "/sold/16-the-sherkin-lancaster-gate-lancaster-quay-cork/D9B8517DB2F757BD80258E51005AB1F5",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvNlwvNzY0Mjc3MDYwZjhmYzBlNmM3MjJkYTVlYmEwNGRiMzJfc3RhbmRhcmQucG5nIn0=?signature=11fe7dcf1ed333f30ae372e20f0ffb26c302fc514b47bd41bacbc9ee943c8649",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI1XC9kXC81ZDVjMDc3YTRiYmU0MDg4YjExNDAwZGRiYjhlZjUxZC5qcGcifQ==?signature=01000e4d23db66420c6a74de6ed25db99972d2f995af4ff611449afa479e7ea4",
+                    "backgroundColour": "#324999",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI1XC9kXC81ZDVjMDc3YTRiYmU0MDg4YjExNDAwZGRiYjhlZjUxZC5qcGcifQ==?signature=01000e4d23db66420c6a74de6ed25db99972d2f995af4ff611449afa479e7ea4"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvNlwvNzY0Mjc3MDYwZjhmYzBlNmM3MjJkYTVlYmEwNGRiMzJfc3RhbmRhcmQucG5nIn0=?signature=11fe7dcf1ed333f30ae372e20f0ffb26c302fc514b47bd41bacbc9ee943c8649"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6131706,
+                "title": "5 St Josephs Park, The Lough, Cork, Cork",
+                "seoTitle": "5 St Josephs Park, The Lough, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "DCC588D400F5B68480258E51005AB09D",
+                "category": "Sold",
+                "price": "€525,000",
+                "abbreviatedPrice": "€525k",
+                "numBedrooms": "4 Bed",
+                "numBathrooms": "4 Bath",
+                "propertyType": "Semi-D",
+                "daftShortcode": "16131706",
+                "seller": {
+                    "sellerId": 1805,
+                    "name": "Fiona Waldron",
+                    "phone": "021 4897300",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImJcL2FcL2JhMWZkYjczNTY5ZmE5MGJjMzU4ZDE1ZjhlMmU4MzdjLnBuZyJ9?signature=67acee786ce59a9b924b5f5edb8d8b965aca69bd902e7bbcb730203e61260603",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJiXC9hXC9iYTFmZGI3MzU2OWZhOTBiYzM1OGQxNWY4ZTJlODM3Yy5wbmcifQ==?signature=5cc6091e17162adccc82eeeb5be4c62603c273cd3f1a8a4b0ae4400de826d6ef",
+                    "branch": "DNG O’Connor Finn",
+                    "address": "Village Green House\nChurch Road\nDouglas\nCork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiYlwvN1wvYjcyYTQzYWJjMTNjOGUxMDU5Mjk2MmMyOWViYTM1N2Nfc3RhbmRhcmQucG5nIn0=?signature=107f1451ec7d1e93cec7de1621b1a4b102a3f6283902c45d72397cc53721229e",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImJcLzFcL2IxMWRkN2Q1MmMwZWIzMDdkNmNjMTg1MzZmZjI0NjEzLnBuZyJ9?signature=deade82e03859384dc29e7b29c0e2f1752c8eda3eb6175e6379f963954e156ec",
+                    "backgroundColour": "#02244b",
+                    "licenceNumber": "003905",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€680,000",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "C1",
+                    "code": "0",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "203.0 m²",
+                "seoFriendlyPath": "/sold/5-st-josephs-park-the-lough-cork/DCC588D400F5B68480258E51005AB09D",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiYlwvN1wvYjcyYTQzYWJjMTNjOGUxMDU5Mjk2MmMyOWViYTM1N2Nfc3RhbmRhcmQucG5nIn0=?signature=107f1451ec7d1e93cec7de1621b1a4b102a3f6283902c45d72397cc53721229e",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImJcLzFcL2IxMWRkN2Q1MmMwZWIzMDdkNmNjMTg1MzZmZjI0NjEzLnBuZyJ9?signature=deade82e03859384dc29e7b29c0e2f1752c8eda3eb6175e6379f963954e156ec",
+                    "backgroundColour": "#02244b",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImJcLzFcL2IxMWRkN2Q1MmMwZWIzMDdkNmNjMTg1MzZmZjI0NjEzLnBuZyJ9?signature=deade82e03859384dc29e7b29c0e2f1752c8eda3eb6175e6379f963954e156ec"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiYlwvN1wvYjcyYTQzYWJjMTNjOGUxMDU5Mjk2MmMyOWViYTM1N2Nfc3RhbmRhcmQucG5nIn0=?signature=107f1451ec7d1e93cec7de1621b1a4b102a3f6283902c45d72397cc53721229e"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "48 Ballycannon Woods, Ballycannon, Kerry Pike, Cork",
+                "seoTitle": "48 Ballycannon Woods, Ballycannon, Kerry Pike, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "06C3F9213176E64C80258E66005AB83F",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€405,287",
+                "soldContent": "LIMITED",
+                "soldDate": "30/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/48-ballycannon-woods-ballycannon-kerry-pike-cork/06C3F9213176E64C80258E66005AB83F",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6532307,
+                "title": "4 Fernhurst View, Magazine Rd, Cork, Cork",
+                "seoTitle": "4 Fernhurst View, Magazine Rd, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "143418B28488794580258E5F005AB735",
+                "category": "Sold",
+                "price": "€545,000",
+                "abbreviatedPrice": "€545k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "2 Bath",
+                "propertyType": "End of Terrace",
+                "daftShortcode": "16532307",
+                "seller": {
+                    "sellerId": 2559,
+                    "name": "Johnny O'Flynn",
+                    "phone": "021 4273041",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImRcLzFcL2QxNTE2ZDY3ZjEzZmIyMGFmNjM5ODQ0YWRmNjM5NDU1LmpwZyJ9?signature=4f9f4a7fbf56c5fd11d73f9cf4b9fd60965f1490d998a31a710a98a331041468",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJkXC8xXC9kMTUxNmQ2N2YxM2ZiMjBhZjYzOTg0NGFkZjYzOTQ1NS5qcGcifQ==?signature=cf37210c6ea56b588a8903758ad30dd66acc1166d0f8350898d5c46e0936ee39",
+                    "branch": "Sherry FitzGerald Cork",
+                    "address": "6 Lapp's Quay,Cork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "licenceNumber": "002183",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€615,000",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "B2",
+                    "code": "0",
+                    "epi": "116.23 kWh/m2/yr"
+                },
+                "propertySize": "100.7 m²",
+                "seoFriendlyPath": "/sold/4-fernhurst-view-magazine-rd-cork/143418B28488794580258E5F005AB735",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6501469,
+                "title": "43 Bothar An Chrainn, Ovens, Cork",
+                "seoTitle": "43 Bothar An Chrainn, Ovens, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "B318A4FCB4501D6080258E4A005AB3C3",
+                "category": "Sold",
+                "price": "€499,000",
+                "abbreviatedPrice": "€499k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "3 Bath",
+                "propertyType": "End of Terrace",
+                "daftShortcode": "16501469",
+                "seller": {
+                    "sellerId": 1924,
+                    "name": "Sales Department",
+                    "phone": "021 4873466",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjlcL2VcLzllZTc2OTRhMTRmZjRmYTk0M2Q0MzQwNjJkMGM4ZmRkLnBuZyJ9?signature=83089a2fe240204fefc0e1193f17729f82c02fb856f712a934d89a5b00c5ea67",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiI5XC9lXC85ZWU3Njk0YTE0ZmY0ZmE5NDNkNDM0MDYyZDBjOGZkZC5wbmcifQ==?signature=94f2d19048814162abe9d79ffc20e549748597b77c1c60709a6e3f0ddd98a21a",
+                    "branch": "O'Mahony Walsh - Ballincollig",
+                    "address": "3 Main Street\r\nBallincollig\r\nCo. Cork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe",
+                    "backgroundColour": "#af261b",
+                    "licenceNumber": "001092",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€439,648",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "A2",
+                    "code": "0",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "103.0 m²",
+                "seoFriendlyPath": "/sold/43-bothar-an-chrainn-ovens-cork/B318A4FCB4501D6080258E4A005AB3C3",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe",
+                    "backgroundColour": "#af261b",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6118788,
+                "title": "5 The Avenue, Coolroe Heights, Ballincollig, Cork",
+                "seoTitle": "5 The Avenue, Coolroe Heights, Ballincollig, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "BCBF319841E4452980258E5F005AB9C2",
+                "category": "Sold",
+                "price": "€380,000",
+                "abbreviatedPrice": "€380k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "2 Bath",
+                "propertyType": "Semi-D",
+                "daftShortcode": "16118788",
+                "seller": {
+                    "sellerId": 2559,
+                    "name": "Norma Healy",
+                    "phone": "021 4273041",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjFcLzBcLzEwMzljYTQ4OWM2NThjYWY3MjhjODViNGRjMjkzZWQyLmpwZyJ9?signature=5af703e68e9c851857ec42f2e5d6344808fa8e5ff8a6589ef8a6d435221515c9",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiIxXC8wXC8xMDM5Y2E0ODljNjU4Y2FmNzI4Yzg1YjRkYzI5M2VkMi5qcGcifQ==?signature=c1f296eba98b062afa93bce103db66883ac850c9bacc6d7fcf91ff82660f2ad9",
+                    "branch": "Sherry FitzGerald Cork",
+                    "address": "6 Lapp's Quay,Cork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "licenceNumber": "002183",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "2002",
+                "soldPrice": "€380,000",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "C2",
+                    "code": "107502684",
+                    "epi": "187.14 kWh/m2/yr"
+                },
+                "propertySize": "97.3 m²",
+                "seoFriendlyPath": "/sold/5-the-avenue-coolroe-heights-ballincollig-cork/BCBF319841E4452980258E5F005AB9C2",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "19 Upper Beaumont Dr, Ballintemple, Cork City, Cork",
+                "seoTitle": "19 Upper Beaumont Dr, Ballintemple, Cork City, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "FCBAEEAEAA4ECE8280258E66005AB71C",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€350,000",
+                "soldContent": "LIMITED",
+                "soldDate": "30/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/19-upper-beaumont-dr-ballintemple-cork-city-cork/FCBAEEAEAA4ECE8280258E66005AB71C",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "Gorsefield, 22 Loreto Park, Cross Douglas Rd, Cork",
+                "seoTitle": "Gorsefield, 22 Loreto Park, Cross Douglas Rd, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "03A6C5EFD818D58980258E5F005AB6AF",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€767,500",
+                "soldContent": "LIMITED",
+                "soldDate": "30/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/gorsefield-22-loreto-park-cross-douglas-rd-cork/03A6C5EFD818D58980258E5F005AB6AF",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6538517,
+                "title": "2 Parkside, Westgate, Bishopstown, Cork",
+                "seoTitle": "2 Parkside, Westgate, Bishopstown, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "281365AF7830990980258E51005AB15E",
+                "category": "Sold",
+                "price": "€720,000",
+                "abbreviatedPrice": "€720k",
+                "numBedrooms": "4 Bed",
+                "numBathrooms": "3 Bath",
+                "propertyType": "Detached",
+                "daftShortcode": "16538517",
+                "seller": {
+                    "sellerId": 2559,
+                    "name": "Johnny O'Flynn",
+                    "phone": "021 4273041",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImRcLzFcL2QxNTE2ZDY3ZjEzZmIyMGFmNjM5ODQ0YWRmNjM5NDU1LmpwZyJ9?signature=4f9f4a7fbf56c5fd11d73f9cf4b9fd60965f1490d998a31a710a98a331041468",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJkXC8xXC9kMTUxNmQ2N2YxM2ZiMjBhZjYzOTg0NGFkZjYzOTQ1NS5qcGcifQ==?signature=cf37210c6ea56b588a8903758ad30dd66acc1166d0f8350898d5c46e0936ee39",
+                    "branch": "Sherry FitzGerald Cork",
+                    "address": "6 Lapp's Quay,Cork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "licenceNumber": "002183",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€820,000",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "A3",
+                    "code": "0",
+                    "epi": "57.57 kWh/m2/yr"
+                },
+                "propertySize": "126.0 m²",
+                "seoFriendlyPath": "/sold/2-parkside-westgate-bishopstown-cork/281365AF7830990980258E51005AB15E",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a",
+                    "backgroundColour": "#003764",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI0XC84XC80ODgwZDM2ODAwM2Q1OGY3Y2RjNDFlOWZhZTlkYWM2NC5qcGcifQ==?signature=40c8138a9bc5cb6ff5fbaab1c211cfda2aac4b3c05db8eb04d5959fece8a8f7a"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvMFwvNTA5OTRiZmFjN2I3MDNjZWFmYmJjNmMzMjQ1Y2Y5ZDNfc3RhbmRhcmQucG5nIn0=?signature=48b3dc307cbf7ad639e7e9af54c26a13393f0293f55c5d898c52e5baeb08edae"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "3 Ferry Hill, Popes Quay, Cork, Cork",
+                "seoTitle": "3 Ferry Hill, Popes Quay, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "A1CDA03C1E6766CC80258E58005AB781",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€200,000",
+                "soldContent": "LIMITED",
+                "soldDate": "30/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/3-ferry-hill-popes-quay-cork/A1CDA03C1E6766CC80258E58005AB781",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6472208,
+                "title": "113 Fort Hill, Moneygourney, Douglas, Cork",
+                "seoTitle": "113 Fort Hill, Moneygourney, Douglas, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "B5CBC1913731A02C80258E5F005ABAE5",
+                "category": "Sold",
+                "price": "€440,000",
+                "abbreviatedPrice": "€440k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "3 Bath",
+                "propertyType": "Semi-D",
+                "daftShortcode": "16472208",
+                "seller": {
+                    "sellerId": 9654,
+                    "name": "Mark Gosling",
+                    "phone": "021 4270007",
+                    "alternativePhone": "087 7777274",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImFcLzVcL2E1NjMwZjc0YWY2NDU2MWIwODdiYmU2Y2Q5NDkxZTYwLnBuZyJ9?signature=c14d3dca6dec3dab682886af6500099e5b9357ed53c213553d315376c86567e5",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJhXC81XC9hNTYzMGY3NGFmNjQ1NjFiMDg3YmJlNmNkOTQ5MWU2MC5wbmcifQ==?signature=4864d8e6f890b6edd189c94d9fe078f5ff7c6c932a29c041600172e7830ac8c7",
+                    "branch": "Behan Irwin & Gosling",
+                    "address": "40 South Mall,\r\nCork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiMlwvZlwvMmYxNjI0Y2M5Y2YyYWYwMzU1NDc4M2RiYTc3NmNmMmNfc3RhbmRhcmQucG5nIn0=?signature=d7a13ca9a361da5f57dd9aa337b4a201bdc0332dfe35eeed1cf656176bffc16d",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImRcLzdcL2Q3YzMxNjExMTAwZjFkOTdmYzU5Y2YwM2Q3ZmVmMDIyLnBuZyJ9?signature=a93b6b8932090fcf748ed1b5e1da237271dfd53b4125860bac94746e9bfb613b",
+                    "backgroundColour": "#0f272f",
+                    "licenceNumber": "003218",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "2006",
+                "soldPrice": "€490,000",
+                "soldDate": "30/07/2026",
+                "ber": {
+                    "rating": "C1",
+                    "code": "106547425",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/113-fort-hill-moneygourney-douglas-cork/B5CBC1913731A02C80258E5F005ABAE5",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiMlwvZlwvMmYxNjI0Y2M5Y2YyYWYwMzU1NDc4M2RiYTc3NmNmMmNfc3RhbmRhcmQucG5nIn0=?signature=d7a13ca9a361da5f57dd9aa337b4a201bdc0332dfe35eeed1cf656176bffc16d",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImRcLzdcL2Q3YzMxNjExMTAwZjFkOTdmYzU5Y2YwM2Q3ZmVmMDIyLnBuZyJ9?signature=a93b6b8932090fcf748ed1b5e1da237271dfd53b4125860bac94746e9bfb613b",
+                    "backgroundColour": "#0f272f",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImRcLzdcL2Q3YzMxNjExMTAwZjFkOTdmYzU5Y2YwM2Q3ZmVmMDIyLnBuZyJ9?signature=a93b6b8932090fcf748ed1b5e1da237271dfd53b4125860bac94746e9bfb613b"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiMlwvZlwvMmYxNjI0Y2M5Y2YyYWYwMzU1NDc4M2RiYTc3NmNmMmNfc3RhbmRhcmQucG5nIn0=?signature=d7a13ca9a361da5f57dd9aa337b4a201bdc0332dfe35eeed1cf656176bffc16d"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6519157,
+                "title": "2 Whitethorn Ave, Ballincollig, Cork, Cork",
+                "seoTitle": "2 Whitethorn Ave, Ballincollig, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "LITE",
+                "featuredLevelFull": "PREMIER_PARTNER_LITE",
+                "adId": "C25D036C9EB832F180258E5F005ABA92",
+                "category": "Sold",
+                "price": "€425,000",
+                "abbreviatedPrice": "€425k",
+                "numBedrooms": "5 Bed",
+                "numBathrooms": "2 Bath",
+                "propertyType": "Semi-D",
+                "daftShortcode": "16519157",
+                "seller": {
+                    "sellerId": 1924,
+                    "name": "Sales Department",
+                    "phone": "021 4873466",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjlcL2VcLzllZTc2OTRhMTRmZjRmYTk0M2Q0MzQwNjJkMGM4ZmRkLnBuZyJ9?signature=83089a2fe240204fefc0e1193f17729f82c02fb856f712a934d89a5b00c5ea67",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiI5XC9lXC85ZWU3Njk0YTE0ZmY0ZmE5NDNkNDM0MDYyZDBjOGZkZC5wbmcifQ==?signature=94f2d19048814162abe9d79ffc20e549748597b77c1c60709a6e3f0ddd98a21a",
+                    "branch": "O'Mahony Walsh - Ballincollig",
+                    "address": "3 Main Street\r\nBallincollig\r\nCo. Cork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe",
+                    "backgroundColour": "#af261b",
+                    "licenceNumber": "001092",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€442,906",
+                "soldDate": "30/07/2026",
+                "media": {
+                    "images": [
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjZcL2NcLzZjY2I1NGE1LWE1YzctNGFkOC05M2FjLTQyY2M5NzY4ZmJjMC5KUEVHIn0=?signature=801b3f94b07a680f0ab343f26415616d37efb614fa3b00eae5340a275a23a1b9"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImNcLzlcL2M5OTZjYzYyLTI0ODctNDk3MC1iZDFhLWZhN2YyMDM1OThmMi5KUEVHIn0=?signature=df7a7afe84c670a585a315bddd6c55b1d6b3f084092d0373c3a163176ea6a579"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjRcL2FcLzRhODdiMGM5LWM5NjQtNGQ0Yi1iNjA4LTEwZWVhZTM1NzE0YS5KUEVHIn0=?signature=4e201ccade72d73dc2f2c311d2de12f8fe40fc35fb957758ff261be2a26a3697"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjJcL2ZcLzJmOTNkNDU4LTc0MjMtNDgxOC04YTkyLWE4OGVhM2NjZGNkYi5KUEVHIn0=?signature=d0a188c77336835134e044391ca77701c143a16251f7a767cc4e43e8a63b684e"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImJcLzVcL2I1NmUxZTU3LTJkZWEtNDFjNi04NWEyLTU2YmVlNzQzMDg3ZS5KUEVHIn0=?signature=3e70c66114f60ed60f12f37514ef3364682c5bd9f4da3c65c1b1690047d0e44d"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjNcLzNcLzMzZTI2YmJhLTM0YjYtNDczOC05YzM2LTE5ZTdhNzJiMDM4Mi5KUEVHIn0=?signature=ab0c386de5953e2e381adc9f6eac7b51cefc9be5dc5a341aecc36cd4f547aa13"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImZcLzZcL2Y2OTEwYjI4LWEyODYtNDc4My1hNTdjLThjOTlmMmEwMTY4Zi5KUEVHIn0=?signature=6540b85a8163244bf7ddf7bea8f1f4f3eb7575a6614c195a632fe893ff9578fa"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRod2VzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjBcL2VcLzBlYjg1N2VmLTYzY2ItNDI0ZS1iZjI5LTQ2ZDQ1ODEwZTA2NS5KUEVHIn0=?signature=a2263848c1a66d167433a529e089a97c01f42b9163d6ddde4f14e64961e26219"
+                        },
+                        {
+                            "size720x480": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsib3ZlcmxheVdpdGgiOnsiYnVja2V0IjoibWVkaWFtYXN0ZXItczNldSIsIm9wdGlvbnMiOnsiZ3Jhdml0eSI6InNvdXRoZWFzdCJ9LCJrZXkiOiJ3YXRlcm1hcmstZGFmdC1sb2dvLXNtYWxsMi12NC5wbmcifSwicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjcyMCwiaGVpZ2h0Ijo0ODB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjRcL2FcLzRhYTdhMDg4LWUxMzgtNDQxNi1hZjBmLWFhMmExMjcxY2IyZS5KUEVHIn0=?signature=558eb8c0cb2511471e571a96787566541cf334290c394fafe5a827d8ec1b02fb"
+                        }
+                    ],
+                    "totalImages": 18,
+                    "hasVideo": false,
+                    "hasVirtualTour": false,
+                    "hasBrochure": false
+                },
+                "ber": {
+                    "rating": "C3",
+                    "code": "0",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "142.0 m²",
+                "seoFriendlyPath": "/sold/2-whitethorn-ave-ballincollig-cork/C25D036C9EB832F180258E5F005ABA92",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe",
+                    "backgroundColour": "#af261b",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2JcLzliMzkzNzhlOTNkZmJlZGVkNTJjODM0Y2U5NWNiOWQ2LnBuZyJ9?signature=5e547cabfb3d6cbf249a63405d8d9fedad092ef66a621c7a13534143a66705fe"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiZFwvNVwvZDUwNjE2NjYzMDY5YWI5NjhlZGQ4ZmU2ZDU1YjQzODlfc3RhbmRhcmQucG5nIn0=?signature=a12daa037c480ad6d586b9d642412dfc180f2d3a4ccdc02b2f1d19091e77233a"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": true,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "29 The Orchard, Carleton, Castletreasure, Cork",
+                "seoTitle": "29 The Orchard, Carleton, Castletreasure, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "80A180BCBA983E3880258E51005AB34D",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€409,692",
+                "soldContent": "LIMITED",
+                "soldDate": "29/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/29-the-orchard-carleton-castletreasure-cork/80A180BCBA983E3880258E51005AB34D",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6513772,
+                "title": "2 Castle View, Castle Rd, Blackrock, Cork",
+                "seoTitle": "2 Castle View, Castle Rd, Blackrock, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "95B346AB84EEF3D380258E51005AB214",
+                "category": "Sold",
+                "price": "€650,000",
+                "abbreviatedPrice": "€650k",
+                "numBedrooms": "4 Bed",
+                "numBathrooms": "3 Bath",
+                "propertyType": "End of Terrace",
+                "daftShortcode": "16513772",
+                "seller": {
+                    "sellerId": 2571,
+                    "name": "Cohalan Downing",
+                    "phone": "021 4277717",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImFcLzBcL2EwN2Q0YjJhYzk5YjNmNzczNTdhMzJkZDg3YTQ5MjExLnBuZyJ9?signature=0e753d2e429a96d53c16b5b49b595085e9acdecade4acc296ba3a974a8ac72b6",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJhXC8wXC9hMDdkNGIyYWM5OWIzZjc3MzU3YTMyZGQ4N2E0OTIxMS5wbmcifQ==?signature=0f3391c383607077d84b805cc4080e8f855be6449d37c4ac0209ae05459b2e37",
+                    "branch": "Cohalan Downing",
+                    "address": "14 South Mall\r\nCork",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvYlwvN2IxODg5N2YzMzFiZDVjMjBmYTk0NzQyMjViZTk2MjZfc3RhbmRhcmQucG5nIn0=?signature=3eaca7dd0ef49cbbfa36f3134b7851bd9a3bd8f97197d4aaae1e215cb1f55d37",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImFcL2ZcL2FmODE4MWMxZTViNTIxZjdiN2M5ZTllMjg0YTc4YWRlLnBuZyJ9?signature=e53d43e1f496c104654b002a1ba518a8197309a1ca3bb5a19ddbf36b7929689f",
+                    "backgroundColour": "#026c81",
+                    "licenceNumber": "001641",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€775,000",
+                "soldDate": "29/07/2026",
+                "ber": {
+                    "rating": "E1",
+                    "code": "0",
+                    "epi": "0.0 kWh/m2/yr"
+                },
+                "propertySize": "148.0 m²",
+                "seoFriendlyPath": "/sold/2-castle-view-castle-rd-blackrock-cork/95B346AB84EEF3D380258E51005AB214",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvYlwvN2IxODg5N2YzMzFiZDVjMjBmYTk0NzQyMjViZTk2MjZfc3RhbmRhcmQucG5nIn0=?signature=3eaca7dd0ef49cbbfa36f3134b7851bd9a3bd8f97197d4aaae1e215cb1f55d37",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImFcL2ZcL2FmODE4MWMxZTViNTIxZjdiN2M5ZTllMjg0YTc4YWRlLnBuZyJ9?signature=e53d43e1f496c104654b002a1ba518a8197309a1ca3bb5a19ddbf36b7929689f",
+                    "backgroundColour": "#026c81",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6ImFcL2ZcL2FmODE4MWMxZTViNTIxZjdiN2M5ZTllMjg0YTc4YWRlLnBuZyJ9?signature=e53d43e1f496c104654b002a1ba518a8197309a1ca3bb5a19ddbf36b7929689f"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiN1wvYlwvN2IxODg5N2YzMzFiZDVjMjBmYTk0NzQyMjViZTk2MjZfc3RhbmRhcmQucG5nIn0=?signature=3eaca7dd0ef49cbbfa36f3134b7851bd9a3bd8f97197d4aaae1e215cb1f55d37"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6523746,
+                "title": "1 O Mahony Sq, Blackpool, Co Cork, Cork",
+                "seoTitle": "1 O Mahony Sq, Blackpool, Co Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "AD315F9A9369EA0D80258E66005AB711",
+                "category": "Sold",
+                "price": "€175,000",
+                "abbreviatedPrice": "€175k",
+                "numBedrooms": "2 Bed",
+                "numBathrooms": "1 Bath",
+                "propertyType": "End of Terrace",
+                "daftShortcode": "16523746",
+                "seller": {
+                    "sellerId": 11062,
+                    "name": "Auctioneera Cork Office",
+                    "phone": "0212040132",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6IjdcLzBcLzcwY2QzZWQzNzY1ZmY4MDBkMzJmZmYyYzZjY2FlOGU2LnBuZyJ9?signature=b152f32e926e1591d31988e9cfa3b5d5af57e7f197cde41ea80877a87863b57e",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiI3XC8wXC83MGNkM2VkMzc2NWZmODAwZDMyZmZmMmM2Y2NhZThlNi5wbmcifQ==?signature=2910896ed910aed0d4abd914a0e187c18540e0f0668fa9159eb13d6c09938b79",
+                    "branch": "Auctioneera.ie",
+                    "address": "-",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNFwvMlwvNDI4ZWMwZjBjZjI1ZGNlZDFkNWYwNmI4NWNhYjRmNjdfc3RhbmRhcmQucG5nIn0=?signature=12a553bc24f09c30a2372e6f92a4179ab660ff6bb710202c61a3493b78952f18",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2NcLzljMmFkY2MzZWU2ZTk0MTIzMTNmYzk2OGI0ZGRjNGZhLnBuZyJ9?signature=1302f325dcd139b4efb1103cd5f8c583e77937a1381ea2c198fdeeef585c4421",
+                    "backgroundColour": "#ffffff",
+                    "licenceNumber": "003912",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€210,000",
+                "soldDate": "29/07/2026",
+                "ber": {
+                    "rating": "G",
+                    "code": "0",
+                    "epi": "575.67 kWh/m2/yr"
+                },
+                "propertySize": "35.0 m²",
+                "seoFriendlyPath": "/sold/1-o-mahony-sq-blackpool/AD315F9A9369EA0D80258E66005AB711",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNFwvMlwvNDI4ZWMwZjBjZjI1ZGNlZDFkNWYwNmI4NWNhYjRmNjdfc3RhbmRhcmQucG5nIn0=?signature=12a553bc24f09c30a2372e6f92a4179ab660ff6bb710202c61a3493b78952f18",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2NcLzljMmFkY2MzZWU2ZTk0MTIzMTNmYzk2OGI0ZGRjNGZhLnBuZyJ9?signature=1302f325dcd139b4efb1103cd5f8c583e77937a1381ea2c198fdeeef585c4421",
+                    "backgroundColour": "#ffffff",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sImtleSI6IjlcL2NcLzljMmFkY2MzZWU2ZTk0MTIzMTNmYzk2OGI0ZGRjNGZhLnBuZyJ9?signature=1302f325dcd139b4efb1103cd5f8c583e77937a1381ea2c198fdeeef585c4421"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNFwvMlwvNDI4ZWMwZjBjZjI1ZGNlZDFkNWYwNmI4NWNhYjRmNjdfc3RhbmRhcmQucG5nIn0=?signature=12a553bc24f09c30a2372e6f92a4179ab660ff6bb710202c61a3493b78952f18"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6557159,
+                "title": "27 Ryecroft, Maryborough Woods, Douglas, Cork",
+                "seoTitle": "27 Ryecroft, Maryborough Woods, Douglas, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "0FC5AB0075D8209B80258E4A005AB249",
+                "category": "Sold",
+                "price": "€395,000",
+                "abbreviatedPrice": "€395k",
+                "numBedrooms": "3 Bed",
+                "numBathrooms": "3 Bath",
+                "propertyType": "Terrace",
+                "daftShortcode": "16557159",
+                "seller": {
+                    "sellerId": 947,
+                    "name": "Mark Rose",
+                    "phone": "021-4293333",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImFmYzAyMzU4OGE0NzBkOGU5N2NkMmQ5MDM0ZDVkMWYzIn0=?signature=89debb7640373a728a5790dcfcb14eaeaa7af340d0e8a2c068fb1e6ba85d4be8",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJhZmMwMjM1ODhhNDcwZDhlOTdjZDJkOTAzNGQ1ZDFmMyJ9?signature=26a4645b2339368c46132922249c477181aed9047944211f46c2d4e3b149d1b2",
+                    "branch": "Rose Property Services",
+                    "address": "South Douglas Road,\nCork City,\nCo Cork.",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvZVwvNWVmMGRhOTI5NmJiOTE5NWEwZmVjOTNkMThmNzY2MThfc3RhbmRhcmQucG5nIn0=?signature=8f478b60790e93c4cab2c37dc0dc4d22f1235aadf8ff7da6481ff2da69e2125f",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI3YzdlMDYwMGIzOGI3MjFlNzBlNWE1NzM0NmY0ODgyYSJ9?signature=fbcd247ab9173e3394149a5ac7cdc6991245180f4eabfae6a98ea9ed9dd5cfd4",
+                    "backgroundColour": "#154270",
+                    "licenceNumber": "001430",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€425,000",
+                "soldDate": "29/07/2026",
+                "ber": {
+                    "rating": "C1",
+                    "code": "0",
+                    "epi": "163.38 kWh/m2/yr"
+                },
+                "propertySize": "107.0 m²",
+                "seoFriendlyPath": "/sold/27-ryecroft-maryborough-woods-douglas-cork/0FC5AB0075D8209B80258E4A005AB249",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvZVwvNWVmMGRhOTI5NmJiOTE5NWEwZmVjOTNkMThmNzY2MThfc3RhbmRhcmQucG5nIn0=?signature=8f478b60790e93c4cab2c37dc0dc4d22f1235aadf8ff7da6481ff2da69e2125f",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI3YzdlMDYwMGIzOGI3MjFlNzBlNWE1NzM0NmY0ODgyYSJ9?signature=fbcd247ab9173e3394149a5ac7cdc6991245180f4eabfae6a98ea9ed9dd5cfd4",
+                    "backgroundColour": "#154270",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiI3YzdlMDYwMGIzOGI3MjFlNzBlNWE1NzM0NmY0ODgyYSJ9?signature=fbcd247ab9173e3394149a5ac7cdc6991245180f4eabfae6a98ea9ed9dd5cfd4"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiNVwvZVwvNWVmMGRhOTI5NmJiOTE5NWEwZmVjOTNkMThmNzY2MThfc3RhbmRhcmQucG5nIn0=?signature=8f478b60790e93c4cab2c37dc0dc4d22f1235aadf8ff7da6481ff2da69e2125f"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "83 Pearce Rd, Ballyphehane, Cork, Cork",
+                "seoTitle": "83 Pearce Rd, Ballyphehane, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "4A3A20CAA70A0B2980258E5F005ABBA3",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€160,000",
+                "soldContent": "LIMITED",
+                "soldDate": "29/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/83-pearce-rd-ballyphehane-cork/4A3A20CAA70A0B2980258E5F005ABBA3",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "64 Ardan View, Longview, Ballyvolane, Cork",
+                "seoTitle": "64 Ardan View, Longview, Ballyvolane, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "7B72DFD3628FDEAF80258E51005AB34B",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€361,233",
+                "soldContent": "LIMITED",
+                "soldDate": "29/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/64-ardan-view-longview-ballyvolane-cork/7B72DFD3628FDEAF80258E51005AB34B",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "id": 6229146,
+                "title": "4 Mount Prospect, Glasheen Rd, Cork, Cork",
+                "seoTitle": "4 Mount Prospect, Glasheen Rd, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "A648447ED326770280258E4A005AB3B9",
+                "category": "Sold",
+                "price": "€365,000",
+                "abbreviatedPrice": "€365k",
+                "numBedrooms": "4 Bed",
+                "numBathrooms": "2 Bath",
+                "propertyType": "Terrace",
+                "daftShortcode": "16229146",
+                "seller": {
+                    "sellerId": 3708,
+                    "name": "Timothy Sullivan",
+                    "phone": "021 4275888",
+                    "profileImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImNvdmVyIiwid2lkdGgiOjEwMCwiaGVpZ2h0IjoxMDB9fSwib3V0cHV0Rm9ybWF0IjoianBlZyIsImtleSI6ImRhZnRcL2ltYWdlc1wvbm8tcHJvZmlsZS1waWN0dXJlLnBuZyJ9?signature=b0e0938a5d6a610f97ea5e75c9daf0eb6a4014d2cbd757a3578104c3863bc261",
+                    "profileRoundedImage": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicm91bmRDcm9wIjp0cnVlLCJyZXNpemUiOnsiZml0IjoiY292ZXIiLCJ3aWR0aCI6MTAwLCJoZWlnaHQiOjEwMH19LCJvdXRwdXRGb3JtYXQiOiJwbmciLCJrZXkiOiJkYWZ0XC9pbWFnZXNcL25vLXByb2ZpbGUtcGljdHVyZS5wbmcifQ==?signature=0a3578d6159df09c742d55c378450c9a77d517fc4b8a6d41dd473ee2ac28bdd6",
+                    "branch": "Timothy Sullivan & Associates",
+                    "address": "56 Grand Parade, Clarke's Bridge, Cork, T12 RX2H",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiOFwvOFwvODhkODQ0MzBkOTYzYzQxYmEzZjk2M2M4Mzk2ZjlkM2Vfc3RhbmRhcmQucG5nIn0=?signature=8beee2fc6e909d1c9776f093ddf4d7854b6690b7077855c0f0143946d09aada6",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiJjXC9mXC9jZjMyNDYxZS00ZDk1LTQ5NGItYmQ1MS02ZmMzYzZhYmY0YjguanBlZyJ9?signature=284ee2536dc4f52874aed14c3c572b3b1a33e9a1cc9956d37cdb7b01285b1bca",
+                    "backgroundColour": "#005d9e",
+                    "licenceNumber": "001081",
+                    "sellerType": "BRANDED_AGENT",
+                    "showContactForm": true,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": true
+                },
+                "dateOfConstruction": "1920",
+                "soldPrice": "€450,000",
+                "soldDate": "29/07/2026",
+                "ber": {
+                    "rating": "E1",
+                    "code": "118585702",
+                    "epi": "317.05 kWh/m2/yr"
+                },
+                "propertySize": "104.0 m²",
+                "seoFriendlyPath": "/sold/4-mount-prospect-glasheen-rd-cork/A648447ED326770280258E4A005AB3B9",
+                "pageBranding": {
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiOFwvOFwvODhkODQ0MzBkOTYzYzQxYmEzZjk2M2M4Mzk2ZjlkM2Vfc3RhbmRhcmQucG5nIn0=?signature=8beee2fc6e909d1c9776f093ddf4d7854b6690b7077855c0f0143946d09aada6",
+                    "squareLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiJjXC9mXC9jZjMyNDYxZS00ZDk1LTQ5NGItYmQ1MS02ZmMzYzZhYmY0YjguanBlZyJ9?signature=284ee2536dc4f52874aed14c3c572b3b1a33e9a1cc9956d37cdb7b01285b1bca",
+                    "backgroundColour": "#005d9e",
+                    "squareLogos": [
+                        "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsIndpZHRoIjoxMjAsImhlaWdodCI6MTIwfX0sIm91dHB1dEZvcm1hdCI6ImpwZWciLCJrZXkiOiJjXC9mXC9jZjMyNDYxZS00ZDk1LTQ5NGItYmQ1MS02ZmMzYzZhYmY0YjguanBlZyJ9?signature=284ee2536dc4f52874aed14c3c572b3b1a33e9a1cc9956d37cdb7b01285b1bca"
+                    ],
+                    "rectangleLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwia2V5IjoiOFwvOFwvODhkODQ0MzBkOTYzYzQxYmEzZjk2M2M4Mzk2ZjlkM2Vfc3RhbmRhcmQucG5nIn0=?signature=8beee2fc6e909d1c9776f093ddf4d7854b6690b7077855c0f0143946d09aada6"
+                },
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        },
+        {
+            "listing": {
+                "title": "44 Old Market Place, Wolf Tone Street, Cork, Cork",
+                "seoTitle": "44 Old Market Place, Wolf Tone Street, Cork, Cork",
+                "sections": [
+                    "Residential",
+                    "Sold"
+                ],
+                "featuredLevel": "STANDARD",
+                "featuredLevelFull": "STANDARD",
+                "adId": "0AD84253036A30D480258E58005AB878",
+                "category": "Sold",
+                "price": "-",
+                "abbreviatedPrice": "-",
+                "numBedrooms": "— Bed",
+                "numBathrooms": "— Bath",
+                "propertyType": "—",
+                "seller": {
+                    "name": "No Seller info",
+                    "branch": "NA",
+                    "showContactForm": false,
+                    "premierPartnerSeller": false,
+                    "sellerAvailable": false
+                },
+                "dateOfConstruction": "0",
+                "soldPrice": "€50,000",
+                "soldContent": "LIMITED",
+                "soldDate": "28/07/2026",
+                "ber": {},
+                "propertySize": "—",
+                "seoFriendlyPath": "/sold/44-old-market-place-wolf-tone-street-cork/0AD84253036A30D480258E58005AB878",
+                "state": "PUBLISHED",
+                "premierPartner": false,
+                "betterBest": false
+            },
+            "savedAd": false,
+            "imageRestricted": false
+        }
+    ],
+    "paging": {
+        "totalPages": 1607,
+        "currentPage": 11,
+        "nextFrom": 220,
+        "previousFrom": 180,
+        "displayingFrom": 201,
+        "displayingTo": 220,
+        "totalResults": 32137,
+        "pageSize": 20
+    },
+    "dfpTargetingValues": {
+        "next_property": [
+            "last"
+        ],
+        "pageType": [
+            "listings"
+        ],
+        "cityName": [
+            "Cork City"
+        ],
+        "searchPageNo": [
+            "11"
+        ],
+        "areaName": [
+            "cork-city"
+        ],
+        "distilledBrand": [
+            "daft"
+        ],
+        "section": [
+            "residential-sold"
+        ],
+        "countyName": [
+            "Cork"
+        ]
+    },
+    "breadcrumbs": [
+        {
+            "displayValue": "Home",
+            "url": "/"
+        },
+        {
+            "displayValue": "Search sold Residential Property",
+            "url": "/sold-properties/ireland"
+        },
+        {
+            "displayValue": "Cork Property sold",
+            "url": "/sold-properties/cork"
+        },
+        {
+            "displayValue": "Cork City Property sold",
+            "url": "/sold-properties/cork-city"
+        }
+    ],
+    "canonicalUrl": "https://www.daft.ie/sold-properties/cork-city?page=11",
+    "mapView": false,
+    "savedSearch": false,
+    "topPerformingAgents": {
+        "area": {
+            "areaId": 15,
+            "title": "Most visible agents in Co. Cork"
+        },
+        "agents": [
+            {
+                "id": 1196,
+                "email": "info@eracork.ie",
+                "branch": "ERA Downey McCarthy",
+                "branding": {
+                    "backgroundColour": "#300062",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwib3V0cHV0Rm9ybWF0IjoicG5nIiwia2V5IjoiMS9kLzFkOGQxZTRiODJlNjA4N2RiZjc1YTJkNjhlYzRiNmQyX3N0YW5kYXJkLnBuZyJ9?signature=0642ef12467396e46b44161a69c175682147d00f1b560c7dac0481effe4a5afa"
+                }
+            },
+            {
+                "id": 6706,
+                "email": "ballincollig@bowe.ie",
+                "branch": "Bowe Property",
+                "branding": {
+                    "backgroundColour": "#1c206d",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwib3V0cHV0Rm9ybWF0IjoicG5nIiwia2V5IjoiYy80L2M0MTM0ZjU5OGE4ODlkOWVhMGJhZTdjYmZjOGQ4MjEzX3N0YW5kYXJkLnBuZyJ9?signature=bfa6790dfa1e215c718f321372ceb029b95f0c87dfef0370c3f843271949df69"
+                }
+            },
+            {
+                "id": 2559,
+                "email": "cork@sherryfitz.ie",
+                "branch": "Sherry FitzGerald Cork",
+                "branding": {
+                    "backgroundColour": "#003764",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwib3V0cHV0Rm9ybWF0IjoicG5nIiwia2V5IjoiNS8wLzUwOTk0YmZhYzdiNzAzY2VhZmJiYzZjMzI0NWNmOWQzX3N0YW5kYXJkLnBuZyJ9?signature=a243ab069988b185f6869319df5ea30991f0a93b735f6fc0385e545384294c44"
+                }
+            },
+            {
+                "id": 10189,
+                "email": "dan@danhowardsales.com",
+                "branch": "Dan Howard & Co. Ltd",
+                "branding": {
+                    "backgroundColour": "#034467",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwib3V0cHV0Rm9ybWF0IjoicG5nIiwia2V5IjoiNC9iLzRiNGM4MzgyZTZhY2NiNzMxMTZjZmFhOGFiYTk0OTEyX3N0YW5kYXJkLnBuZyJ9?signature=b5ec9927860c18c90c5b0e551bc616e5dbc38cbf3f8e84dbca246a962808b6fc"
+                }
+            },
+            {
+                "id": 1442,
+                "email": "kevin@barryauctioneers.ie",
+                "branch": "Barry Auctioneers",
+                "branding": {
+                    "backgroundColour": "#004595",
+                    "standardLogo": "https://media.daft.ie/eyJidWNrZXQiOiJtZWRpYW1hc3Rlci1zM2V1IiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6Imluc2lkZSIsImhlaWdodCI6ODB9fSwib3V0cHV0Rm9ybWF0IjoicG5nIiwia2V5IjoiZS81L2U1ZTZjY2E2MTNmMzRiMGViNDM1OTFkYmY0NzEzYTdmX3N0YW5kYXJkLnBuZyJ9?signature=0048f0154dcea09af42d0a7b47410f3d2bc175af6d895d2939dcbff0e1b74066"
+                }
+            }
+        ]
+    }
+}

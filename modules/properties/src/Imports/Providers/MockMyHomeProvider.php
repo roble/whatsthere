@@ -14,7 +14,7 @@ class MockMyHomeProvider extends JsonListingProvider
         $payload = $this->decodedJson($sourcePath);
 
         if (array_is_list($payload)) {
-            yield from parent::records($sourcePath);
+            yield from $payload;
 
             return;
         }
@@ -47,6 +47,6 @@ class MockMyHomeProvider extends JsonListingProvider
 
     public function defaultSourcePath(): string
     {
-        return base_path('modules/properties/database/fixtures/myhome-cork.json');
+        return base_path('modules/properties/database/fixtures/myhome-cork-lite.json');
     }
 }

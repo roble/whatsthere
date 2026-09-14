@@ -3,6 +3,7 @@
 namespace Modules\Properties\Imports;
 
 use InvalidArgumentException;
+use Modules\Properties\Imports\Providers\MockDaftProvider;
 use Modules\Properties\Imports\Providers\MockMyHomeProvider;
 
 class ListingProviderRegistry
@@ -12,7 +13,7 @@ class ListingProviderRegistry
 
     public static function make(): self
     {
-        $providers = [new MockMyHomeProvider];
+        $providers = [new MockMyHomeProvider, new MockDaftProvider];
 
         return new self(collect($providers)->keyBy(fn (ListingProvider $provider): string => $provider->name())->all());
     }

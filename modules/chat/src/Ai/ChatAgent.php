@@ -43,7 +43,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      * to change it, and so the admin pricing form can offer it as the rate
      * that actually matters.
      */
-    public const string MODEL = 'gpt-4o-mini';
+    public const string MODEL = 'gpt-5.4-mini';
 
     /**
      * Whether the pinned model reasons.
@@ -52,7 +52,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
      * without the other either loses the route of thought or breaks every
      * request.
      */
-    public const bool REASONS = false;
+    public const bool REASONS = true;
 
     /**
      * Questions the interview always asks before a plan can be saved.
@@ -96,6 +96,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             Ask a question only when a stated filter is genuinely ambiguous and you cannot search without resolving it, above all city versus county for Cork, Galway and Limerick. Ask it as one short sentence in your reply. Search with your best reading first whenever you can; do not hold results back waiting for an answer.
             sort is price for cheapest asking price first, or price_per_sqm for cheapest euro per square metre first. Use price_per_sqm when they ask for the best value, cheapest per metre, most space for the money, or the lowest price per square metre. For land that rate uses plot size, not floor area. A home or plot with no area has no rate: do not invent one.
             After a search, advise. Pick two or three standouts from the listings below and name each by its exact address so the map can link them. Compare homes with listed facts only: price, euro per m2, beds, type, town, BER, floor area, highlight, photo count. Compare land with price, euro per m2 of plot, plot size, town, highlight and photo count. Never invent planning permission, services, road frontage or soil. Green value pins are the cheaper matches on the active sort; blue match pins hit the bedroom filter exactly; amber premium pins sit near the top of that sort; purple typical pins sit in the middle. A red pin is the listing the visitor selected in chat or on the map.
+            When a listing has a photo URL, embed it as markdown `![exact address](photo URL)` using that exact URL. The chat turns one photo into a swipeable gallery of every picture we have for that listing. Do not invent image URLs.
             When a visitor has selected a listing, answer from the selected-property facts first, then compare it briefly to one other listed home or plot if that helps. When they ask which listing has the best, closest or most convenient hospital, school, clinic, bus stop, train station, park or shop, call compare_listing_amenities once with those kinds. Never use find_places or a listing address for that comparison: the tool already walks from each pin. Name the winner by its exact address, give each nearest place with the distance the tool returned, and say when a kind is missing. Do not invent a hospital, school or stop.
             Only describe facts from the listings below, the selected property, or a compare_listing_amenities result. Do not invent addresses, prices, features, photos, or availability. If photos are 0, do not claim a listing has pictures. No results means no matches in our database; say so plainly and offer to widen a filter.
             Do not dump the whole list or repeat every filter. Three or four short sentences is enough.
@@ -209,13 +210,19 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             $highlight = $marker['highlight'] ?? 'typical';
             $name = $marker['name'] ?? 'Listing';
             $town = $marker['town'] ?? '';
-            $photos = count($marker['images'] ?? []);
+            $images = array_values(array_filter(
+                $marker['images'] ?? [],
+                static fn (mixed $url): bool => is_string($url) && safe_listing_image_url($url) !== null,
+            ));
+            $photos = count($images);
+            $photo = $images[0] ?? null;
+            $photoNote = $photo === null ? 'no photo' : "photo {$photo}";
 
             $rate = PropertySearch::rateLabel($marker['price_per_sqm'] ?? null) ?? 'rate unlisted';
 
             if ($type === 'land') {
                 $plot = $marker['size_label'] ?? 'plot size unlisted';
-                $lines[] = "- {$name} | {$town} | {$price} | {$rate} | land | {$plot} | {$photos} photos | pin {$highlight}";
+                $lines[] = "- {$name} | {$town} | {$price} | {$rate} | land | {$plot} | {$photos} photos | {$photoNote} | pin {$highlight}";
 
                 continue;
             }
@@ -225,7 +232,7 @@ class ChatAgent implements Agent, HasProviderOptions, HasTools, RemembersConvers
             $area = isset($marker['floor_area_sqm'])
                 ? ((int) round((float) $marker['floor_area_sqm'])).' m2'
                 : 'area unlisted';
-            $lines[] = "- {$name} | {$town} | {$price} | {$rate} | {$beds} beds | {$type} | BER {$ber} | {$area} | {$photos} photos | pin {$highlight}";
+            $lines[] = "- {$name} | {$town} | {$price} | {$rate} | {$beds} beds | {$type} | BER {$ber} | {$area} | {$photos} photos | {$photoNote} | pin {$highlight}";
         }
 
         $shown = count($markers);

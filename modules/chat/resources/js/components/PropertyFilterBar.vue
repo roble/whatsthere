@@ -117,13 +117,13 @@ const priceLabel = computed(() =>
 
 <template>
     <div
-        class="border-border/40 from-background/70 to-background/40 flex min-w-0 items-center gap-1.5 border-b bg-gradient-to-r px-2 py-1 backdrop-blur-xl"
+        class="border-border/40 from-background/70 to-background/40 flex min-w-0 items-center gap-1 border-b bg-gradient-to-r px-2 py-0.5 backdrop-blur-xl"
         data-testid="property-filter-bar"
     >
         <button
             v-if="compact"
             type="button"
-            class="border-border/50 bg-background/80 hover:bg-primary/8 focus-visible:ring-ring group flex min-w-0 flex-1 items-center gap-2 rounded-full border px-3 py-1.5 text-left text-xs shadow-sm shadow-black/5 transition-all duration-200 outline-none hover:border-primary/25 hover:shadow-md hover:shadow-primary/10 focus-visible:ring-2 active:scale-[0.99]"
+            class="border-border/50 bg-background/80 hover:bg-primary/8 focus-visible:ring-ring group flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-full border px-2.5 text-left text-[11px] shadow-sm shadow-black/5 transition-all duration-200 outline-none hover:border-primary/25 hover:shadow-md hover:shadow-primary/10 focus-visible:ring-2 active:scale-[0.99]"
             data-testid="property-filter-summary"
             :aria-label="$t('Edit search filters')"
             :disabled="saving"
