@@ -82,10 +82,13 @@ class PropertySearch
                 // a copy taken at import time, so this is the only way to see
                 // whether it is still for sale, book a viewing, or read the
                 // parts of the ad we do not store.
-                'source' => $property->activeListing?->url === null ? null : [
+                // `filled`, not a null check: the importer keeps whatever the
+                // feed gave it, and an empty string is a listing without a URL
+                // wearing the shape of one.
+                'source' => filled($property->activeListing?->url) ? [
                     'provider' => $property->activeListing->provider,
                     'url' => $property->activeListing->url,
-                ],
+                ] : null,
                 'details' => [
                     'address' => "{$property->address}, {$property->town}, {$property->county}",
                     'description' => $property->description,

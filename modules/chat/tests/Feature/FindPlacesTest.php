@@ -291,6 +291,60 @@ class FindPlacesTest extends TestCase
         $this->assertSame("Darcy's Bar", json_decode((string) $result, true)['markers'][0]['name']);
     }
 
+    public function test_a_two_hundred_carrying_no_results_is_not_an_answer(): void
+    {
+        // Overpass reports a server-side query timeout as a 200 with a
+        // `remark` and no `elements`, and a proxy in front of it will hand back
+        // an HTML error page just as cheerfully. Read as an empty list, either
+        // would be cached as "there is nothing here" for a month and would stop
+        // the failover before it reached an instance that had the answer.
+        config(['chat.overpass_endpoints' => [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+        ]]);
+
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '53.2707', 'lon' => '-9.0568',
+                'display_name' => 'Galway, Ireland',
+                'boundingbox' => ['53.2500', '53.3000', '-9.1000', '-9.0000'],
+            ]]),
+            'overpass-api.de/*' => Http::response(['remark' => 'runtime error: Query timed out']),
+            'overpass.kumi.systems/*' => Http::response(['elements' => [
+                ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => "Darcy's Bar"]],
+            ]]),
+        ]);
+
+        $result = (new FindPlaces)->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
+
+        $this->assertSame("Darcy's Bar", json_decode((string) $result, true)['markers'][0]['name']);
+    }
+
+    public function test_a_forced_warm_asks_again_rather_than_reading_the_cache(): void
+    {
+        config(['chat.overpass_endpoints' => ['https://overpass-api.de/api/interpreter']]);
+
+        Http::fake(['overpass-api.de/*' => Http::sequence()
+            ->push(['elements' => [
+                ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => 'The Old Pub', 'amenity' => 'pub']],
+            ]])
+            ->push(['elements' => [
+                ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => 'The New Pub', 'amenity' => 'pub']],
+            ]]),
+        ]);
+
+        $places = new FindPlaces;
+        $places->aroundMany(53.27, -9.05, ['pub']);
+
+        // Without this the forced run is answered from the cache, and the
+        // command reports having re-asked about everything while asking about
+        // nothing.
+        $fresh = $places->aroundMany(53.27, -9.05, ['pub'], fresh: true);
+
+        $this->assertSame('The New Pub', $fresh[0]['name']);
+        Http::assertSentCount(2);
+    }
+
     public function test_an_outage_is_not_cached_as_an_empty_area(): void
     {
         config(['chat.overpass_endpoints' => ['https://overpass-api.de/api/interpreter']]);

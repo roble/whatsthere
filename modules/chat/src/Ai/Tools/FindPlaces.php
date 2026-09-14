@@ -188,7 +188,7 @@ class FindPlaces implements Tool
      * @param  list<string>  $categories
      * @return list<array<string, mixed>>|null Null when Overpass could not be reached.
      */
-    public function aroundMany(float $latitude, float $longitude, array $categories, float $radiusKm = 2.0): ?array
+    public function aroundMany(float $latitude, float $longitude, array $categories, float $radiusKm = 2.0, bool $fresh = false): ?array
     {
         $categories = array_values(array_filter(
             array_unique($categories),
@@ -202,7 +202,11 @@ class FindPlaces implements Tool
         $box = $this->boxAround($latitude, $longitude, $radiusKm);
         $key = self::aroundKey($box, $categories);
 
-        if (($cached = Cache::get($key)) !== null) {
+        // `$fresh` is what makes a forced re-warm mean anything. Skipping only
+        // the caller's own "do I have this already" check still lands here and
+        // is answered from the cache, so the run reports having asked Overpass
+        // about everything while asking it about nothing.
+        if (! $fresh && ($cached = Cache::get($key)) !== null) {
             return $cached;
         }
 
@@ -617,8 +621,15 @@ class FindPlaces implements Tool
                 continue;
             }
 
-            if ($response->successful()) {
-                return $response->json('elements') ?? [];
+            // A 200 is not the same as an answer. Overpass reports a
+            // server-side query timeout as `{"remark": "runtime error ..."}`
+            // with a 200, and a proxy in front of it can return an HTML error
+            // page just as cheerfully. Reading `elements` off either gives an
+            // empty list, which would be cached as "there is nothing here" for
+            // a month and stop the failover before it reached an instance that
+            // would have answered.
+            if ($response->successful() && is_array($elements = $response->json('elements'))) {
+                return $elements;
             }
         }
 
