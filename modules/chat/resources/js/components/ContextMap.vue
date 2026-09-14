@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     MAP_STYLES,
+    propertyFacts,
     styleUrlFor,
     viewKey,
     type ItineraryStop,
@@ -417,7 +418,7 @@ function propertyPopupContent(place: MapMarker): HTMLElement {
 
     const facts = document.createElement('span');
     facts.className = 'block text-sm text-neutral-500';
-    facts.textContent = `${place.bedrooms ?? '?'} Bed · ${place.property_type ?? ''}`;
+    facts.textContent = propertyFacts(place, true);
 
     details.append(price, address, facts);
     root.append(details);
@@ -663,7 +664,7 @@ function popupContent(place: MapMarker): HTMLElement {
                 maximumFractionDigits: 0,
             }).format(place.asking_price / 100) + ' asking price';
         const facts = document.createElement('p');
-        facts.textContent = `${place.bedrooms ?? 'Unknown'} bedrooms · ${place.property_type ?? ''}`;
+        facts.textContent = propertyFacts(place);
         root.append(price, facts);
     }
 
