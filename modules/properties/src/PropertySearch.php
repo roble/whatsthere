@@ -20,23 +20,21 @@ class PropertySearch
             ->where('record_type', 'asking_price')->where('effective_date', '<=', today())
             ->orderByDesc('effective_date')->orderByDesc('id')->limit(1);
 
-        $locationColumn = match ($filters['location_type']) {
-            'town' => 'town',
-            'county' => 'county',
-            default => throw new \InvalidArgumentException('Unsupported location type.'),
-        };
-
         $query = Property::query()->with(['askingPrice', 'activeListing.media'])
             ->where('status', 'for_sale')->whereNotNull('latitude')->whereNotNull('longitude')
             ->where(fn (Builder $query) => $query
                 ->where('latitude', '!=', 0)
                 ->where('longitude', '!=', 0))
             ->whereHas('askingPrice', fn (Builder $query) => $query->where('currency', 'EUR'))
-            ->whereRaw('LOWER('.$locationColumn.') = ?', [mb_strtolower($filters['location'])])
             ->where($price, '<=', $filters['max_price']);
 
+        $this->whereInPlace($query, $filters);
+
         if ($filters['location_type'] === 'town' && $filters['county'] !== null) {
-            $query->whereRaw('LOWER(county) = ?', [mb_strtolower($filters['county'])]);
+            // Applied outside the name-or-box group on purpose: it is what
+            // stops a bounding box that overshoots the county line from
+            // dragging in the Blackrock or Rochestown of somewhere else.
+            $this->whereLocality($query, 'county', $filters['county']);
         }
         if ($filters['property_type'] !== null) {
             $this->constrainType($query, $filters['property_type']);
@@ -255,6 +253,17 @@ class PropertySearch
             'categoryKey' => $marker['categoryKey'] ?? 'property',
         ];
 
+        $sourceUrl = is_array($marker['source'] ?? null)
+            ? safe_http_url($marker['source']['url'] ?? null)
+            : null;
+
+        if ($sourceUrl !== null) {
+            $slim['source'] = [
+                'provider' => $marker['source']['provider'] ?? null,
+                'url' => $sourceUrl,
+            ];
+        }
+
         $safeImage = is_string($firstImage[0] ?? null) ? safe_listing_image_url($firstImage[0]) : null;
 
         if ($safeImage !== null) {
@@ -372,6 +381,10 @@ class PropertySearch
             'images' => $images,
             'highlight' => 'typical',
             'categoryKey' => 'property',
+            'source' => ($sourceUrl = safe_http_url($listing?->url)) === null || $listing === null ? null : [
+                'provider' => $listing->provider,
+                'url' => $sourceUrl,
+            ],
             'details' => [
                 'address' => "{$property->address}, {$property->town}, {$property->county}",
                 'description' => $property->description,
@@ -379,6 +392,61 @@ class PropertySearch
                 'agent' => $metadata['agent'] ?? null,
             ],
         ];
+    }
+
+    /**
+     * Narrow to the place the visitor named.
+     *
+     * A county is matched by name. A town is matched by name or by falling
+     * inside the place's bounding box, so "Cork City" still finds Glasheen
+     * and Douglas listings that do not carry that exact town label.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function whereInPlace(Builder $query, array $filters): void
+    {
+        if ($filters['location_type'] !== 'town') {
+            $this->whereLocality($query, $filters['location_type'], $filters['location']);
+
+            return;
+        }
+
+        $bounds = (new PlaceBounds)->for($filters['location'], $filters['county']);
+
+        if ($bounds === null) {
+            $this->whereLocality($query, 'town', $filters['location']);
+
+            return;
+        }
+
+        [$south, $north, $west, $east] = $bounds;
+
+        $query->where(function (Builder $query) use ($filters, $south, $north, $west, $east): void {
+            $this->whereLocality($query, 'town', $filters['location']);
+
+            $query->orWhere(fn (Builder $query) => $query
+                ->whereBetween('latitude', [$south, $north])
+                ->whereBetween('longitude', [$west, $east]));
+        });
+    }
+
+    /**
+     * Match a locality by whole words so "Cork City Centre" hits Cork
+     * without dragging Castletownshend into Castletown.
+     */
+    private function whereLocality(Builder $query, string $column, string $value): void
+    {
+        $column = in_array($column, ['town', 'county'], true) ? $column : 'county';
+
+        $term = mb_strtolower(trim($value));
+        $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term);
+
+        $query->where(function (Builder $query) use ($column, $term, $like): void {
+            $query->whereRaw("LOWER({$column}) = ?", [$term])
+                ->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '\\'", [$like.' %'])
+                ->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '\\'", ['% '.$like])
+                ->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '\\'", ['% '.$like.' %']);
+        });
     }
 
     private function constrainType(Builder $query, string $type): void

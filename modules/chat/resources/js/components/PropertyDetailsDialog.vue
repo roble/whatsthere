@@ -11,12 +11,14 @@ import {
     formatDistance,
     formatPricePerSqm,
     isLand,
+    listingSource,
     nearbyCategoryIcon,
     nearbyCategoryLabel,
     typeLabelKey,
 } from '@modules/chat/resources/js/listing';
 import PropertyGallery from '@modules/chat/resources/js/components/PropertyGallery.vue';
 import IconCompass from '~icons/lucide/compass';
+import IconExternalLink from '~icons/lucide/external-link';
 import IconMapPin from '~icons/lucide/map-pin';
 import { Button } from '@/components/ui/button';
 import { computed, ref, watch } from 'vue';
@@ -42,6 +44,7 @@ const description = computed(
 );
 const longDescription = computed(() => description.value.length > 180);
 const nearbyPreview = computed(() => props.nearby.slice(0, 6));
+const source = computed(() => listingSource(props.property));
 const facts = computed(() => {
     const property = props.property;
 
@@ -235,6 +238,23 @@ function price(property: MapMarker): string {
                                 ? $t('Looking around…')
                                 : $t("What's there?")
                         }}
+                    </Button>
+
+                    <Button
+                        v-if="source"
+                        as-child
+                        variant="outline"
+                        class="w-full rounded-xl"
+                    >
+                        <a
+                            :href="source.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-testid="property-source-link"
+                        >
+                            <IconExternalLink class="size-4" />
+                            {{ $t('View on :portal', { portal: source.label }) }}
+                        </a>
                     </Button>
                 </section>
             </div>

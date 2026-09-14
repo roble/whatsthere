@@ -1,4 +1,5 @@
 import type { MapMarker } from '@modules/chat/resources/js/map';
+import { safeHttpUrl } from '@/lib/safeHttpUrl';
 import type { Component } from 'vue';
 import IconBus from '~icons/lucide/bus';
 import IconCoffee from '~icons/lucide/coffee';
@@ -177,6 +178,32 @@ export function slimSelectedProperty(
     marker: MapMarker | null,
 ): { id: number } | null {
     return typeof marker?.id === 'number' ? { id: marker.id } : null;
+}
+
+const PORTALS: Record<string, string> = {
+    daft: 'Daft.ie',
+    myhome: 'MyHome.ie',
+    ppr: 'Property Price Register',
+};
+
+/** Live portal link, only when the stored URL is a safe http(s) address. */
+export function listingSource(
+    marker: MapMarker | null | undefined,
+): { provider: string; url: string; label: string } | null {
+    const source = marker?.source;
+    const url = source ? safeHttpUrl(source.url) : null;
+
+    if (!source || url === null) {
+        return null;
+    }
+
+    return {
+        provider: source.provider,
+        url,
+        label:
+            PORTALS[source.provider] ??
+            source.provider.replace(/^./, (character) => character.toUpperCase()),
+    };
 }
 
 export function headingKey(markers: MapMarker[] | undefined): string {

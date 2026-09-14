@@ -1,3 +1,5 @@
+import { trans } from 'laravel-vue-i18n';
+
 /**
  * Basemaps OpenFreeMap serves, all keyless and unmetered.
  *
@@ -46,6 +48,11 @@ export type MapMarker = {
     name: string;
     /** Set when several searches share one map, so each pin keeps its symbol. */
     categoryKey?: string;
+    /**
+     * The portal this listing came from. Everything else on a property card is
+     * a copy taken at import time, so this is the only live thing on it.
+     */
+    source?: { provider: string; url: string } | null;
     /** Whatever OpenStreetMap knew that a visitor can act on. Keys from FindPlaces::DETAIL_TAGS. */
     details?: Partial<
         Record<
@@ -118,6 +125,39 @@ export type MapViewport = {
     moved: boolean;
     interacted: boolean;
 };
+
+/**
+ * The one-line summary under a property's address, wherever it is drawn.
+ *
+ * A bedroom count we do not have is left out rather than written as "?". In
+ * this data the count is only ever missing for a site, where it is not unknown
+ * but inapplicable -- a field with no house on it has no bedrooms, and saying
+ * "? bedrooms" invites the visitor to wonder what the answer is.
+ *
+ * Shared because the same line is drawn in four places -- the list, the dialog,
+ * the map pin and its popup -- and they had already drifted into printing "?",
+ * "?", "?" and "Unknown" for the identical missing value.
+ */
+export function propertyFacts(marker: MapMarker, compact = false): string {
+    const bedrooms = marker.bedrooms;
+    const parts: string[] = [];
+
+    if (typeof bedrooms === 'number' && bedrooms > 0) {
+        parts.push(
+            compact
+                ? `${bedrooms} ${trans('Bed')}`
+                : trans(bedrooms === 1 ? ':count bedroom' : ':count bedrooms', {
+                      count: String(bedrooms),
+                  }),
+        );
+    }
+
+    if (marker.property_type) {
+        parts.push(marker.property_type);
+    }
+
+    return parts.join(' · ');
+}
 
 /**
  * Identity for a view.

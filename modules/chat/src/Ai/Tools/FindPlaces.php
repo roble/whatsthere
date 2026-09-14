@@ -3,6 +3,7 @@
 namespace Modules\Chat\Ai\Tools;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Contracts\Tool;
@@ -115,6 +116,16 @@ class FindPlaces implements Tool
     public const int DEFAULT_RADIUS_METRES = 8000;
 
     /**
+     * How long to wait on any one Overpass instance.
+     *
+     * Paid once per instance in the worst case, so this is a third of the time
+     * a visitor can spend finding out that every server is busy. Kept above the
+     * ten seconds a healthy instance takes on the widest query here, so a slow
+     * answer still arrives rather than being abandoned just before it lands.
+     */
+    protected const int TIMEOUT_SECONDS = 12;
+
+    /**
      * The OpenStreetMap tags worth carrying to the popup and the model.
      * Everything else is dropped: the result is context as well as map data.
      */
@@ -200,17 +211,6 @@ class FindPlaces implements Tool
     }
 
     /**
-     * Resolve an area name to the box to search inside.
-     *
-     * ponytail: a bounding box, not the area's real outline, so a search of
-     * somewhere non-rectangular picks up its neighbours -- a box around Kerry
-     * reaches into Clare. Fixing it properly means resolving the place to an
-     * OpenStreetMap area and filtering on that, which is exact but only works
-     * for places mapped as boundaries, so free-text areas would stop working.
-     *
-     * @return array{label: string, bbox: array{string, string, string, string}}|null
-     */
-    /**
      * Everything of several kinds around a point, in one request.
      *
      * Asking for seven categories as seven searches means seven round trips to
@@ -233,17 +233,8 @@ class FindPlaces implements Tool
             return [];
         }
 
-        $latitudeSpan = $radiusKm / 111.0;
-        $longitudeSpan = $latitudeSpan / max(cos(deg2rad($latitude)), 0.01);
-        $box = sprintf(
-            '%F,%F,%F,%F',
-            $latitude - $latitudeSpan,
-            $longitude - $longitudeSpan,
-            $latitude + $latitudeSpan,
-            $longitude + $longitudeSpan,
-        );
-
-        $key = 'overpass:around:v2:'.md5($box.'|'.implode(',', $categories));
+        $box = $this->boxAround($latitude, $longitude, $radiusKm);
+        $key = self::aroundKey($box, $categories);
 
         if (($cached = Cache::get($key)) !== null) {
             return $cached;
@@ -254,20 +245,19 @@ class FindPlaces implements Tool
             $categories,
         ));
 
-        $response = Http::asForm()
-            ->withUserAgent(config('app.name').' ('.config('app.url').')')
-            ->timeout(45)
-            ->post('https://overpass-api.de/api/interpreter', [
-                'data' => sprintf('[out:json][timeout:40];(%s);out center %d;', $clauses, self::LIMIT * 2),
-            ]);
+        $elements = $this->ask(sprintf(
+            '[out:json][timeout:25];(%s);out center %d;',
+            $clauses,
+            self::LIMIT * 2,
+        ));
 
-        if ($response->failed()) {
+        if ($elements === null) {
             return null;
         }
 
         $grouped = [];
 
-        foreach ($response->json('elements') ?? [] as $element) {
+        foreach ($elements as $element) {
             $category = $this->categoryOf((array) ($element['tags'] ?? []), $categories);
 
             if ($category !== null) {
@@ -417,7 +407,7 @@ class FindPlaces implements Tool
         }
 
         $this->rememberMarkers($markers);
-        Cache::put($key, $markers, now()->addDay());
+        Cache::put($key, $markers, ShowOnMap::cacheFor());
 
         return $markers;
     }
@@ -436,6 +426,58 @@ class FindPlaces implements Tool
             + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($deltaLon / 2) ** 2;
 
         return (int) round($earth * 2 * atan2(sqrt($haversine), sqrt(1 - $haversine)));
+    }
+
+    /**
+     * Whether this exact question has already been answered.
+     *
+     * Lets the warming command skip what it already knows without paying for a
+     * request to find out. Shares `aroundKey` with the fetch rather than
+     * rebuilding the key, because a check that computed a key even slightly
+     * differently would report every property cold and re-ask for all of them.
+     *
+     * @param  list<string>  $categories
+     */
+    public function hasNearby(float $latitude, float $longitude, array $categories, float $radiusKm = 2.0): bool
+    {
+        $categories = array_values(array_filter(
+            array_unique($categories),
+            fn (string $category): bool => isset(self::CATEGORIES[$category]),
+        ));
+
+        return $categories !== [] && Cache::has(self::aroundKey(
+            $this->boxAround($latitude, $longitude, $radiusKm),
+            $categories,
+        ));
+    }
+
+    /**
+     * The Overpass bounding box for a radius around a point.
+     *
+     * Longitude degrees narrow towards the poles, so the east-west span is
+     * divided by the cosine of the latitude; without that the box is a wide
+     * rectangle in Ireland and a sliver in Norway.
+     */
+    protected function boxAround(float $latitude, float $longitude, float $radiusKm): string
+    {
+        $latitudeSpan = $radiusKm / 111.0;
+        $longitudeSpan = $latitudeSpan / max(cos(deg2rad($latitude)), 0.01);
+
+        return sprintf(
+            '%F,%F,%F,%F',
+            $latitude - $latitudeSpan,
+            $longitude - $longitudeSpan,
+            $latitude + $latitudeSpan,
+            $longitude + $longitudeSpan,
+        );
+    }
+
+    /**
+     * @param  list<string>  $categories
+     */
+    protected static function aroundKey(string $box, array $categories): string
+    {
+        return 'overpass:around:v1:'.md5($box.'|'.implode(',', $categories));
     }
 
     /**
@@ -463,6 +505,17 @@ class FindPlaces implements Tool
         return null;
     }
 
+    /**
+     * Resolve an area name to the box to search inside.
+     *
+     * ponytail: a bounding box, not the area's real outline, so a search of
+     * somewhere non-rectangular picks up its neighbours -- a box around Kerry
+     * reaches into Clare. Fixing it properly means resolving the place to an
+     * OpenStreetMap area and filtering on that, which is exact but only works
+     * for places mapped as boundaries, so free-text areas would stop working.
+     *
+     * @return array{label: string, bbox: array{string, string, string, string}}|null
+     */
     protected function boundsOf(string $area): ?array
     {
         $view = json_decode(
@@ -506,7 +559,7 @@ class FindPlaces implements Tool
 
         // Only answers are cached. A timeout must not pin an area to "nothing
         // here" for the rest of the day.
-        Cache::put($key, $places, now()->addDay());
+        Cache::put($key, $places, ShowOnMap::cacheFor());
 
         return $places;
     }
@@ -581,6 +634,10 @@ class FindPlaces implements Tool
         }
 
         foreach ($markers as $marker) {
+            // Deliberately a day, not the OpenStreetMap lifetime: this records
+            // that *this conversation* asked for *this pin*, so it expires with
+            // the visitor's session rather than with the map data. Keeping it
+            // for a month would only widen the window on a replayed marker.
             Cache::put(
                 self::markerKey($this->conversationId, $marker['name'], $marker['lat'], $marker['lon']),
                 true,
@@ -712,16 +769,53 @@ class FindPlaces implements Tool
             self::LIMIT
         );
 
-        $response = Http::asForm()
-            // Overpass is a donated service whose usage policy asks that
-            // clients identify themselves and go easy, hence the cache above.
-            ->withUserAgent(config('app.name').' ('.config('app.url').')')
-            // Generous: Overpass regularly takes several seconds, and the
-            // alternative to waiting is the answer arriving without its map.
-            ->timeout(30)
-            ->post('https://overpass-api.de/api/interpreter', ['data' => $query]);
+        return $this->ask($query);
+    }
 
-        return $response->failed() ? null : ($response->json('elements') ?? []);
+    /**
+     * Put a query to Overpass, trying each instance in turn.
+     *
+     * The main instance at overpass-api.de is the busiest thing in
+     * OpenStreetMap and sheds load by returning 504 from its gateway in a few
+     * seconds -- measured here at two failures in three, which is what "could
+     * not load what is nearby" actually was. The mirrors run the same software
+     * over the same planet, so any of them will do, and a visitor should not
+     * have to care which one happened to be up.
+     *
+     * Ordered, not random: the first is tried first every time, so a healthy
+     * main instance still serves almost everything and the mirrors carry only
+     * the overflow.
+     *
+     * @return list<array<string, mixed>>|null Null when every instance failed.
+     */
+    protected function ask(string $query): ?array
+    {
+        foreach ((array) config('chat.overpass_endpoints', []) as $endpoint) {
+            try {
+                $response = Http::asForm()
+                    // Overpass is a donated service whose usage policy asks
+                    // that clients identify themselves and go easy, hence the
+                    // cache above.
+                    ->withUserAgent(config('app.name').' ('.config('app.url').')')
+                    // Measured: a healthy instance answers this query in 2-10
+                    // seconds and an overloaded one gives up in 5. Waiting
+                    // longer than that buys almost nothing and is paid for
+                    // three times over, once per instance, by someone watching
+                    // a spinner.
+                    ->timeout(self::TIMEOUT_SECONDS)
+                    ->post($endpoint, ['data' => $query]);
+            } catch (ConnectionException) {
+                // A timeout or a refused connection is this instance being
+                // unavailable, which is the case the next one exists for.
+                continue;
+            }
+
+            if ($response->successful()) {
+                return $response->json('elements') ?? [];
+            }
+        }
+
+        return null;
     }
 
     /**

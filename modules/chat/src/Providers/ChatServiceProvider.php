@@ -6,6 +6,7 @@ use App\Providers\ModuleServiceProvider;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Laravel\Ai\Models\Conversation;
+use Modules\Chat\Console\Commands\WarmNearbyPlaces;
 use Modules\Chat\Jobs\GenerateConversationTitle;
 
 class ChatServiceProvider extends ModuleServiceProvider
@@ -13,6 +14,13 @@ class ChatServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         // YourServiceProvider::class,
     ];
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        $this->commands([WarmNearbyPlaces::class]);
+    }
 
     /**
      * Share Inertia data globally.
