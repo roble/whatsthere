@@ -100,6 +100,7 @@ import {
     onBeforeUnmount,
     onMounted,
     ref,
+    useTemplateRef,
     watch,
 } from 'vue';
 
@@ -198,6 +199,29 @@ const searchError = ref('');
 const searchingProperties = ref(false);
 const selectedPropertyId = ref<number | null>(null);
 const propertyFiltersOpen = ref(false);
+
+/**
+ * Whether the listing has the column to itself.
+ *
+ * This is a mirror of the transcript panel's collapsed state, not a second
+ * source of truth: the panel emits `collapse`/`expand` -- whether that came
+ * from the divider or the button -- and this follows. Writing to it moves the
+ * panel, the panel answers, and the two cannot drift apart.
+ */
+const transcriptPanel = useTemplateRef<{
+    collapse: () => void;
+    expand: () => void;
+}>('transcriptPanel');
+const resultsExpanded = ref(false);
+
+watch(resultsExpanded, (expanded) => {
+    if (expanded) {
+        transcriptPanel.value?.collapse();
+    } else {
+        transcriptPanel.value?.expand();
+    }
+});
+
 const selectedAnswers = ref<string[]>([]);
 const otherAnswer = ref('');
 
@@ -1121,12 +1145,15 @@ function refreshSessions() {
 
 /**
  * The title is rewritten by a queued job, so the browser is never told. Rather
- * than poll, refresh once a reply lands and again a few seconds after a
- * milestone, which is the only moment the title can have changed.
+ * than poll, look again a few seconds after a milestone, which is the only
+ * moment the title can have changed.
+ *
+ * The turn's own refreshOnboarding() already re-reads the list, so there is
+ * nothing to do here for an ordinary reply. Refreshing again from this watcher
+ * would also race it: on a first message the two land on different URLs, and
+ * the navigation onto the new conversation cancels whichever is still open.
  */
 function scheduleSessionRefresh() {
-    refreshSessions();
-
     const userMessages = messages.value.filter(
         (message) => message.role === 'user',
     ).length;
@@ -1237,6 +1264,13 @@ async function send(text: string): Promise<void> {
     if (!text.trim()) {
         return;
     }
+
+    // The full list hides the transcript, so a reply sent from it would stream
+    // somewhere nobody can see. Asking a question is asking to be answered:
+    // give the answer somewhere to land. Done here rather than in the composer
+    // so the example cards, the interview answers and WebMCP all collapse too.
+    resultsExpanded.value = false;
+
     if (propertyFlow.value && onboarding.value) {
         onboarding.value.current_question = null;
     }
@@ -1286,6 +1320,11 @@ async function send(text: string): Promise<void> {
  *
  * Only safe once the stream has ended either way: moving a new conversation
  * onto its durable URL any earlier aborts the stream and loses that state.
+ *
+ * This is also the turn's only read of the session list. It has to be: a first
+ * message creates the conversation and then navigates onto its URL, and that
+ * navigation cancels any separate reload still in flight -- which is exactly
+ * the request that would have carried the new chat into the sidebar.
  */
 async function refreshOnboarding(): Promise<void> {
     // Always read back from the conversation itself once there is one. A plain
@@ -1302,14 +1341,14 @@ async function refreshOnboarding(): Promise<void> {
                   replace: true,
                   preserveState: true,
                   preserveScroll: true,
-                  only: ['onboarding'],
+                  only: ['chat', 'onboarding'],
                   onFinish: () => {
                       pendingConversationUrl.value = null;
                       resolve();
                   },
               })
             : router.reload({
-                  only: ['onboarding'],
+                  only: ['chat', 'onboarding'],
                   onFinish: () => resolve(),
               }),
     );
@@ -1606,20 +1645,388 @@ watch(tripPhase, () => {
                         @preferences="propertyFiltersOpen = true"
                     />
 
-                    <!-- With no transcript yet the results are the page, so
-                         they take the room the conversation is not using
-                         instead of being capped at a fixed height that cuts a
-                         card in half. -->
-                    <PropertyResults
-                        v-if="
-                            propertyFlow && !isMapStaging && propertyListingView
-                        "
-                        :class="messages.length ? 'max-h-72' : 'flex-1'"
-                        :view="propertyListingView"
-                        :selected-id="selectedPropertyId"
-                        @select="selectProperty"
-                        @highlight="highlightProperty"
-                    />
+                    <!--
+                        The listing and the transcript share what the filter bar
+                        and the composer leave behind, on a divider of their own.
+                        `order` is what lets the results panel come and go with
+                        the property flow without the group losing track of which
+                        panel is which.
+
+                        Collapsing the transcript panel is the same thing as
+                        expanding the results: one mechanism, so the divider and
+                        the expand button cannot disagree about the layout.
+                    -->
+                    <ResizablePanelGroup
+                        direction="vertical"
+                        auto-save-id="chat-results-split"
+                        class="min-h-0 flex-1"
+                    >
+                        <ResizablePanel
+                            v-if="
+                                propertyFlow &&
+                                !isMapStaging &&
+                                propertyListingView
+                            "
+                            :order="1"
+                            :default-size="messages.length ? 35 : 60"
+                            :min-size="15"
+                            class="flex min-h-0 flex-col"
+                        >
+                            <PropertyResults
+                                v-model:expanded="resultsExpanded"
+                                class="min-h-0 flex-1"
+                                :view="propertyListingView"
+                                :selected-id="selectedPropertyId"
+                                @select="selectProperty"
+                                @highlight="highlightProperty"
+                            />
+                        </ResizablePanel>
+
+                        <ResizableHandle
+                            v-if="
+                                propertyFlow &&
+                                !isMapStaging &&
+                                propertyListingView
+                            "
+                            with-handle
+                            data-testid="results-split-handle"
+                        />
+
+                        <ResizablePanel
+                            ref="transcriptPanel"
+                            :order="2"
+                            :default-size="messages.length ? 65 : 40"
+                            :min-size="20"
+                            collapsible
+                            :collapsed-size="0"
+                            class="flex min-h-0 flex-col"
+                            @collapse="resultsExpanded = true"
+                            @expand="resultsExpanded = false"
+                        >
+                            <Conversation
+                                ref="conversation"
+                                class="min-h-0 flex-1"
+                            >
+                                <ConversationContent
+                                    data-testid="chat-messages"
+                                    @click="onTranscriptClick"
+                                >
+                                    <!-- The opening screen sits beside the map rather
+                                 than in place of it. Every property we hold is
+                                 already pinned, so the first message narrows a
+                                 search the visitor can see, instead of starting
+                                 one they cannot. -->
+                                    <!-- The opening screen sits beside the map
+                                 rather than in place of it, and stays small:
+                                 the results above it are the thing worth
+                                 looking at, so this is one line of orientation
+                                 and a few starting points. -->
+                                    <div
+                                        v-if="!messages.length && propertyFlow"
+                                        class="space-y-3 px-2 py-4"
+                                        data-testid="chat-landing"
+                                    >
+                                        <div
+                                            class="flex items-baseline justify-between gap-3"
+                                        >
+                                            <p
+                                                class="text-muted-foreground text-sm"
+                                            >
+                                                {{
+                                                    $t(
+                                                        'Everything we have is on the map. Tell me what matters and I will narrow it down.',
+                                                    )
+                                                }}
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                class="text-muted-foreground shrink-0"
+                                                data-testid="refresh-examples"
+                                                @click="refreshExamplePrompts"
+                                            >
+                                                <RefreshCwIcon
+                                                    aria-hidden="true"
+                                                />
+                                                {{ $t('More ideas') }}
+                                            </Button>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <Button
+                                                v-for="example in examplePrompts"
+                                                :key="example.text"
+                                                variant="outline"
+                                                size="sm"
+                                                class="text-muted-foreground hover:text-foreground h-auto rounded-full px-3 py-1.5 text-left text-xs whitespace-normal"
+                                                @click="
+                                                    startExample(example.text)
+                                                "
+                                            >
+                                                <span aria-hidden="true">{{
+                                                    example.emoji
+                                                }}</span>
+                                                {{ $t(example.text) }}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <ConversationEmptyState
+                                        v-else-if="!messages.length"
+                                        :title="$t('Ask me anything')"
+                                        :description="
+                                            $t(
+                                                'Your conversation is saved as you go.',
+                                            )
+                                        "
+                                        data-testid="chat-empty"
+                                    />
+
+                                    <Message
+                                        v-for="message in messages"
+                                        v-show="!isEmptyReply(message)"
+                                        :key="message.id"
+                                        :from="message.role"
+                                        :class="
+                                            message.role === 'user'
+                                                ? 'flex-col items-end'
+                                                : undefined
+                                        "
+                                        :data-testid="`message-${message.id}`"
+                                    >
+                                        <MessageContent
+                                            :class="
+                                                isPending(message) &&
+                                                'animate-pulse opacity-60'
+                                            "
+                                            :data-pending="
+                                                isPending(message) || undefined
+                                            "
+                                        >
+                                            <!-- The whole process in one collapsible,
+                                         reasoning and tool calls interleaved in
+                                         the order they streamed.
+
+                                         Labelled "Route of thought": the
+                                         components keep the upstream ai-elements
+                                         names so they still diff against the
+                                         registry, only the visible string is
+                                         ours. -->
+                                            <!-- Keyed on whether the turn is still
+                                         writing: `default-open` is only read
+                                         once, so without a remount every
+                                         finished turn stays expanded and the
+                                         transcript becomes three copies of
+                                         itself. -->
+                                            <ChainOfThought
+                                                v-if="thoughts(message).length"
+                                                :key="`thoughts-${message.id}-${isWriting(message)}`"
+                                                :default-open="
+                                                    isWriting(message)
+                                                "
+                                                :data-testid="`thoughts-${message.id}`"
+                                            >
+                                                <ChainOfThoughtHeader
+                                                    v-if="isWriting(message)"
+                                                    hide-label
+                                                >
+                                                    <template #icon>
+                                                        <ThinkingIndicator />
+                                                    </template>
+                                                </ChainOfThoughtHeader>
+                                                <ChainOfThoughtHeader v-else>
+                                                    {{ $t('Route of thought') }}
+                                                </ChainOfThoughtHeader>
+
+                                                <ChainOfThoughtContent>
+                                                    <ChainOfThoughtStep
+                                                        v-for="thought in thoughts(
+                                                            message,
+                                                        )"
+                                                        :key="thought.id"
+                                                        :label="
+                                                            $t(
+                                                                thought.label,
+                                                                thought.params,
+                                                            )
+                                                        "
+                                                        :description="
+                                                            thought.description
+                                                        "
+                                                        :status="thought.status"
+                                                        :default-open="
+                                                            thought.body
+                                                                ?.kind !==
+                                                            'results'
+                                                        "
+                                                        :data-testid="`thought-${message.id}-${thought.id}`"
+                                                    >
+                                                        <template #icon>
+                                                            <component
+                                                                :is="
+                                                                    thought.icon
+                                                                "
+                                                                class="size-4"
+                                                            />
+                                                        </template>
+
+                                                        <!-- One branch per ThoughtBody
+                                                     variant in the registry. -->
+                                                        <MessageResponse
+                                                            v-if="
+                                                                thought.body
+                                                                    ?.kind ===
+                                                                'markdown'
+                                                            "
+                                                            class="text-muted-foreground! text-xs leading-relaxed"
+                                                            :content="
+                                                                thought.body
+                                                                    .text
+                                                            "
+                                                            mode="static"
+                                                        />
+                                                        <!-- The vendored component is
+                                                     a single non-wrapping row,
+                                                     so a search of any size
+                                                     runs off the edge. Set
+                                                     here rather than upstream
+                                                     so it still diffs against
+                                                     the registry. -->
+                                                        <ChainOfThoughtSearchResults
+                                                            v-else-if="
+                                                                thought.body
+                                                                    ?.kind ===
+                                                                'results'
+                                                            "
+                                                            class="flex-wrap gap-y-1.5"
+                                                        >
+                                                            <ChainOfThoughtSearchResult
+                                                                v-for="item in thought
+                                                                    .body.items"
+                                                                :key="`${item.marker.lat},${item.marker.lon}`"
+                                                                as="button"
+                                                                type="button"
+                                                                class="focus-visible:ring-ring cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                                                                :aria-label="
+                                                                    $t(
+                                                                        'Show :place on map',
+                                                                        {
+                                                                            place: item.label,
+                                                                        },
+                                                                    )
+                                                                "
+                                                                @click="
+                                                                    focusMapMarker(
+                                                                        item.marker,
+                                                                    )
+                                                                "
+                                                            >
+                                                                {{ item.label }}
+                                                            </ChainOfThoughtSearchResult>
+                                                        </ChainOfThoughtSearchResults>
+                                                        <ChainOfThoughtImage
+                                                            v-else-if="
+                                                                thought.body
+                                                                    ?.kind ===
+                                                                'image'
+                                                            "
+                                                            :caption="
+                                                                thought.body
+                                                                    .caption
+                                                            "
+                                                        >
+                                                            <img
+                                                                :src="
+                                                                    thought.body
+                                                                        .src
+                                                                "
+                                                                alt=""
+                                                            />
+                                                        </ChainOfThoughtImage>
+                                                    </ChainOfThoughtStep>
+                                                </ChainOfThoughtContent>
+                                            </ChainOfThought>
+
+                                            <template
+                                                v-for="(
+                                                    part, index
+                                                ) in message.parts"
+                                                :key="index"
+                                            >
+                                                <!-- The library's word animation is off
+                                             on purpose. It wraps every word in a
+                                             Vue TransitionGroup, and on each
+                                             streamed token Vue measures every
+                                             word and reads its computed style, so
+                                             the cost grows with the reply: a
+                                             long answer froze the page for ten
+                                             seconds at a time and the animation
+                                             never showed. Tokens arriving is the
+                                             typewriter; the caret marks it. -->
+                                                <MessageResponse
+                                                    v-if="part.type === 'text'"
+                                                    :content="
+                                                        message.role ===
+                                                        'assistant'
+                                                            ? withPlaceLinks(
+                                                                  part.text,
+                                                              )
+                                                            : part.text
+                                                    "
+                                                    :mode="
+                                                        isWriting(message)
+                                                            ? 'streaming'
+                                                            : 'static'
+                                                    "
+                                                    :enable-animate="false"
+                                                    :node-renderers="
+                                                        markdownRenderers
+                                                    "
+                                                    caret="block"
+                                                />
+                                            </template>
+                                        </MessageContent>
+
+                                        <div
+                                            v-if="isUndelivered(message)"
+                                            class="mt-1 flex flex-col items-end gap-0.5"
+                                            :data-testid="`undelivered-${message.id}`"
+                                        >
+                                            <p
+                                                class="text-destructive flex items-center gap-1 text-xs"
+                                            >
+                                                <CircleAlertIcon
+                                                    class="size-3.5 shrink-0"
+                                                />
+                                                {{ $t('Not delivered') }}
+                                            </p>
+
+                                            <!-- Withdrawn once the attempts are spent,
+                                         rather than left there doing nothing. -->
+                                            <Button
+                                                v-if="retriesLeft(message) > 0"
+                                                variant="link"
+                                                size="sm"
+                                                class="text-muted-foreground h-auto p-0 text-xs"
+                                                :data-testid="`retry-${message.id}`"
+                                                @click="retry(message)"
+                                            >
+                                                {{ $t('Try again') }}
+                                            </Button>
+                                        </div>
+                                    </Message>
+
+                                    <!-- Sent, nothing back yet: no assistant message
+                                 exists to hang a chain of thought on. -->
+                                    <ThinkingIndicator
+                                        v-if="status === 'submitted'"
+                                    />
+                                </ConversationContent>
+
+                                <ConversationScrollButton :status="status" />
+                            </Conversation>
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
 
                     <PropertyFiltersDialog
                         v-model:open="propertyFiltersOpen"
@@ -1634,297 +2041,6 @@ watch(tripPhase, () => {
                         :loading-nearby="loadingNearby"
                         @nearby="showNearby"
                     />
-
-                    <Conversation
-                        ref="conversation"
-                        :class="messages.length ? undefined : 'flex-none'"
-                    >
-                        <ConversationContent
-                            data-testid="chat-messages"
-                            @click="onTranscriptClick"
-                        >
-                            <!-- The opening screen sits beside the map rather
-                                 than in place of it. Every property we hold is
-                                 already pinned, so the first message narrows a
-                                 search the visitor can see, instead of starting
-                                 one they cannot. -->
-                            <!-- The opening screen sits beside the map
-                                 rather than in place of it, and stays small:
-                                 the results above it are the thing worth
-                                 looking at, so this is one line of orientation
-                                 and a few starting points. -->
-                            <div
-                                v-if="!messages.length && propertyFlow"
-                                class="space-y-3 px-2 py-4"
-                                data-testid="chat-landing"
-                            >
-                                <div
-                                    class="flex items-baseline justify-between gap-3"
-                                >
-                                    <p class="text-muted-foreground text-sm">
-                                        {{
-                                            $t(
-                                                'Everything we have is on the map. Tell me what matters and I will narrow it down.',
-                                            )
-                                        }}
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="text-muted-foreground shrink-0"
-                                        data-testid="refresh-examples"
-                                        @click="refreshExamplePrompts"
-                                    >
-                                        <RefreshCwIcon aria-hidden="true" />
-                                        {{ $t('More ideas') }}
-                                    </Button>
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <Button
-                                        v-for="example in examplePrompts"
-                                        :key="example.text"
-                                        variant="outline"
-                                        size="sm"
-                                        class="text-muted-foreground hover:text-foreground h-auto rounded-full px-3 py-1.5 text-left text-xs whitespace-normal"
-                                        @click="startExample(example.text)"
-                                    >
-                                        <span aria-hidden="true">{{
-                                            example.emoji
-                                        }}</span>
-                                        {{ $t(example.text) }}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <ConversationEmptyState
-                                v-else-if="!messages.length"
-                                :title="$t('Ask me anything')"
-                                :description="
-                                    $t('Your conversation is saved as you go.')
-                                "
-                                data-testid="chat-empty"
-                            />
-
-                            <Message
-                                v-for="message in messages"
-                                v-show="!isEmptyReply(message)"
-                                :key="message.id"
-                                :from="message.role"
-                                :class="
-                                    message.role === 'user'
-                                        ? 'flex-col items-end'
-                                        : undefined
-                                "
-                                :data-testid="`message-${message.id}`"
-                            >
-                                <MessageContent
-                                    :class="
-                                        isPending(message) &&
-                                        'animate-pulse opacity-60'
-                                    "
-                                    :data-pending="
-                                        isPending(message) || undefined
-                                    "
-                                >
-                                    <!-- The whole process in one collapsible,
-                                         reasoning and tool calls interleaved in
-                                         the order they streamed.
-
-                                         Labelled "Route of thought": the
-                                         components keep the upstream ai-elements
-                                         names so they still diff against the
-                                         registry, only the visible string is
-                                         ours. -->
-                                    <!-- Keyed on whether the turn is still
-                                         writing: `default-open` is only read
-                                         once, so without a remount every
-                                         finished turn stays expanded and the
-                                         transcript becomes three copies of
-                                         itself. -->
-                                    <ChainOfThought
-                                        v-if="thoughts(message).length"
-                                        :key="`thoughts-${message.id}-${isWriting(message)}`"
-                                        :default-open="isWriting(message)"
-                                        :data-testid="`thoughts-${message.id}`"
-                                    >
-                                        <ChainOfThoughtHeader
-                                            v-if="isWriting(message)"
-                                            hide-label
-                                        >
-                                            <template #icon>
-                                                <ThinkingIndicator />
-                                            </template>
-                                        </ChainOfThoughtHeader>
-                                        <ChainOfThoughtHeader v-else>
-                                            {{ $t('Route of thought') }}
-                                        </ChainOfThoughtHeader>
-
-                                        <ChainOfThoughtContent>
-                                            <ChainOfThoughtStep
-                                                v-for="thought in thoughts(
-                                                    message,
-                                                )"
-                                                :key="thought.id"
-                                                :label="
-                                                    $t(
-                                                        thought.label,
-                                                        thought.params,
-                                                    )
-                                                "
-                                                :description="
-                                                    thought.description
-                                                "
-                                                :status="thought.status"
-                                                :default-open="
-                                                    thought.body?.kind !==
-                                                    'results'
-                                                "
-                                                :data-testid="`thought-${message.id}-${thought.id}`"
-                                            >
-                                                <template #icon>
-                                                    <component
-                                                        :is="thought.icon"
-                                                        class="size-4"
-                                                    />
-                                                </template>
-
-                                                <!-- One branch per ThoughtBody
-                                                     variant in the registry. -->
-                                                <MessageResponse
-                                                    v-if="
-                                                        thought.body?.kind ===
-                                                        'markdown'
-                                                    "
-                                                    class="text-muted-foreground! text-xs leading-relaxed"
-                                                    :content="thought.body.text"
-                                                    mode="static"
-                                                />
-                                                <!-- The vendored component is
-                                                     a single non-wrapping row,
-                                                     so a search of any size
-                                                     runs off the edge. Set
-                                                     here rather than upstream
-                                                     so it still diffs against
-                                                     the registry. -->
-                                                <ChainOfThoughtSearchResults
-                                                    v-else-if="
-                                                        thought.body?.kind ===
-                                                        'results'
-                                                    "
-                                                    class="flex-wrap gap-y-1.5"
-                                                >
-                                                    <ChainOfThoughtSearchResult
-                                                        v-for="item in thought
-                                                            .body.items"
-                                                        :key="`${item.marker.lat},${item.marker.lon}`"
-                                                        as="button"
-                                                        type="button"
-                                                        class="focus-visible:ring-ring cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                                                        :aria-label="
-                                                            $t(
-                                                                'Show :place on map',
-                                                                {
-                                                                    place: item.label,
-                                                                },
-                                                            )
-                                                        "
-                                                        @click="
-                                                            focusMapMarker(
-                                                                item.marker,
-                                                            )
-                                                        "
-                                                    >
-                                                        {{ item.label }}
-                                                    </ChainOfThoughtSearchResult>
-                                                </ChainOfThoughtSearchResults>
-                                                <ChainOfThoughtImage
-                                                    v-else-if="
-                                                        thought.body?.kind ===
-                                                        'image'
-                                                    "
-                                                    :caption="
-                                                        thought.body.caption
-                                                    "
-                                                >
-                                                    <img
-                                                        :src="thought.body.src"
-                                                        alt=""
-                                                    />
-                                                </ChainOfThoughtImage>
-                                            </ChainOfThoughtStep>
-                                        </ChainOfThoughtContent>
-                                    </ChainOfThought>
-
-                                    <template
-                                        v-for="(part, index) in message.parts"
-                                        :key="index"
-                                    >
-                                        <!-- The library's word animation is off
-                                             on purpose. It wraps every word in a
-                                             Vue TransitionGroup, and on each
-                                             streamed token Vue measures every
-                                             word and reads its computed style, so
-                                             the cost grows with the reply: a
-                                             long answer froze the page for ten
-                                             seconds at a time and the animation
-                                             never showed. Tokens arriving is the
-                                             typewriter; the caret marks it. -->
-                                        <MessageResponse
-                                            v-if="part.type === 'text'"
-                                            :content="
-                                                message.role === 'assistant'
-                                                    ? withPlaceLinks(part.text)
-                                                    : part.text
-                                            "
-                                            :mode="
-                                                isWriting(message)
-                                                    ? 'streaming'
-                                                    : 'static'
-                                            "
-                                            :enable-animate="false"
-                                            :node-renderers="markdownRenderers"
-                                            caret="block"
-                                        />
-                                    </template>
-                                </MessageContent>
-
-                                <div
-                                    v-if="isUndelivered(message)"
-                                    class="mt-1 flex flex-col items-end gap-0.5"
-                                    :data-testid="`undelivered-${message.id}`"
-                                >
-                                    <p
-                                        class="text-destructive flex items-center gap-1 text-xs"
-                                    >
-                                        <CircleAlertIcon
-                                            class="size-3.5 shrink-0"
-                                        />
-                                        {{ $t('Not delivered') }}
-                                    </p>
-
-                                    <!-- Withdrawn once the attempts are spent,
-                                         rather than left there doing nothing. -->
-                                    <Button
-                                        v-if="retriesLeft(message) > 0"
-                                        variant="link"
-                                        size="sm"
-                                        class="text-muted-foreground h-auto p-0 text-xs"
-                                        :data-testid="`retry-${message.id}`"
-                                        @click="retry(message)"
-                                    >
-                                        {{ $t('Try again') }}
-                                    </Button>
-                                </div>
-                            </Message>
-
-                            <!-- Sent, nothing back yet: no assistant message
-                                 exists to hang a chain of thought on. -->
-                            <ThinkingIndicator v-if="status === 'submitted'" />
-                        </ConversationContent>
-
-                        <ConversationScrollButton :status="status" />
-                    </Conversation>
 
                     <div v-if="activeQuestion && isMapStaging" class="p-4">
                         <div

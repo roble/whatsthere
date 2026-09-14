@@ -72,6 +72,13 @@ A new conversation is named after its opening message (truncated). Once it has
 enough substance, `GenerateConversationTitle` replaces that with a real title
 from `ConversationTitleAgent` (cheapest model, 30 tokens).
 
+Unlike `ChatAgent` this one pins no model, so it needs whatever provider is
+configured to be able to name its cheapest — on `openai` that resolves to
+`gpt-5.4-nano`. A provider that cannot answer throws, the job fails every
+attempt, and the only visible symptom is a sidebar where every conversation
+keeps its opening message forever. `ConversationTitleModelTest` guards it
+against whatever `ai.default` currently points at.
+
 Re-titled at the user-message counts in `GenerateConversationTitle::RETITLE_AT`
 (`3, 10, 25, 60`) — a conversation drifts, and a title from turn three stops
 describing it by turn twenty. Each run summarises the **most recent**
@@ -82,21 +89,56 @@ same opening and produce the same title.
 `ShouldBeUnique` + `$uniqueFor = 3600` would let the run at three messages
 suppress the run at ten.
 
+### The chat column is two panels, not a stack
+
+The listing and the transcript share what the filter bar and the composer leave
+behind, split by a vertical `ResizablePanelGroup` (`auto-save-id`
+`chat-results-split`, so a drag survives a reload). The composer and the
+filter bar stay **outside** the group: they are always visible, whatever the
+split.
+
+`order` on both panels is load-bearing. The results panel comes and goes with
+the property flow, and without an explicit order the group loses track of which
+panel is which when it reappears.
+
+**Expanding the listing is collapsing the transcript panel** — one mechanism,
+so the divider and the expand button cannot disagree. `resultsExpanded` mirrors
+the panel rather than duplicating it: writing to it calls `collapse()` /
+`expand()`, and the panel's own `@collapse` / `@expand` write back, so a drag
+all the way to the edge and a button press end up in the same state. Collapsing
+this way also remembers the size to restore, which `v-show` on the transcript
+did not.
+
+`send()` expands the transcript before dispatching. The full list hides the
+transcript, so a reply sent from it would otherwise stream somewhere nobody can
+see — and that has to happen in `send()` rather than the composer's submit
+handler, or the example cards, the interview answers and WebMCP still send
+into a hidden pane.
+
 ### Sidebar freshness and ordering
 
 The session list is a **shared** Inertia prop, so it only changes when a
 response arrives. Two consequences:
 
 - Adopting a new conversation id uses `router.visit(..., { replace: true,
-preserveState: true, only: ['chat'] })`, not `history.replaceState`. A bare
-  `replaceState` leaves Inertia's `page.url` on `/chat` and never refreshes the
-  shared props, so a newly created conversation never appears in the list.
-  `only: ['chat']` keeps `initialMessages` out of the response, which is what
-  stops the reset watcher wiping a chat that is mid-stream.
-- After each reply the page calls `router.reload({ only: ['chat'] })`, and again
-  five seconds later if the user-message count hit a milestone — the only moment
-  a queued rename can have changed a title. Milestones come from the server as
-  `chat.retitle_at` rather than being duplicated in JS.
+preserveState: true, only: ['chat', 'onboarding'] })`, not
+  `history.replaceState`. A bare `replaceState` leaves Inertia's `page.url` on
+  `/chat` and never refreshes the shared props, so a newly created conversation
+  never appears in the list. The `only` list keeps `initialMessages` out of the
+  response, which is what stops the reset watcher wiping a chat that is
+  mid-stream.
+- **One request per turn reads the list, and it is `refreshOnboarding()`'s.**
+  Inertia serialises visits: starting one cancels whatever is still in flight.
+  A first message navigates from `/chat` to `/chat/{id}`, so a second, separate
+  `router.reload({ only: ['chat'] })` fired from the status watcher was aborted
+  every time — and that was the request carrying the new conversation into the
+  sidebar. The symptom was narrow enough to be misleading: the list lagged one
+  message behind, but only ever on the first message, because that is the only
+  turn where the two requests target different URLs.
+- The page reloads the list once more five seconds after a reply if the
+  user-message count hit a milestone — the only moment a queued rename can have
+  changed a title. Milestones come from the server as `chat.retitle_at` rather
+  than being duplicated in JS.
 
 Ordering is `updated_at` descending, which `laravel/ai` touches on every stored
 message. **A rename must therefore not touch it** — `GenerateConversationTitle`
@@ -308,6 +350,17 @@ php artisan test --compact modules/chat/tests/Feature/
   access a property on an incomplete object". Run `php artisan queue:restart`
   from the repository root. This is not a code bug and no test catches it.
 - Titles need a **running worker**; `QUEUE_CONNECTION=database` here.
+- **Do not reach for `AI_PROVIDER=openai-compatible` again without reading
+  this.** It was a standing workaround for this project's key being refused by
+  OpenAI's `/v1/responses`; that has since been lifted and the application is
+  back on the native `openai` driver with no extra configuration. The compatible
+  driver is a chat/completions path and breaks two things silently: it ships no
+  model list, so `#[UseCheapestModel]` throws rather than resolving, and it
+  sends `max_tokens`, which the `gpt-5.x` models reject in favour of
+  `max_completion_tokens` — so `#[MaxTokens]` 400s the request outright. Both
+  land on `ConversationTitleAgent`, and both show up only as titles that never
+  change. `providerOptions()` also gates reasoning on `Lab::OpenAI`, so the
+  route of thought loses its Thinking step on any other provider.
 - `read_current_chat` returns the whole transcript, which can flood an agent's
   context on a long conversation. It wants a `limit` parameter.
 - Module pages resolve through `module-loader.js`, not the PHP view finder, so

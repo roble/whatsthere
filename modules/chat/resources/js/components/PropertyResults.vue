@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
-import type { MapMarker, MapView } from '@modules/chat/resources/js/map';
+import {
+    propertyFacts,
+    type MapMarker,
+    type MapView,
+} from '@modules/chat/resources/js/map';
 import IconChevronRight from '~icons/lucide/chevron-right';
 import IconImage from '~icons/lucide/image';
 import IconImages from '~icons/lucide/images';
 import IconMaximize2 from '~icons/lucide/maximize-2';
 import IconMinimize2 from '~icons/lucide/minimize-2';
-import { ref } from 'vue';
 
 defineProps<{ view: MapView; selectedId: number | null }>();
 defineEmits<{
@@ -14,7 +17,14 @@ defineEmits<{
     highlight: [MapMarker | null];
 }>();
 
-const expanded = ref(false);
+/**
+ * Owned by the page, not here. The height this section is allowed to take is
+ * decided by the column it sits in, and a parent passing `max-h-72` for the
+ * collapsed layout merges with whatever class this root sets rather than
+ * losing to it -- so expanding from the inside produced `h-full max-h-72` and
+ * a panel that never grew.
+ */
+const expanded = defineModel<boolean>('expanded', { default: false });
 
 function price(marker: MapMarker): string {
     return new Intl.NumberFormat('en-IE', {
@@ -26,14 +36,16 @@ function price(marker: MapMarker): string {
 </script>
 
 <template>
+    <!--
+        Deliberately not an overlay. Covering the column with `absolute inset-0`
+        also covered the filter bar above it, and the filters are the reason to
+        open the full list in the first place. Growing inside the column leaves
+        them where they were.
+    -->
     <section
-        class="bg-card text-card-foreground flex flex-col border-b"
-        :class="
-            expanded
-                ? 'bg-background absolute inset-0 z-40 h-full border-0'
-                : 'min-h-0'
-        "
+        class="bg-card text-card-foreground flex min-h-0 flex-col border-b"
         data-testid="property-results"
+        :data-expanded="expanded ? 'true' : 'false'"
     >
         <header class="flex items-center gap-3 border-b px-2 py-1">
             <h2 class="truncate font-semibold whitespace-nowrap">
@@ -121,8 +133,7 @@ function price(marker: MapMarker): string {
                         property.name
                     }}</span>
                     <span class="text-muted-foreground block truncate text-xs">
-                        {{ property.bedrooms ?? '?' }} {{ $t('bedrooms') }} ·
-                        {{ property.property_type }}
+                        {{ propertyFacts(property) }}
                     </span>
                     <span
                         v-if="selectedId === property.id"

@@ -2,10 +2,12 @@
 
 namespace Modules\Chat\Tests\Feature;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Tools\Request;
 use Modules\Chat\Ai\Tools\FindPlaces;
+use Modules\Chat\Ai\Tools\ShowOnMap;
 use Tests\TestCase;
 
 class FindPlacesTest extends TestCase
@@ -234,8 +236,65 @@ class FindPlacesTest extends TestCase
         $this->assertNull(json_decode((string) $result, true));
     }
 
+    public function test_it_moves_on_to_another_instance_when_the_first_sheds_load(): void
+    {
+        // The main instance is the busiest thing in OpenStreetMap and answers
+        // 504 from its gateway when it is loaded. Measured from here that was
+        // two requests in three, which is what "could not load what is nearby"
+        // actually was. The mirrors hold the same planet.
+        config(['chat.overpass_endpoints' => [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+        ]]);
+
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '53.2707', 'lon' => '-9.0568',
+                'display_name' => 'Galway, Ireland',
+                'boundingbox' => ['53.2500', '53.3000', '-9.1000', '-9.0000'],
+            ]]),
+            'overpass-api.de/*' => Http::response(null, 504),
+            'overpass.kumi.systems/*' => Http::response(['elements' => [
+                ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => "Darcy's Bar"]],
+            ]]),
+        ]);
+
+        $result = (new FindPlaces)->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
+
+        $this->assertSame("Darcy's Bar", json_decode((string) $result, true)['markers'][0]['name']);
+    }
+
+    public function test_a_refused_connection_is_tried_elsewhere_rather_than_thrown(): void
+    {
+        config(['chat.overpass_endpoints' => [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+        ]]);
+
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '53.2707', 'lon' => '-9.0568',
+                'display_name' => 'Galway, Ireland',
+                'boundingbox' => ['53.2500', '53.3000', '-9.1000', '-9.0000'],
+            ]]),
+            // An instance that hangs raises rather than returning a response,
+            // so the loop has to catch it or the whole reply dies on the one
+            // server that happened to be unreachable.
+            'overpass-api.de/*' => fn () => throw new ConnectionException('timed out'),
+            'overpass.kumi.systems/*' => Http::response(['elements' => [
+                ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => "Darcy's Bar"]],
+            ]]),
+        ]);
+
+        $result = (new FindPlaces)->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
+
+        $this->assertSame("Darcy's Bar", json_decode((string) $result, true)['markers'][0]['name']);
+    }
+
     public function test_an_outage_is_not_cached_as_an_empty_area(): void
     {
+        config(['chat.overpass_endpoints' => ['https://overpass-api.de/api/interpreter']]);
+
         Http::fake([
             'nominatim.openstreetmap.org/*' => Http::response([[
                 'lat' => '53.2707', 'lon' => '-9.0568',
@@ -258,11 +317,34 @@ class FindPlacesTest extends TestCase
             (string) $tool->handle(new Request(['category' => 'pub', 'area' => 'Galway'])),
         );
 
-        // A timeout must not pin the area to "nothing here" for the rest of the
-        // day. Had the failure been cached, this would never reach Overpass
-        // again and would answer "found no pubs" instead.
+        // An outage must not pin the area to "nothing here" for a month. Had
+        // the failure been cached, this would never reach Overpass again and
+        // would answer "found no pubs" instead.
         $retried = $tool->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
 
         $this->assertSame("Darcy's Bar", json_decode((string) $retried, true)['markers'][0]['name']);
+    }
+
+    public function test_a_search_is_asked_of_overpass_once_and_kept_for_the_configured_month(): void
+    {
+        config(['chat.osm_cache_days' => 30]);
+        $this->fakeServices([
+            ['type' => 'node', 'lat' => 53.2741, 'lon' => -9.0476, 'tags' => ['name' => "Darcy's Bar"]],
+        ]);
+
+        $tool = new FindPlaces;
+        $tool->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
+        $tool->handle(new Request(['category' => 'pub', 'area' => 'Galway']));
+
+        // Overpass and Nominatim are donated infrastructure, and Overpass
+        // throttles hard when leaned on. Asking the same question twice is the
+        // thing this cache exists to stop.
+        Http::assertSentCount(2);
+
+        $this->assertEqualsWithDelta(
+            now()->addDays(30)->getTimestamp(),
+            ShowOnMap::cacheFor()->getTimestamp(),
+            5,
+        );
     }
 }

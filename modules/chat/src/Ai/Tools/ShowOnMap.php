@@ -24,6 +24,20 @@ class ShowOnMap implements Tool
     public const string NAME = 'show_on_map';
 
     /**
+     * How long an answer from OpenStreetMap is worth keeping.
+     *
+     * Lives here rather than in FindPlaces because FindPlaces already geocodes
+     * through this class, so this is the end of the dependency both can reach.
+     *
+     * Read on every call rather than resolved into a constant, so the suite can
+     * pin it and so raising it does not need a deploy.
+     */
+    public static function cacheFor(): \DateTimeInterface
+    {
+        return now()->addDays(max(1, (int) config('chat.osm_cache_days', 30)));
+    }
+
+    /**
      * Get the tool's name.
      */
     public function name(): string
@@ -87,7 +101,7 @@ class ShowOnMap implements Tool
         // Only hits are cached: a timeout or a 503 must not pin a place to
         // "not found" for the rest of the day.
         if ($match !== null) {
-            Cache::put($key, $match, now()->addDay());
+            Cache::put($key, $match, self::cacheFor());
         }
 
         return $match;
@@ -119,7 +133,7 @@ class ShowOnMap implements Tool
         ])['display_name'] ?? null;
 
         if ($name !== null) {
-            Cache::put($key, $name, now()->addDay());
+            Cache::put($key, $name, self::cacheFor());
         }
 
         return $name;

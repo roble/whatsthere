@@ -39,4 +39,53 @@ return [
         'max_messages' => (int) env('CHAT_INSIGHTS_MAX_MESSAGES', 20000),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OpenStreetMap Cache
+    |--------------------------------------------------------------------------
+    |
+    | How long a geocode or an Overpass answer is kept. Schools, parks and
+    | supermarkets do not move, and a town's coordinates have not changed in
+    | living memory, so a day was far too cautious for data of this kind.
+    |
+    | It is also a courtesy. Both APIs are donated infrastructure with no rate
+    | limit worth the name, and Overpass throttles hard when leaned on -- the
+    | slow, half-empty results we were seeing were mostly our own repeat
+    | questions coming back to bite. Every cache hit is a request they do not
+    | have to serve, and one a visitor does not have to wait for.
+    |
+    | Cached in the database store, so a deploy does not throw it away.
+    |
+    */
+
+    'osm_cache_days' => (int) env('CHAT_OSM_CACHE_DAYS', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Overpass Instances
+    |--------------------------------------------------------------------------
+    |
+    | Tried in order until one answers. The main instance is the busiest thing
+    | in OpenStreetMap and sheds load by returning 504 from its gateway within
+    | a few seconds; measured from here, two requests in three failed that way.
+    | The mirrors run the same software over the same planet, so any of them
+    | gives the same answer, and a visitor should not have to care which one
+    | happened to be up.
+    |
+    | Keep the main instance first. It is the best resourced when it is healthy,
+    | so the mirrors should only ever carry the overflow -- they are donated
+    | too, and a client that spreads its load evenly across all of them is just
+    | being rude to three servers instead of one.
+    |
+    */
+
+    'overpass_endpoints' => array_values(array_filter(array_map(
+        trim(...),
+        explode(',', (string) env('CHAT_OVERPASS_ENDPOINTS', implode(',', [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+            'https://overpass.private.coffee/api/interpreter',
+        ]))),
+    ))),
+
 ];

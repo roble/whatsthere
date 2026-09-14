@@ -6,10 +6,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { MapMarker } from '@modules/chat/resources/js/map';
+import { propertyFacts, type MapMarker } from '@modules/chat/resources/js/map';
 import IconChevronLeft from '~icons/lucide/chevron-left';
 import IconChevronRight from '~icons/lucide/chevron-right';
 import IconCompass from '~icons/lucide/compass';
+import IconExternalLink from '~icons/lucide/external-link';
 import IconImage from '~icons/lucide/image';
 import { Button } from '@/components/ui/button';
 import { computed, ref, watch } from 'vue';
@@ -41,6 +42,37 @@ function price(property: MapMarker): string {
         maximumFractionDigits: 0,
     }).format((property.asking_price ?? 0) / 100);
 }
+
+/**
+ * What to call the portal a listing came from.
+ *
+ * Unknown providers fall back to their own name rather than being hidden: a
+ * link to somewhere is more use than no link, and a provider we have not
+ * named yet is a data question, not a reason to drop it.
+ */
+const PORTALS: Record<string, string> = {
+    daft: 'Daft.ie',
+    myhome: 'MyHome.ie',
+    ppr: 'Property Price Register',
+};
+
+/**
+ * Checked rather than trusted. These URLs arrive from scraped listing data, so
+ * the same `http(s)` guard the map popup uses applies here -- a `javascript:`
+ * value edited into a fixture must not become a live link in a dialog.
+ */
+const sourceUrl = computed(() => {
+    const source = props.property?.source;
+
+    return source && /^https?:\/\//i.test(source.url) ? source : null;
+});
+
+const sourceLabel = computed(() =>
+    sourceUrl.value
+        ? (PORTALS[sourceUrl.value.provider] ??
+          sourceUrl.value.provider.replace(/^./, (c) => c.toUpperCase()))
+        : '',
+);
 
 function previousImage(): void {
     imageIndex.value =
@@ -117,8 +149,7 @@ function nextImage(): void {
                         </p>
                     </div>
                     <p class="text-muted-foreground text-sm">
-                        {{ property.bedrooms ?? '?' }} {{ $t('bedrooms') }} ·
-                        {{ property.property_type }}
+                        {{ propertyFacts(property) }}
                     </p>
                     <p
                         v-if="property.details?.description"
@@ -171,6 +202,27 @@ function nextImage(): void {
                                 ? $t('Looking around…')
                                 : $t("What's there?")
                         }}
+                    </Button>
+
+                    <!-- Everything above is a copy taken when the listing was
+                         imported. This is the only live thing on the card, so
+                         it is the way to check the home is still for sale and
+                         to arrange a viewing. -->
+                    <Button
+                        v-if="sourceUrl"
+                        as-child
+                        variant="outline"
+                        class="w-full"
+                    >
+                        <a
+                            :href="sourceUrl.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-testid="property-source-link"
+                        >
+                            <IconExternalLink class="size-4" />
+                            {{ $t('View on :portal', { portal: sourceLabel }) }}
+                        </a>
                     </Button>
                 </section>
             </div>
