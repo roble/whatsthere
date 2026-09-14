@@ -53,11 +53,10 @@ Profile page shows connected providers with connect/disconnect buttons. Delegate
 `PasswordController::update()` hashes new password, saves, sends `PasswordChangedNotification` (mail channel with timestamp and profile link), then redirects with toast.
 
 ### Navigation
-Configured in `routes/navigation.php` via Spatie Navigation. Two groups:
-- `user` — "Settings" link (order 10), reached from the avatar menu
-- `settings` — "General" (10) and "Profile" (20) in the settings sidebar
-
-There is deliberately no `secondary` entry: the app sidebar is reserved for chat.
+Configured in `routes/navigation.php` via Spatie Navigation. Three groups:
+- `user` — "Settings" link (order 10)
+- `settings` — "General" (10) and "Profile" (20) in sidebar
+- `secondary` — "Settings" with destructive badge
 
 Other modules can add items to the `settings` group from their own `routes/navigation.php`. Frontend reads from `page.props.navigation?.settings`.
 

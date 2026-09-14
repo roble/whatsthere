@@ -14,7 +14,7 @@ class MockDaftProvider extends JsonListingProvider
         $payload = $this->decodedJson($sourcePath);
 
         if (array_is_list($payload)) {
-            yield from parent::records($sourcePath);
+            yield from $payload;
 
             return;
         }

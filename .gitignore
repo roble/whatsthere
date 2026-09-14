@@ -1,8 +1,8 @@
 *.log
 .DS_Store
 .env
-.env.backup
-.env.production
+.env.*
+!.env.example
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -71,6 +71,10 @@ public/vendor/livewire/
 # Generated files
 lang/php_*.json
 /resources/js/types/generated.d.ts
+
+# Full MyHome Cork dump — too large for git and for a 128M PHP seed.
+# Seed uses myhome-cork-lite.json; import the full file by hand if you have it.
+/modules/properties/database/fixtures/myhome-cork.json
 
 # Transient language-server scratch files, unanchored so they are ignored
 # wherever they are written -- they land in storage/framework

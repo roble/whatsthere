@@ -15,8 +15,13 @@
 
 <style scoped>
 .page-transition-wrapper {
+    display: flex;
     width: 100%;
+    min-width: 0;
     height: 100%;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
 }
 
 .page-enter-active,

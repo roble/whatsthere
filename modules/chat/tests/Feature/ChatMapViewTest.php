@@ -9,11 +9,33 @@ use Laravel\Ai\Models\ConversationMessage;
 use Modules\Chat\Ai\ChatAgent;
 use Modules\Chat\Ai\Tools\FindPlaces;
 use Modules\Chat\Ai\Tools\ShowOnMap;
+use Modules\Chat\Models\OnboardingState;
 use Tests\TestCase;
 
 class ChatMapViewTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_a_property_conversation_with_broken_preferences_still_opens(): void
+    {
+        $user = $this->createUser();
+        $conversation = $this->conversationFor($user);
+
+        OnboardingState::create([
+            'conversation_id' => $conversation->id,
+            'flow' => 'property',
+            'phase' => 'mapping',
+            'plan' => ['preferences' => []],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('chat.show', $conversation->id))
+            ->assertOk()
+            ->assertInertia(
+                fn ($page) => $page->component('Chat::Index', false)
+                    ->where('initialMapView.categoryKey', 'property')
+            );
+    }
 
     public function test_a_blank_chat_opens_on_the_home_areas_properties(): void
     {

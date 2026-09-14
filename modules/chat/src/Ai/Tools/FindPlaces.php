@@ -59,15 +59,19 @@ class FindPlaces implements Tool
         'church' => '["amenity"="place_of_worship"]',
         'library' => '["amenity"="library"]',
         'school' => '["amenity"="school"]',
+        'college' => '["amenity"="college"]',
+        'university' => '["amenity"="university"]',
         'cinema' => '["amenity"="cinema"]',
         'pharmacy' => '["amenity"="pharmacy"]',
         'hospital' => '["amenity"="hospital"]',
+        'clinic' => '["amenity"="clinic"]',
         'supermarket' => '["shop"="supermarket"]',
         'fuel' => '["amenity"="fuel"]',
         'atm' => '["amenity"="atm"]',
         'car_park' => '["amenity"="parking"]',
         'train_station' => '["railway"="station"]',
         'bus_station' => '["amenity"="bus_station"]',
+        'bus_stop' => '["highway"="bus_stop"]',
         'toilets' => '["amenity"="toilets"]',
     ];
 
@@ -80,6 +84,36 @@ class FindPlaces implements Tool
      * sets, so the map can carry more than this.
      */
     protected const LIMIT = 40;
+
+    /**
+     * How far each kind is allowed to sit from a listing.
+     *
+     * A hospital serving rural Cork is not in the same town box as the house.
+     * Searching the geocoded address of "Carrigboy, Kilmichael" therefore
+     * returns a school and nothing else. These radii are walked from the
+     * listing's own coordinates, and they are wide enough that a real hospital
+     * still counts.
+     *
+     * @var array<string, int>
+     */
+    public const array RADIUS_METRES = [
+        'hospital' => 40000,
+        'clinic' => 12000,
+        'school' => 10000,
+        'college' => 20000,
+        'university' => 25000,
+        'bus_stop' => 5000,
+        'bus_station' => 15000,
+        'train_station' => 20000,
+        'supermarket' => 8000,
+        'pharmacy' => 8000,
+        'park' => 5000,
+        'playground' => 3000,
+        'cafe' => 4000,
+        'restaurant' => 4000,
+    ];
+
+    public const int DEFAULT_RADIUS_METRES = 8000;
 
     /**
      * How long to wait on any one Overpass instance.
@@ -239,6 +273,139 @@ class FindPlaces implements Tool
 
         foreach ($grouped as $category => $elements) {
             foreach ($this->toMarkers($elements, $category) as $marker) {
+                $markers[] = [
+                    'categoryKey' => $category,
+                    'distance_m' => $this->distanceMetres(
+                        $latitude,
+                        $longitude,
+                        (float) $marker['lat'],
+                        (float) $marker['lon'],
+                    ),
+                ] + $marker;
+            }
+        }
+
+        usort(
+            $markers,
+            fn (array $left, array $right): int => ($left['distance_m'] ?? PHP_INT_MAX) <=> ($right['distance_m'] ?? PHP_INT_MAX),
+        );
+
+        $kept = [];
+        $perCategory = [];
+
+        foreach ($markers as $marker) {
+            $category = (string) ($marker['categoryKey'] ?? '');
+            $perCategory[$category] = ($perCategory[$category] ?? 0) + 1;
+
+            if ($perCategory[$category] <= 5) {
+                $kept[] = $marker;
+            }
+        }
+
+        $this->rememberMarkers($kept);
+        Cache::put($key, $kept, now()->addDay());
+
+        return $kept;
+    }
+
+    /**
+     * Places of several kinds around one or more coordinates, in one request.
+     *
+     * Each category uses its own radius, so a hospital 20 km away still counts
+     * while a bus stop is only taken when it is actually nearby. The query is
+     * Overpass `around`, not a bounding box around a geocoded address: listing
+     * pins already have coordinates, and geocoding "Carrigboy, Kilmichael"
+     * searches the hamlet rather than the house.
+     *
+     * @param  list<array{lat: float, lon: float}>  $origins
+     * @param  list<string>  $categories
+     * @return list<array<string, mixed>>|null
+     */
+    public function aroundPoints(array $origins, array $categories): ?array
+    {
+        $categories = array_values(array_filter(
+            array_unique($categories),
+            fn (string $category): bool => isset(self::CATEGORIES[$category]),
+        ));
+
+        $points = [];
+
+        foreach ($origins as $origin) {
+            $latitude = (float) ($origin['lat'] ?? 0);
+            $longitude = (float) ($origin['lon'] ?? 0);
+
+            if ($latitude === 0.0 && $longitude === 0.0) {
+                continue;
+            }
+
+            $points[] = [
+                'lat' => $latitude,
+                'lon' => $longitude,
+            ];
+        }
+
+        if ($categories === [] || $points === []) {
+            return [];
+        }
+
+        $fingerprint = collect($points)
+            ->map(fn (array $point): string => sprintf('%.5F,%.5F', $point['lat'], $point['lon']))
+            ->unique()
+            ->sort()
+            ->implode('|');
+        $key = 'overpass:around-points:v1:'.md5($fingerprint.'|'.implode(',', $categories));
+
+        if (($cached = Cache::get($key)) !== null) {
+            return $cached;
+        }
+
+        $clauses = '';
+
+        foreach ($points as $point) {
+            foreach ($categories as $category) {
+                $clauses .= sprintf(
+                    'nwr%s(around:%d,%F,%F);',
+                    self::CATEGORIES[$category],
+                    self::radiusMetres($category),
+                    $point['lat'],
+                    $point['lon'],
+                );
+            }
+        }
+
+        $response = Http::asForm()
+            ->withUserAgent(config('app.name').' ('.config('app.url').')')
+            ->timeout(45)
+            ->post('https://overpass-api.de/api/interpreter', [
+                'data' => sprintf('[out:json][timeout:40];(%s);out center %d;', $clauses, 200),
+            ]);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $seen = [];
+        $grouped = [];
+
+        foreach ($response->json('elements') ?? [] as $element) {
+            $identity = ($element['type'] ?? 'node').'/'.($element['id'] ?? json_encode($element));
+
+            if (isset($seen[$identity])) {
+                continue;
+            }
+
+            $seen[$identity] = true;
+            $category = $this->categoryOf((array) ($element['tags'] ?? []), $categories);
+
+            if ($category !== null) {
+                $grouped[$category][] = $element;
+            }
+        }
+
+        $markers = [];
+
+        foreach ($grouped as $category => $elements) {
+            foreach ($this->toMarkers($elements, $category) as $marker) {
                 $markers[] = ['categoryKey' => $category] + $marker;
             }
         }
@@ -247,6 +414,22 @@ class FindPlaces implements Tool
         Cache::put($key, $markers, ShowOnMap::cacheFor());
 
         return $markers;
+    }
+
+    public static function radiusMetres(string $category): int
+    {
+        return self::RADIUS_METRES[$category] ?? self::DEFAULT_RADIUS_METRES;
+    }
+
+    public function distanceMetres(float $fromLat, float $fromLon, float $toLat, float $toLon): int
+    {
+        $earth = 6371000.0;
+        $deltaLat = deg2rad($toLat - $fromLat);
+        $deltaLon = deg2rad($toLon - $fromLon);
+        $haversine = sin($deltaLat / 2) ** 2
+            + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($deltaLon / 2) ** 2;
+
+        return (int) round($earth * 2 * atan2(sqrt($haversine), sqrt(1 - $haversine)));
     }
 
     /**
@@ -534,9 +717,19 @@ class FindPlaces implements Tool
         foreach (self::DETAIL_TAGS as $tag => $key) {
             $value = trim((string) ($tags[$tag] ?? ''));
 
-            if ($value !== '' && ! isset($details[$key])) {
-                $details[$key] = mb_substr($value, 0, 200);
+            if ($value === '' || isset($details[$key])) {
+                continue;
             }
+
+            if ($key === 'website') {
+                $value = safe_http_url($value) ?? '';
+
+                if ($value === '') {
+                    continue;
+                }
+            }
+
+            $details[$key] = mb_substr($value, 0, 200);
         }
 
         // A house number is only an address next to its street.

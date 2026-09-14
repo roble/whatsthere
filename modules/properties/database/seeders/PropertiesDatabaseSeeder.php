@@ -10,10 +10,10 @@ class PropertiesDatabaseSeeder extends Seeder
     /**
      * Load every listing fixture in the repository.
      *
-     * The fixtures are real scraped listings, so there is nothing to invent
-     * here: seeding is the same import a developer would run by hand, over
-     * every file at once. Inventing properties instead would put addresses
-     * that do not exist in front of anyone looking at the map.
+     * MyHome Cork lite covers current for-sale stock. Daft sold fixtures keep
+     * the price history a portal search does not give you. The full
+     * myhome-cork.json dump is gitignored — it is too large to seed on a
+     * default 128M PHP box and must not re-enter git history.
      *
      * The importer is idempotent, so re-seeding updates rows rather than
      * duplicating them, and a malformed listing is counted and skipped rather
@@ -30,11 +30,13 @@ class PropertiesDatabaseSeeder extends Seeder
         $importer = app(ListingImportService::class);
 
         foreach ($this->fixtures() as $fixture) {
-            $import = $importer->import('daft', $fixture);
+            $provider = $this->providerFor($fixture);
+            $import = $importer->import($provider, $fixture);
 
             $this->command?->getOutput()->writeln(sprintf(
-                '  <fg=gray>%s</>: %d/%d imported%s',
+                '  <fg=gray>%s</> (%s): %d/%d imported%s',
                 basename($fixture),
+                $provider,
                 $import->imported_records,
                 $import->total_records,
                 $import->failed_records > 0 ? ", {$import->failed_records} skipped" : '',
@@ -51,12 +53,22 @@ class PropertiesDatabaseSeeder extends Seeder
      *
      * @return list<string>
      */
-    private function fixtures(): array
+    public function fixtures(): array
     {
         $fixtures = glob(base_path('modules/properties/database/fixtures/*.json')) ?: [];
+
+        $fixtures = array_values(array_filter(
+            $fixtures,
+            static fn (string $path): bool => basename($path) !== 'myhome-cork.json',
+        ));
 
         sort($fixtures);
 
         return $fixtures;
+    }
+
+    public function providerFor(string $fixture): string
+    {
+        return str_ends_with(basename($fixture), '-daft.json') ? 'daft' : 'myhome';
     }
 }

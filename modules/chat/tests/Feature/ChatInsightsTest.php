@@ -92,11 +92,11 @@ class ChatInsightsTest extends TestCase
         ]);
 
         $this->assertNull(ChatInsights::make()->cost());
-        $this->assertSame(['gpt-5.4-mini'], ChatInsights::make()->unpricedModels());
+        $this->assertSame([ChatAgent::MODEL], ChatInsights::make()->unpricedModels());
 
         $settings = app(ChatSettings::class);
         $settings->model_pricing = [
-            ['model' => 'gpt-5.4-mini', 'input' => 0.25, 'cached' => 0.025, 'output' => 2.0],
+            ['model' => ChatAgent::MODEL, 'input' => 0.25, 'cached' => 0.025, 'output' => 2.0],
         ];
         $settings->save();
 
@@ -199,7 +199,7 @@ class ChatInsightsTest extends TestCase
             'tool_calls' => [],
             'tool_results' => $toolResults,
             'usage' => $usage,
-            'meta' => ['provider' => 'openai', 'model' => 'gpt-5.4-mini'],
+            'meta' => ['provider' => 'openai', 'model' => ChatAgent::MODEL],
             'created_at' => $at ?? now(),
         ]);
     }

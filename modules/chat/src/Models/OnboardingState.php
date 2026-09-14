@@ -12,7 +12,17 @@ class OnboardingState extends Model
 
     protected $keyType = 'string';
 
-    protected $guarded = [];
+    /** @var list<string> */
+    protected $fillable = [
+        'conversation_id',
+        'phase',
+        'question_count',
+        'current_question',
+        'answers',
+        'plan',
+        'flow',
+        'property_result_ids',
+    ];
 
     /**
      * Mirrors the column defaults so a row created with firstOrCreate reads

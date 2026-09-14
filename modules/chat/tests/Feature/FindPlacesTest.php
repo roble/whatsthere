@@ -84,6 +84,22 @@ class FindPlacesTest extends TestCase
         $this->assertArrayNotHasKey('details', $markers[1]);
     }
 
+    public function test_it_drops_javascript_websites_from_map_details(): void
+    {
+        $this->fakeServices([
+            ['type' => 'node', 'lat' => 53.2, 'lon' => -9.2, 'tags' => [
+                'name' => 'Unsafe Cafe',
+                'website' => 'javascript:alert(1)',
+                'phone' => '+353 1 234 5678',
+            ]],
+        ]);
+
+        $details = json_decode((string) (new FindPlaces)->handle(new Request(['category' => 'cafe', 'area' => 'Galway'])), true)['markers'][0]['details'];
+
+        $this->assertArrayNotHasKey('website', $details);
+        $this->assertSame('+353 1 234 5678', $details['phone']);
+    }
+
     public function test_it_reads_the_centre_of_a_building_not_just_a_point(): void
     {
         // Ways and relations carry no top-level lat/lon -- their coordinates
@@ -234,6 +250,32 @@ class FindPlacesTest extends TestCase
 
         $this->assertStringContainsString('Found no castles', (string) $result);
         $this->assertNull(json_decode((string) $result, true));
+    }
+
+    public function test_it_ranks_nearby_places_by_distance_and_keeps_the_closest_of_each_kind(): void
+    {
+        Http::fake([
+            'overpass-api.de/*' => Http::response(['elements' => [
+                ['type' => 'node', 'lat' => 51.9, 'lon' => -8.47, 'tags' => ['name' => 'Far Hospital', 'amenity' => 'hospital']],
+                ['type' => 'node', 'lat' => 51.898, 'lon' => -8.471, 'tags' => ['name' => 'Near Hospital', 'amenity' => 'hospital']],
+                ['type' => 'node', 'lat' => 51.8978, 'lon' => -8.4705, 'tags' => ['name' => 'College Gate', 'amenity' => 'college']],
+                ['type' => 'node', 'lat' => 51.8979, 'lon' => -8.4702, 'tags' => ['name' => 'Stop A', 'highway' => 'bus_stop']],
+            ]]),
+        ]);
+
+        $markers = (new FindPlaces)->aroundMany(51.8977, -8.4701, ['hospital', 'college', 'bus_stop']);
+
+        $this->assertNotNull($markers);
+        $this->assertSame('Stop A', $markers[0]['name']);
+        $this->assertSame('bus_stop', $markers[0]['categoryKey']);
+        $this->assertLessThan($markers[array_key_last($markers)]['distance_m'], $markers[0]['distance_m']);
+        $hospitals = array_values(array_filter(
+            $markers,
+            fn (array $marker): bool => $marker['categoryKey'] === 'hospital',
+        ));
+        $this->assertSame('Near Hospital', $hospitals[0]['name']);
+        $this->assertContains('university', array_keys(FindPlaces::CATEGORIES));
+        $this->assertContains('bus_stop', array_keys(FindPlaces::CATEGORIES));
     }
 
     public function test_it_moves_on_to_another_instance_when_the_first_sheds_load(): void

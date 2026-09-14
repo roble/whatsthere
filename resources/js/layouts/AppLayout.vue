@@ -44,7 +44,7 @@ const { isOpen } = useSidebarState();
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1">
+            <main class="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 <PageTransition>
                     <slot />
                 </PageTransition>

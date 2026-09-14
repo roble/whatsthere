@@ -1,10 +1,14 @@
 # Whatsthere
 
-Ask about a place in plain language and watch the map keep up.
+Ask about a place or a house in plain language and watch the map keep up.
 
-Whatsthere pairs a streaming AI chat with a live map. Ask about somewhere and the
-assistant moves the map to it; drag the map yourself and the assistant knows what
-you are looking at when you ask "what's here?".
+Whatsthere is a streaming AI chat beside a live map. Ask where something is and
+the assistant moves the map to it. Ask what is around, and pins appear. Ask
+about homes for sale, and listings from the local database light up so you can
+filter, compare, and open photos without leaving the conversation.
+
+Drag the map yourself and the assistant knows what you are looking at when you
+ask "what's here?".
 
 <div align="center">
 
@@ -20,13 +24,25 @@ you are looking at when you ask "what's here?".
 
 ## How it works
 
-**The assistant places things for you.** It never invents coordinates. When an
-answer is about somewhere, it calls a `show_on_map` tool that geocodes the name
-through [Nominatim](https://nominatim.openstreetmap.org/), and the map follows.
+**Two conversations, one map.** A new chat can explore a place anywhere in the
+world, or search homes and plots for sale. Place chats interview briefly, then
+open the map with a plan and optional itinerary. Property chats skip the
+interview and search the listings already in the database.
+
+**The assistant never invents coordinates.** When an answer is about somewhere,
+it calls a map tool. `show_on_map` geocodes one name through
+[Nominatim](https://nominatim.openstreetmap.org/). `find_places` ranks up to 40
+OpenStreetMap results for "what is around here". Property tools search the
+listings table and move the camera to the matches.
 
 **The map answers back.** Every message carries where the map is pointing. Pan
 away from where the conversation left it and the new centre is named afresh, so
 "here" means what you can see rather than what was last discussed.
+
+**Listings stay on the facts.** Homes and land come from imported MyHome Cork
+fixtures — real addresses, asking prices, BER ratings, and photos. The
+assistant quotes those fields and compares nearby schools, hospitals, or stops
+from mapped amenities. It does not invent planning permission or availability.
 
 **Your own agent can drive it.** The chat page publishes
 [WebMCP](https://github.com/webmachinelearning/webmcp) tools — list and read
@@ -48,7 +64,42 @@ docker compose exec app composer setup
 The app is served at https://localhost. Set an AI provider key in `.env` before
 the chat will answer.
 
-### The database
+Property chats need listings in the database. `composer setup` runs migrations
+but does not seed them. The seeder loads `myhome-cork-lite.json` plus the Daft
+buy and sold fixtures — not the full 52 MB MyHome dump, which is gitignored:
+
+```bash
+docker compose exec app php artisan db:seed --class=Modules\\Properties\\Database\\Seeders\\PropertiesDatabaseSeeder
+```
+
+Or import a file by hand:
+
+```bash
+docker compose exec app php artisan data:import --provider=myhome
+docker compose exec app php artisan data:import --provider=daft
+```
+
+Frontend changes need Vite running:
+
+```bash
+npm run dev
+```
+
+`CHAT_TEST_MODE=true` answers with canned replies instead of calling a model, so
+the front end can be worked on without spending tokens. It is refused in
+production and pinned off in PHPUnit.
+
+## AI providers
+
+Chat and tools run on OpenAI (`gpt-5.4-mini` unless `CHAT_OPENAI_MODEL` is set).
+
+```dotenv
+AI_PROVIDER=openai
+OPENAI_API_KEY=
+# CHAT_OPENAI_MODEL=
+```
+
+## The database
 
 PostgreSQL 18 with PostGIS 3.6, via the `imresamu/postgis` image — the official
 `postgis/postgis` publishes no arm64 manifest and will not start on Apple
@@ -77,12 +128,6 @@ RUN apt-get update && apt-get install -y postgresql-18-pgvector
 Then `CREATE EXTENSION vector;`. Rebuilding the image does not touch the data
 volume.
 
-Frontend changes need Vite running:
-
-```bash
-npm run dev
-```
-
 ## Testing
 
 ```bash
@@ -107,11 +152,12 @@ column, at which point tests need a real Postgres service.
 Modules are copy-and-own packages under `modules/`. An installed module is
 active; there is no enable/disable toggle.
 
-| Module     | Description                                                      |
-| ---------- | ---------------------------------------------------------------- |
-| `chat`     | The streaming assistant, the map beside it, and the WebMCP tools |
-| `auth`     | Authentication, social login, email verification, impersonation  |
-| `settings` | Profile management, avatar uploads, password changes             |
+| Module       | Description                                                                      |
+| ------------ | -------------------------------------------------------------------------------- |
+| `chat`       | The streaming assistant, the map beside it, property tools, and the WebMCP tools |
+| `properties` | Listings, asking prices, search filters, and the MyHome Cork import              |
+| `auth`       | Authentication, social login, email verification, impersonation                  |
+| `settings`   | Profile management, avatar uploads, password changes                             |
 
 `chat` is the application's home: `/` and `/dashboard` both redirect there once
 you are signed in.

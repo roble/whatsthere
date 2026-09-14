@@ -11,6 +11,7 @@ import {
     type MapMarker,
     type MapView,
 } from '@modules/chat/resources/js/map';
+import { formatDistance } from '@modules/chat/resources/js/listing';
 import type { Component } from 'vue';
 
 /**
@@ -87,10 +88,75 @@ export const THOUGHT_KINDS: Record<string, ThoughtKind> = {
     },
     'tool-search_properties': {
         icon: MapPinnedIcon,
-        label: 'Searching properties for sale',
-        doneLabel: 'Found :count matching properties',
+        label: 'Searching homes and land for sale',
+        doneLabel: 'Found :count matching listings',
         params: (part) => ({ count: countOf(toMapView(part.output)) }),
         succeeded: (part) => toMapView(part.output) !== null,
+        body: (part) => {
+            const found = toMapView(part.output)?.markers ?? [];
+
+            return found.length
+                ? {
+                      kind: 'results',
+                      items: found.slice(0, 8).map((marker) => ({
+                          label: marker.name,
+                          marker,
+                      })),
+                  }
+                : undefined;
+        },
+    },
+    'tool-compare_listing_amenities': {
+        icon: MapPinnedIcon,
+        label: 'Comparing nearby hospitals, schools and stops',
+        doneLabel: 'Ranked listings by what is nearby',
+        failedLabel: 'Could not compare what is nearby',
+        succeeded: (part) => toMapView(part.output) !== null,
+        description: (part) => {
+            const view = toMapView(part.output) as
+                | (MapView & { winner?: { name?: string } })
+                | null;
+
+            return view?.winner?.name ?? view?.label;
+        },
+        body: (part) => {
+            const found = toMapView(part.output)?.markers ?? [];
+
+            return found.length
+                ? {
+                      kind: 'results',
+                      items: found.slice(0, 8).map((marker) => ({
+                          label:
+                              marker.distance_m != null
+                                  ? `${marker.name} · ${formatDistance(marker.distance_m)}`
+                                  : marker.name,
+                          marker,
+                      })),
+                  }
+                : undefined;
+        },
+    },
+    'tool-update_property_search_preferences': {
+        icon: MapPinnedIcon,
+        label: 'Updating the listing search',
+        doneLabel: 'Showing :count matching listings',
+        failedLabel: 'No listings matched those filters',
+        params: (part) => ({ count: countOf(toMapView(part.output)) }),
+        succeeded: (part) =>
+            Boolean(toMapView(part.output)?.markers?.length),
+        body: (part) => {
+            const found = toMapView(part.output)?.markers ?? [];
+
+            return found.length
+                ? {
+                      kind: 'results',
+                      items: found.slice(0, 8).map((marker) => ({
+                          label: marker.name,
+                          marker,
+                      })),
+                  }
+                : undefined;
+        },
     },
     reasoning: {
         icon: BrainIcon,

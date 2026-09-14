@@ -44,7 +44,7 @@ class SearchProperties implements Tool
         $view = (new PropertySearch)->search($preferences);
         $this->state->update(['property_result_ids' => array_column($view['markers'], 'id')]);
 
-        return json_encode($view, JSON_THROW_ON_ERROR);
+        return (new PropertySearch)->compactToolResponse($view);
     }
 
     public function schema(JsonSchema $schema): array

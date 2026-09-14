@@ -1,5 +1,7 @@
 <?php
 
+use Modules\Chat\Ai\ChatAgent;
+
 return [
 
     /*
@@ -18,6 +20,37 @@ return [
     */
 
     'test_mode' => (bool) env('CHAT_TEST_MODE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chat AI Provider
+    |--------------------------------------------------------------------------
+    |
+    | Chat streams on OpenAI. A leftover AI_PROVIDER=manus is ignored so an
+    | old .env cannot select a provider that no longer exists.
+    |
+    */
+
+    'ai_provider' => 'openai',
+
+    'models' => [
+        'openai' => env('CHAT_OPENAI_MODEL') ?: ChatAgent::MODEL,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limits
+    |--------------------------------------------------------------------------
+    |
+    | Authenticated chat endpoints that call the model or donated map services.
+    | Format matches Laravel's throttle middleware: max attempts, decay minutes.
+    |
+    */
+
+    'throttle' => [
+        'stream' => env('CHAT_THROTTLE_STREAM', '30,1'),
+        'map' => env('CHAT_THROTTLE_MAP', '60,1'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

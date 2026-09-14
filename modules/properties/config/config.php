@@ -35,4 +35,45 @@ return [
 
     'max_price' => (int) env('PROPERTIES_MAX_PRICE', 10_000_000_00),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Search Result Limit
+    |--------------------------------------------------------------------------
+    |
+    | How many homes to put on the map when many match. When fewer than
+    | search_limit_full match, every match is returned so nothing is hidden.
+    |
+    */
+
+    'search_limit' => (int) env('PROPERTIES_SEARCH_LIMIT', 500),
+
+    'search_limit_full' => (int) env('PROPERTIES_SEARCH_LIMIT_FULL', 500),
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI Tool Marker Limit
+    |--------------------------------------------------------------------------
+    |
+    | How many listings to embed in a search tool reply the model reads back.
+    | The map reloads the full result set after each turn; this cap keeps long
+    | conversations inside provider token limits.
+    |
+    */
+
+    'ai_tool_marker_limit' => (int) env('PROPERTIES_AI_TOOL_MARKER_LIMIT', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Map Bounds
+    |--------------------------------------------------------------------------
+    |
+    | When a search returns no mappable homes, the map falls back to this Cork
+    | county bounding box instead of zooming out to all of Ireland.
+    |
+    */
+
+    'default_bbox' => [
+        '-10.5', '51.35', '-7.4', '52.25',
+    ],
+
 ];

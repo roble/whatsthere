@@ -40,6 +40,12 @@ class ListingImportService
         foreach ($provider->records($sourcePath) as $index => $record) {
             $totalRecords++;
 
+            if (! is_array($record)) {
+                $errors[] = "Record {$index}: the listing is not an object.";
+
+                continue;
+            }
+
             try {
                 DB::transaction(function () use ($provider, $record): void {
                     $this->importRecord($provider, $record);
@@ -106,7 +112,7 @@ class ListingImportService
             ['provider' => $provider->name(), 'provider_listing_id' => (string) $record['id']],
             [
                 'property_id' => $property->id,
-                'url' => $record['url'] ?? null,
+                'url' => safe_http_url(isset($record['url']) && is_string($record['url']) ? $record['url'] : null),
                 'title' => $record['title'] ?? $property->address,
                 'status' => $record['status'],
                 'listed_on' => $record['listed_on'] ?? null,
@@ -144,17 +150,39 @@ class ListingImportService
     {
         $listing->media()->delete();
 
-        $media = $media === [] ? [['url' => self::DEFAULT_IMAGE]] : $media;
+        $kept = [];
 
-        foreach ($media as $position => $item) {
-            if (! filled($item['url'] ?? null)) {
+        foreach ($media as $item) {
+            if (! is_array($item)) {
                 continue;
             }
 
-            $listing->media()->create([
+            $url = safe_listing_image_url(isset($item['url']) && is_string($item['url']) ? $item['url'] : null);
+
+            if ($url === null) {
+                continue;
+            }
+
+            $kept[] = [
                 'media_type' => $item['media_type'] ?? 'image',
-                'url' => $item['url'],
+                'url' => $url,
                 'alt_text' => $item['alt_text'] ?? null,
+            ];
+        }
+
+        if ($kept === []) {
+            $kept[] = [
+                'media_type' => 'image',
+                'url' => self::DEFAULT_IMAGE,
+                'alt_text' => null,
+            ];
+        }
+
+        foreach ($kept as $position => $item) {
+            $listing->media()->create([
+                'media_type' => $item['media_type'],
+                'url' => $item['url'],
+                'alt_text' => $item['alt_text'],
                 'position' => $position,
             ]);
         }
@@ -181,7 +209,7 @@ class ListingImportService
                     'property_id' => $listing->property_id,
                     'amount' => $price['amount'],
                     'currency' => $price['currency'] ?? 'EUR',
-                    'source_url' => $price['source_url'] ?? $listing->url,
+                    'source_url' => safe_http_url(isset($price['source_url']) && is_string($price['source_url']) ? $price['source_url'] : null) ?? $listing->url,
                     'source_reference' => $price['source_reference'] ?? $listing->provider.':'.$listing->provider_listing_id.':'.$price['record_type'].':'.$price['effective_date'],
                 ],
             );

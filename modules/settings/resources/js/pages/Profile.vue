@@ -27,6 +27,7 @@ import { Loader2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import IconGithub from '~icons/simple-icons/github';
 import IconGoogle from '~icons/simple-icons/google';
+import IconTrash2 from '~icons/lucide/trash-2';
 
 const title = 'Profile';
 
@@ -178,6 +179,22 @@ const hasSocialiteProviders = computed(() => {
         socialiteProviders.value.length > 0
     );
 });
+
+const chatSessions = computed(() => page.props.chat?.sessions ?? []);
+const chatSessionCount = computed(() => chatSessions.value.length);
+const isDeleteAllChatsDialogOpen = ref(false);
+const isDeletingAllChats = ref(false);
+
+function confirmDeleteAllChats(): void {
+    isDeletingAllChats.value = true;
+    isDeleteAllChatsDialogOpen.value = false;
+
+    router.delete(route('chat.sessions.destroy'), {
+        onFinish: () => {
+            isDeletingAllChats.value = false;
+        },
+    });
+}
 </script>
 <template>
     <SettingsLayout :title="title">
@@ -262,6 +279,64 @@ const hasSocialiteProviders = computed(() => {
                                 </Link>
                             </div>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <!-- Chat history -->
+            <Card v-if="chatSessionCount" class="max-w-3xl">
+                <CardHeader>
+                    <CardTitle>{{ $t('Chat history') }}</CardTitle>
+                    <CardDescription>
+                        {{
+                            $t(
+                                'Remove every conversation you have started in Whatsthere.',
+                            )
+                        }}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div
+                        class="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div class="space-y-1">
+                            <p class="font-medium">
+                                {{
+                                    $t(':count saved chats', {
+                                        count: chatSessionCount,
+                                    })
+                                }}
+                            </p>
+                            <p class="text-muted-foreground text-sm">
+                                {{
+                                    $t(
+                                        'Deleting all chats removes their messages permanently.',
+                                    )
+                                }}
+                            </p>
+                        </div>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            data-testid="delete-all-chats"
+                            :disabled="isDeletingAllChats"
+                            @click="isDeleteAllChatsDialogOpen = true"
+                        >
+                            <Loader2
+                                v-if="isDeletingAllChats"
+                                class="mr-2 size-4 animate-spin"
+                            />
+                            <IconTrash2
+                                v-else
+                                class="mr-2 size-4"
+                                aria-hidden="true"
+                            />
+                            {{
+                                isDeletingAllChats
+                                    ? $t('Deleting chats…')
+                                    : $t('Delete all chats')
+                            }}
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -371,6 +446,41 @@ const hasSocialiteProviders = computed(() => {
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Delete all chats -->
+        <Dialog v-model:open="isDeleteAllChatsDialogOpen">
+            <DialogContent data-testid="delete-all-chats-dialog">
+                <DialogHeader>
+                    <DialogTitle>
+                        {{ $t('Delete all chats?') }}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {{
+                            $t(
+                                'This permanently removes all :count conversations and their messages. This cannot be undone.',
+                                { count: chatSessionCount },
+                            )
+                        }}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        data-testid="cancel-delete-all-chats"
+                        @click="isDeleteAllChatsDialogOpen = false"
+                    >
+                        {{ $t('Cancel') }}
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        data-testid="confirm-delete-all-chats"
+                        @click="confirmDeleteAllChats"
+                    >
+                        {{ $t('Delete all chats') }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Disconnect Social Account Confirmation Dialog -->
         <Dialog v-model:open="isDisconnectDialogOpen">
