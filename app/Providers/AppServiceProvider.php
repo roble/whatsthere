@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
-use App\Ai\Manus\ManusProvider;
 use App\Http\Middleware\SecureHeaders;
 use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\ToggleColumn;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Events\LocaleUpdated;
 use Illuminate\Support\Carbon;
@@ -14,7 +12,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use InterNACHI\Modular\Support\ModuleRegistry;
-use Laravel\Ai\AiManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,7 +31,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->registerManusAiProvider();
         $this->configureSecureUrls();
         $this->configureFilamentDefaults();
         $this->addCommandAboutInfo();
@@ -77,16 +73,6 @@ class AppServiceProvider extends ServiceProvider
         Toggle::configureUsing(fn (Toggle $toggle) => $toggle->onColor('success'));
 
         ToggleColumn::configureUsing(fn (ToggleColumn $column) => $column->onColor('success'));
-    }
-
-    protected function registerManusAiProvider(): void
-    {
-        $this->app->resolving(AiManager::class, function (AiManager $manager): void {
-            $manager->extend('manus', fn ($app, array $config): ManusProvider => new ManusProvider(
-                $config,
-                $app->make(Dispatcher::class),
-            ));
-        });
     }
 
     protected function configureSecureUrls(): void

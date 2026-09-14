@@ -91,27 +91,13 @@ production and pinned off in PHPUnit.
 
 ## AI providers
 
-Chat follows `AI_PROVIDER`. The two supported values:
-
-| `AI_PROVIDER` | What runs |
-| ------------- | --------- |
-| `openai`      | Chat and tools on OpenAI |
-| `manus`       | Chat on [Manus](https://open.manus.ai/docs), tools on OpenAI (hybrid) |
-
-Manus cannot call Laravel tools. In hybrid mode, prose can stay on Manus while
-map and listing tools run on `CHAT_AI_TOOLS_PROVIDER` (OpenAI by default).
+Chat and tools run on OpenAI (`gpt-5.4-mini` unless `CHAT_OPENAI_MODEL` is set).
 
 ```dotenv
 AI_PROVIDER=openai
 OPENAI_API_KEY=
-# AI_PROVIDER=manus
-# MANUS_API_KEY=
-# MANUS_AGENT_PROFILE=lite
-# CHAT_AI_PROVIDER=openai
+# CHAT_OPENAI_MODEL=
 ```
-
-Override chat alone with `CHAT_AI_PROVIDER` when the rest of the app should stay
-on a different default.
 
 ## The database
 

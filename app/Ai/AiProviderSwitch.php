@@ -5,12 +5,10 @@ namespace App\Ai;
 use Modules\Chat\Ai\ChatAgent;
 
 /**
- * One place to resolve which AI provider and model each feature uses.
+ * Chat always streams on OpenAI.
  *
- * Switch globally with AI_PROVIDER=openai|manus. Override chat alone with
- * CHAT_AI_PROVIDER when needed. Manus cannot call Laravel tools, so when chat
- * runs on Manus the tool steps are routed to CHAT_AI_TOOLS_PROVIDER (OpenAI by
- * default) while prose can still use Manus on steps without tools.
+ * A leftover AI_PROVIDER=manus in an old .env is ignored so removing the
+ * Manus gateway does not break an existing checkout.
  */
 final class AiProviderSwitch
 {
@@ -19,7 +17,9 @@ final class AiProviderSwitch
      */
     public static function appProvider(): string
     {
-        return (string) config('ai.default');
+        $provider = (string) config('ai.default');
+
+        return $provider === 'manus' || $provider === '' ? 'openai' : $provider;
     }
 
     /**
@@ -27,26 +27,19 @@ final class AiProviderSwitch
      */
     public static function chatProvider(): string
     {
-        return (string) config('chat.ai_provider');
+        return 'openai';
     }
 
     /**
-     * The model or agent profile for chat on the given provider.
+     * The model for chat on OpenAI.
      */
     public static function chatModel(?string $provider = null): string
     {
-        $provider ??= self::chatProvider();
+        $configured = config('chat.models.openai');
 
-        $configured = config("chat.models.{$provider}");
-
-        if (is_string($configured) && $configured !== '') {
-            return $configured;
-        }
-
-        return match ($provider) {
-            'manus' => (string) config('ai.providers.manus.agent_profile', 'lite'),
-            default => ChatAgent::MODEL,
-        };
+        return is_string($configured) && $configured !== ''
+            ? $configured
+            : ChatAgent::MODEL;
     }
 
     /**
@@ -54,29 +47,15 @@ final class AiProviderSwitch
      */
     public static function supportsToolCalling(string $provider): bool
     {
-        return $provider !== 'manus';
+        return true;
     }
 
     /**
-     * When chat runs on Manus, which provider should execute tool steps.
+     * Chat is OpenAI, so tool steps do not need a second provider.
      */
     public static function chatToolsProvider(): ?string
     {
-        if (self::supportsToolCalling(self::chatProvider())) {
-            return null;
-        }
-
-        $fallback = (string) config('chat.ai_tools_provider', 'openai');
-
-        if ($fallback === '' || $fallback === self::chatProvider()) {
-            return null;
-        }
-
-        if (blank(config("ai.providers.{$fallback}.key"))) {
-            return null;
-        }
-
-        return $fallback;
+        return null;
     }
 
     /**
@@ -86,11 +65,9 @@ final class AiProviderSwitch
      */
     public static function chatStreamOptions(): array
     {
-        $provider = self::chatProvider();
-
         return [
-            'provider' => $provider,
-            'model' => self::chatModel($provider),
+            'provider' => self::chatProvider(),
+            'model' => self::chatModel(),
         ];
     }
 }

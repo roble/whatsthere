@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('AI_PROVIDER', 'openai'),
+    'default' => env('AI_PROVIDER') === 'manus' ? 'openai' : env('AI_PROVIDER', 'openai'),
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
@@ -117,22 +117,6 @@ return [
         'jina' => [
             'driver' => 'jina',
             'key' => env('JINA_API_KEY'),
-        ],
-
-        'manus' => [
-            'driver' => 'manus',
-            'key' => env('MANUS_API_KEY'),
-            'url' => env('MANUS_URL', 'https://api.manus.ai/v2'),
-            'agent_profile' => env('MANUS_AGENT_PROFILE', 'lite'),
-            'poll_interval_ms' => env('MANUS_POLL_INTERVAL_MS', 1500),
-            'hide_in_task_list' => env('MANUS_HIDE_IN_TASK_LIST', true),
-            'models' => [
-                'text' => [
-                    'default' => env('MANUS_AGENT_PROFILE', 'lite'),
-                    'cheapest' => 'lite',
-                    'smartest' => 'max',
-                ],
-            ],
         ],
 
         'mistral' => [

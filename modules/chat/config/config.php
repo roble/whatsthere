@@ -26,23 +26,15 @@ return [
     | Chat AI Provider
     |--------------------------------------------------------------------------
     |
-    | By default chat follows AI_PROVIDER. Set CHAT_AI_PROVIDER to override
-    | chat alone. Manus cannot call Laravel tools; when chat runs on Manus,
-    | tool steps are routed to CHAT_AI_TOOLS_PROVIDER (OpenAI by default).
-    |
-    | Quick switch:
-    |   AI_PROVIDER=openai   — chat + tools on OpenAI
-    |   AI_PROVIDER=manus    — chat on Manus, tools on OpenAI (hybrid)
+    | Chat streams on OpenAI. A leftover AI_PROVIDER=manus is ignored so an
+    | old .env cannot select a provider that no longer exists.
     |
     */
 
-    'ai_provider' => env('CHAT_AI_PROVIDER') ?: env('AI_PROVIDER', 'openai'),
-
-    'ai_tools_provider' => env('CHAT_AI_TOOLS_PROVIDER', 'openai'),
+    'ai_provider' => 'openai',
 
     'models' => [
         'openai' => env('CHAT_OPENAI_MODEL') ?: ChatAgent::MODEL,
-        'manus' => env('CHAT_MANUS_PROFILE', env('MANUS_AGENT_PROFILE', 'lite')),
     ],
 
     /*
