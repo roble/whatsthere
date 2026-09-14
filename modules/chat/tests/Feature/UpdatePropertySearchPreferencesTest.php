@@ -3,6 +3,7 @@
 namespace Modules\Chat\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Laravel\Ai\Tools\Request;
 use Modules\Chat\Ai\Tools\SavePropertyPreferences;
@@ -15,6 +16,18 @@ use Tests\TestCase;
 class UpdatePropertySearchPreferencesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Town search may ask Nominatim for a bounding box. These tests are
+        // about preference merging, not geocoding, so an empty answer keeps the
+        // search on the name match without hitting the real service.
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([]),
+        ]);
+    }
 
     public function test_a_broader_follow_up_widens_when_leftover_filters_match_nothing(): void
     {
